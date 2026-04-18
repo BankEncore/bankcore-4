@@ -26,6 +26,7 @@ jobs:
           --health-retries 10
 
     env:
+      CI: true
       RAILS_ENV: test
       DATABASE_HOST: localhost
       POSTGRES_USER: postgres
