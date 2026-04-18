@@ -1,0 +1,12 @@
+.git
+.github
+log
+tmp
+node_modules
+vendor/bundle
+.env
+.env.*
+!.env.example
+storage
+coverage
+.byebug_history

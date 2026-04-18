@@ -1,0 +1,12 @@
+---
+description: Docker, Compose, CI, and Dev Container for bankcore-4
+globs: "Dockerfile,docker-compose.yml,.github/workflows/**,.devcontainer/**,.dockerignore"
+alwaysApply: false
+---
+
+# Docker and CI
+
+- Images: **`ruby:3.4-bookworm`**, **`postgres:16-alpine`** (pinned in `Dockerfile` / Compose / CI).
+- Dev server in Compose runs **`bundle exec foreman start -f Procfile.dev`** (Rails bound to `0.0.0.0` + Tailwind watch). Rebuild after `Gemfile` / `Dockerfile` changes: `docker compose build`.
+- **`Gemfile.lock`** must keep **`x86_64-linux`** in `PLATFORMS` so GitHub Actions can install gems on amd64 runners while developing on ARM Macs in arm64 Linux containers.
+- Dev Container mounts the repo at **`/app`** and uses the same Compose file as local Docker.

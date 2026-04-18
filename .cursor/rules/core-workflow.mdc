@@ -1,0 +1,10 @@
+---
+description: Docker-first workflow for bankcore-4
+alwaysApply: true
+---
+
+# Core workflow
+
+- Prefer **Docker Compose** or the **Dev Container** for Ruby, Bundler, Rails, and tests. Do not assume a working host Ruby unless the user explicitly asks for host-only steps.
+- Postgres in development uses hostname **`db`** (see `docker-compose.yml` and `.env.example`). CI uses **`localhost`** via GitHub Actions `services`.
+- Never commit **`config/master.key`**, **`.env`**, or real credentials. Use **`.env.example`** as the template for local env vars.

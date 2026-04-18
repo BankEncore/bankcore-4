@@ -1,0 +1,11 @@
+---
+description: Rails and Ruby conventions for bankcore-4
+globs: "**/*.rb,**/*.erb,**/Gemfile*"
+alwaysApply: false
+---
+
+# Rails / Ruby
+
+- Application module: **`BankCore4`** (`config/application.rb`).
+- Keep changes focused; match existing Rails 8.1 patterns and RuboCop omakase where present.
+- Database config is env-driven (`DATABASE_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`); see `config/database.yml`.
