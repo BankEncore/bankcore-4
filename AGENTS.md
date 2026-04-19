@@ -13,6 +13,7 @@ docker compose build
 docker compose up
 docker compose run --rm web bin/rails db:prepare
 docker compose run --rm web bin/rails test
+docker compose run --rm web bin/rubocop -A
 ```
 
 - In Compose, Postgres is reachable at host **`db`** (`DATABASE_HOST=db`). In GitHub Actions, tests use **`localhost`** (see `.github/workflows/ci.yml`).
@@ -25,3 +26,15 @@ docker compose run --rm web bin/rails test
 ## GitHub
 
 - Remote target: **`BankEncore/bankcore-4`** (public). Create/push with `gh` only after you are authenticated (`gh auth login`); do not paste tokens into chat.
+
+## Cursor project rules (BankCORE)
+
+- **`.cursor/rules/bankcore-planning.mdc`** — always on: MVP gating, modular monolith, kernel vs operational events, doc sources under `docs/`.
+- **`.cursor/rules/bankcore-docs-and-adrs.mdc`** — when editing `docs/**`: domain ↔ module mapping, ADR triggers, writing style.
+- **`.cursor/rules/bankcore-implementation.mdc`** — when editing Ruby / `Gemfile` / migrations: controllers vs domains, posting path, test invariants.
+
+Existing rules: `core-workflow.mdc`, `rails-ruby.mdc`, `docker-ci.mdc`.
+
+## Cursor project skill (module catalog)
+
+- **`.cursor/skills/bankcore-module-ruby/`** — Agent skill to align Ruby/Rails work with [`docs/architecture/bankcore-module-catalog.md`](docs/architecture/bankcore-module-catalog.md); see `SKILL.md` and `reference.md` inside that folder.

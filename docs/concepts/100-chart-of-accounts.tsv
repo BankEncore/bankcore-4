@@ -1,0 +1,83 @@
+Account Code	Name	Type	Control Account	Description	Subledger Applies	Subledger Schema	Examples
+1100	Cash and Due from Banks	Asset	Yes	Aggregate cash and correspondent balances; parent for cash-related accounts	No		
+1110	Cash in Vaults (teller drawers)	Asset	Yes	Physical cash under branch custody including vaults and drawers	Yes	1110:{branch}:{vault|drawer}	1110:NYC:vault ; 1110:NYC:DR03
+1120	Due from Federal Reserve	Asset	Yes	Balances at Federal Reserve (master and subaccounts)	Yes	1120:{fed_acct}	1120:042000000:MAIN
+1130	Due from Correspondent Banks	Asset	Yes	Nostro accounts at correspondent banks	Yes	1130:{bank_id}:{nostro_acct}	1130:CITI:USDCHK
+1140	Cash Items in Process of Collection (CIPC)	Asset	Yes	Checks accepted and in transit for external collection	Yes	1140:{branch}:{batch_id}	1140:NYC:20251012A
+1150	Returned Item Clearing	Asset	Yes	Temporary holding for on-us checks and returns while resolving	Yes	1150:{ons|ret}:{ref}	1150:ons:TXN123
+1180	Suspense – Unposted Cash	Asset	Yes	Unverified cash items (night drop, mail) pending verification	Yes	1180:{source}:{ref}	1180:nightdrop:2025-10-12
+1200	Investment Securities	Asset	Yes	Parent for investment securities holdings	No		
+1210	U.S. Treasury & Agency Securities	Asset	Yes	Held-for-investment or AFS Treasuries and agencies	Yes	1210:{cusip}:{lot_id}	1210:9128285Q9:L1
+1220	Mortgage-Backed Securities	Asset	Yes	Agency or private MBS positions	Yes	1220:{cusip}:{lot_id}	
+1230	Other Investment Securities	Asset	Yes	Other debt or equity securities not elsewhere classified	Yes	1230:{cusip}:{lot_id}	
+1400	Loans Receivable (Gross)	Asset	Yes	Parent for loan principal and receivables	No		
+1410	Commercial Real Estate Loans – Principal	Asset	Yes	Outstanding principal for CRE loans	Yes	1410:{loan_id}	1410:LN12345
+1415	Commercial Real Estate – Interest Receivable	Asset	Yes	Accrued interest receivable on CRE loans	Yes	1415:{loan_id}	
+1420	Residential Mortgages – Principal	Asset	Yes	Outstanding principal for residential mortgages	Yes	1420:{loan_id}	
+1425	Residential Mortgages – Interest Receivable	Asset	Yes	Accrued interest receivable on residential mortgages	Yes	1425:{loan_id}	
+1430	Consumer Auto Loans – Principal	Asset	Yes	Outstanding principal for auto loans	Yes	1430:{loan_id}	
+1435	Consumer Auto Loans – Interest Receivable	Asset	Yes	Accrued interest receivable on auto loans	Yes	1435:{loan_id}	
+1440	Unsecured Consumer Loans – Principal	Asset	Yes	Outstanding principal for unsecured consumer loans	Yes	1440:{loan_id}	
+1445	Unsecured Consumer Loans – Interest Receivable	Asset	Yes	Accrued interest receivable on unsecured consumer loans	Yes	1445:{loan_id}	
+1450	Lines of Credit – Principal	Asset	Yes	Outstanding principal for revolving lines of credit	Yes	1450:{loc_id}	
+1455	Lines of Credit – Interest Receivable	Asset	Yes	Accrued interest receivable for lines of credit	Yes	1455:{loc_id}	
+1490	Deferred Loan Fees/Costs (Contra)	Contra-Asset	Yes	Unamortized deferred fees/costs per loan	Yes	1490:{loan_id}:{fee_type}	1490:LN123:ORIG
+1499	Allowance for Credit Losses (Contra-Asset)	Contra-Asset	Yes	Allowance for expected credit losses by segment	Yes	1499:{segment}	1499:CRE_A
+1500	Other Assets	Asset	Yes	Miscellaneous assets not elsewhere classified	No		
+1510	Fixed Assets – Land & Buildings	Asset	Yes	Cost basis of premises and buildings	Yes	1510:{asset_id}	1510:BLDG01
+1520	Furniture & Equipment	Asset	Yes	Cost basis of furniture, fixtures, and equipment	Yes	1520:{asset_id}	1520:ATM07
+1530	Accumulated Depreciation (Contra)	Contra-Asset	Yes	Accumulated depreciation against fixed assets	Yes	1530:{asset_id}	1530:BLDG01
+1560	Prepaid Expenses	Asset	Yes	Prepaid expenses to be amortized	Yes	1560:{prepaid_id}	
+1570	Accrued Interest Receivable – Investments	Asset	Yes	Accrued interest receivable on securities	Yes	1570:{cusip}	
+1580	Deferred Tax Assets	Asset	Yes	Recognized deferred tax assets	No		
+2100	Deposits	Liability	Yes	Parent for customer deposit accounts	No		
+2110	Noninterest-Bearing Demand Deposits (DDA)	Liability	Yes	Customer checking accounts without interest	Yes	2110:{acct_id}	2110:ACCT123
+2120	Interest-Bearing Demand Deposits (NOW)	Liability	Yes	Customer NOW accounts	Yes	2120:{acct_id}	
+2130	Savings & Money Market Accounts	Liability	Yes	Savings/MMDA deposit accounts	Yes	2130:{acct_id}	
+2140	Time Deposits (CDs)	Liability	Yes	Certificates of deposit by account	Yes	2140:{acct_id}	
+2150	Escrow Accounts (Taxes / Insurance)	Liability	Yes	Escrow balances connected to loans	Yes	2150:{loan_id}:{bucket}	2150:LN123:tax
+2160	Official Checks Outstanding	Liability	Yes	Liability for issued official/cashier‚Äôs checks	Yes	2160:{issue_batch}:{check_no}	2160:2025A:000123
+2170	ACH Settlement Clearing	Liability	Yes	Clearing for ACH settlements by direction and file	Yes	2170:{dr|cr|return}:{file_id}:{trace}	
+2180	RTP/Card Clearing	Liability	Yes	Clearing for RTP or card network settlements	Yes	2180:{rtp|card}:{id}	
+2190	Suspense – Unidentified Deposits	Liability	Yes	Temporary holding for unidentified inbound funds	Yes	2190:{source}:{ref}	
+2500	Other Liabilities	Liability	Yes	Parent for accrued and other liabilities	No		
+2510	Accrued Interest Payable – Deposits	Liability	Yes	Accrued interest payable per deposit account	Yes	2510:{acct_id}	
+2520	Accrued Interest Payable – Borrowings	Liability	Yes	Accrued interest payable on borrowings	Yes	2520:{facility_id}	
+2530	Accounts Payable	Liability	Yes	Vendor payables by invoice	Yes	2530:{vendor_id}:{invoice_no}	
+2540	Accrued Salaries & Benefits	Liability	Yes	Payroll and benefits accruals	Yes	2540:{pay_period}	
+2550	Deferred Income (Unearned Fees)	Liability	Yes	Unearned fees deferred over time	Yes	2550:{contract_id}	
+2590	Clearing – Internal Transfers	Liability	Yes	Temporary clearing for internal reclasses	Yes	2590:{channel}:{ref}	
+2700	Borrowings & Notes Payable	Liability	Yes	Parent for wholesale borrowings	No		
+2710	FHLB Advances	Liability	Yes	Federal Home Loan Bank borrowings	Yes	2710:{facility_id}	
+2720	Other Borrowings	Liability	Yes	Other short or long-term notes payable	Yes	2720:{facility_id}	
+3100	Common Stock	Equity	Yes	Issued capital stock	No		
+3120	Additional Paid-in Capital	Equity	Yes	Paid-in capital in excess of par	No		
+3200	Retained Earnings	Equity	Yes	Accumulated retained earnings	No		
+3300	Current-Year Profit/Loss	Equity	Yes	Current period net income pending close	No		
+4100	Interest Income – Loans	Income	Yes	Recognized interest income on loans	No		
+4110	Commercial RE Interest Income	Income	Yes	Interest income from CRE loans	No		
+4120	Residential Mortgage Interest Income	Income	Yes	Interest income from residential mortgages	No		
+4130	Consumer Loan Interest Income	Income	Yes	Interest income from consumer loans	No		
+4140	LOC Interest Income	Income	Yes	Interest income from lines of credit	No		
+4150	Loan Fee Income	Income	Yes	Late and other loan-related fee income	No		
+4200	Interest Income – Investments	Income	Yes	Interest income from securities	No		
+4210	Securities Interest Income	Income	Yes	Coupon/interest on securities	No		
+4500	Non-Interest Income	Income	Yes	Parent for non-interest income	No		
+4510	Deposit Service Charges	Income	Yes	Fees for deposit services and maintenance	No		
+4520	ATM & Debit Card Interchange	Income	Yes	Interchange income from card transactions	No		
+4530	Wire Transfer Fees	Income	Yes	Fee income from wire services	No		
+4540	NSF Fees	Income	Yes	Non-sufficient funds and overdraft fees	No		
+4550	Safe Deposit Box Fees	Income	Yes	Fees from safe deposit services	No		
+4560	Miscellaneous Income	Income	Yes	Other service income	No		
+5100	Interest Expense – Deposits	Expense	Yes	Interest paid on deposit accounts	No		
+5120	Interest Expense – NOW Accounts	Expense	Yes	Interest paid on NOW accounts	No		
+5130	Interest Expense – Savings/MMDA	Expense	Yes	Interest paid on savings/MMDA	No		
+5140	Interest Expense – Time Deposits	Expense	Yes	Interest paid on CDs	No		
+5200	Interest Expense – Borrowings	Expense	Yes	Interest on notes and advances	No		
+5500	Salaries & Employee Benefits	Expense	Yes	Compensation and benefits expense	No		
+5520	Occupancy & Equipment	Expense	Yes	Premises, equipment, depreciation expense	No		
+5530	Technology & Data Processing	Expense	Yes	Core, cloud, and processing costs	No		
+5540	Marketing & Advertising	Expense	Yes	Promotion and advertising	No		
+5550	FDIC Insurance Premiums	Expense	Yes	FDIC assessment expense	No		
+5600	Postage & Supplies	Expense	Yes	Operational supplies and postage	No		
+5900	Provision for Credit Losses	Expense	Yes	Provision expense for credit losses (ACL)	No		

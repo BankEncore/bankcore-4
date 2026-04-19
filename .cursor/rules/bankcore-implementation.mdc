@@ -1,0 +1,15 @@
+---
+description: BankCORE Rails implementation alignment (domains, money movement)
+globs: "**/*.rb,**/Gemfile*,db/migrate/**/*.rb"
+alwaysApply: false
+---
+
+# Implementation alignment
+
+- Controllers orchestrate; **domain commands/services** own invariants. No GL line construction in controllers.
+- Money movement must go through **`Core::Posting`** (or explicit commands that delegate to it), not ad-hoc balance updates.
+- Use **transactions** at application boundaries where a business operation spans multiple writes; prefer DB constraints where appropriate.
+
+## Tests (financial code)
+
+- For posting/ledger/event flows, prefer tests that pin **invariants** (balanced legs, immutability, idempotency, reversal linkage) over only happy-path UI tests.

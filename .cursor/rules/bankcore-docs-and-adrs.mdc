@@ -1,0 +1,24 @@
+---
+description: Planning docs + ADRs for BankCORE (domain mapping, MVP phasing)
+globs: docs/**/*.md,docs/**/*.mdc
+alwaysApply: false
+---
+
+# Docs planning conventions
+
+## Domain mapping expectation
+
+- When adding a new concept to `docs/concepts/**`, include a short mapping to:
+  - a **module** from `docs/architecture/bankcore-module-catalog.md` (e.g., `Core::Posting`, `Teller`), and
+  - whether it is **MVP** or **post-MVP** per `docs/concepts/01-mvp-vs-core.md`.
+
+## ADR triggers (suggest an ADR when…)
+
+- Posting/ledger invariants change, reversals strategy changes, or a new **money movement** pathway is introduced.
+- A new **integration** pathway touches posting (ACH/wire/card/file ingestion), even if implementation is later.
+
+## Writing style
+
+- Prefer crisp invariants ("must never…", "always…") over long narrative.
+- Include at least one **worked example** (sample event type + payload shape + resulting posting outline) when documenting operational flows.
+- Use [docs/adr/0000-template.md](/docs/adr/0000-template.md) for preferred ADR format.

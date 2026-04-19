@@ -1,0 +1,40 @@
+---
+description: BankCORE planning guardrails (Rails modular monolith, MVP-first, financial integrity)
+alwaysApply: true
+---
+
+# BankCORE planning rules
+
+When planning or designing features for this Rails application:
+
+## Source of truth (repo docs)
+
+- Treat these as authoritative intent unless the user explicitly overrides them:
+  - `docs/concepts/00-functional-domains.md` (business scope)
+  - `docs/concepts/01-mvp-vs-core.md` (MVP boundaries)
+  - `docs/architecture/bankcore-module-catalog.md` (modular monolith boundaries)
+
+## Architectural stance
+
+- Default to a **modular monolith**: `app/domains/**` with strict boundaries; **no microservices** unless the user explicitly requests it with strong rationale.
+- The **financial kernel** is `Core::OperationalEvents`, `Core::Posting`, `Core::Ledger`, `Core::BusinessDate`. Planning must preserve **single write paths** for monetary truth.
+- **Operational events** record durable intent + audit metadata; **posting/ledger** record financial truth. Do not collapse these concerns in plans.
+
+## MVP gating
+
+- If a proposal is not required for **financial correctness, auditability, or core branch/teller operations** per `01-mvp-vs-core.md`, label it **post-MVP** and suggest a phased rollout.
+- Prefer **one vertical slice** plans (end-to-end branch story) over broad horizontal "build all modules" plans.
+
+## Planning outputs (what to produce)
+
+- For cross-cutting decisions (posting rules, reversals, idempotency, GL ownership, session/cash invariants), propose a short **ADR** path (`docs/adr/…`) rather than embedding one-off rules only in chat.
+- Plans should name: **module owner**, **tables owned**, **commands/queries**, **failure modes**, and **audit fields** (actor, branch, session, business date).
+
+## Safety / compliance tone (planning)
+
+- Never recommend committing secrets (`config/master.key`, `.env`). Prefer `.env.example` + secret manager patterns.
+- Call out **immutability**, **reversals vs edits**, and **idempotency** whenever money movement is discussed.
+
+## Rails realism
+
+- Prefer **Rails-native boundaries** (transactions, constraints, jobs) in plans; introduce gems/patterns only with a stated reason.
