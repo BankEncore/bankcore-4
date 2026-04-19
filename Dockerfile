@@ -8,6 +8,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     git \
+    nano \
     libpq-dev \
     libvips42 \
     && rm -rf /var/lib/apt/lists/*
