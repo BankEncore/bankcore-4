@@ -309,6 +309,10 @@ Support search by:
 * relationship tables
 * merge workflow
 
+### Physical schema (relational)
+
+Concrete first-cut table definitions for `party_records` and initial subtype profile tables live in **[ADR-0009](0009-initial-party-persistence-schema.md)** so this ADR stays conceptual. Evolve or supersede ADR-0009 when additional subtypes or compliance-linked storage ships.
+
 ### Expansion
 
 * beneficial ownership
@@ -323,6 +327,7 @@ Support search by:
 * ADR-0004
 * ADR-0005
 * ADR-0007
+* ADR-0009 (initial Party persistence tables)
 
 ---
 
