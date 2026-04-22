@@ -1,6 +1,13 @@
 Rails.application.routes.draw do
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
+  scope path: "teller", defaults: { format: :json }, module: :teller do
+    post "parties", to: "parties#create"
+    post "deposit_accounts", to: "deposit_accounts#create"
+    post "operational_events", to: "operational_events#create"
+    post "operational_events/:id/post", to: "operational_event_posts#create"
+  end
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check

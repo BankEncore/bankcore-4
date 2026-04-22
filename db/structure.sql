@@ -93,6 +93,107 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: core_business_date_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.core_business_date_settings (
+    id bigint NOT NULL,
+    current_business_on date NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: core_business_date_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.core_business_date_settings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: core_business_date_settings_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.core_business_date_settings_id_seq OWNED BY public.core_business_date_settings.id;
+
+
+--
+-- Name: deposit_account_parties; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_account_parties (
+    id bigint NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    role character varying NOT NULL,
+    status character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: deposit_account_parties_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_account_parties_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_account_parties_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_account_parties_id_seq OWNED BY public.deposit_account_parties.id;
+
+
+--
+-- Name: deposit_accounts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_accounts (
+    id bigint NOT NULL,
+    account_number character varying NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    status character varying NOT NULL,
+    product_code character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: deposit_accounts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_accounts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_accounts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_accounts_id_seq OWNED BY public.deposit_accounts.id;
+
+
+--
 -- Name: gl_accounts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -182,7 +283,7 @@ CREATE TABLE public.journal_lines (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT journal_lines_amount_non_negative CHECK ((amount_minor_units >= 0)),
-    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY ((ARRAY['debit'::character varying, 'credit'::character varying])::text[])))
+    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY (ARRAY[('debit'::character varying)::text, ('credit'::character varying)::text])))
 );
 
 
@@ -219,7 +320,8 @@ CREATE TABLE public.operational_events (
     currency character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    channel character varying NOT NULL
+    channel character varying NOT NULL,
+    source_account_id bigint
 );
 
 
@@ -240,6 +342,78 @@ CREATE SEQUENCE public.operational_events_id_seq
 --
 
 ALTER SEQUENCE public.operational_events_id_seq OWNED BY public.operational_events.id;
+
+
+--
+-- Name: party_individual_profiles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.party_individual_profiles (
+    id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    first_name character varying NOT NULL,
+    middle_name character varying,
+    last_name character varying NOT NULL,
+    name_suffix character varying,
+    preferred_first_name character varying,
+    preferred_last_name character varying,
+    date_of_birth date,
+    occupation character varying,
+    employer character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: party_individual_profiles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.party_individual_profiles_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: party_individual_profiles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.party_individual_profiles_id_seq OWNED BY public.party_individual_profiles.id;
+
+
+--
+-- Name: party_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.party_records (
+    id bigint NOT NULL,
+    name character varying NOT NULL,
+    party_type character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: party_records_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.party_records_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: party_records_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.party_records_id_seq OWNED BY public.party_records.id;
 
 
 --
@@ -284,6 +458,27 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: core_business_date_settings id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_settings ALTER COLUMN id SET DEFAULT nextval('public.core_business_date_settings_id_seq'::regclass);
+
+
+--
+-- Name: deposit_account_parties id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_parties ALTER COLUMN id SET DEFAULT nextval('public.deposit_account_parties_id_seq'::regclass);
+
+
+--
+-- Name: deposit_accounts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_accounts ALTER COLUMN id SET DEFAULT nextval('public.deposit_accounts_id_seq'::regclass);
+
+
+--
 -- Name: gl_accounts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -312,6 +507,20 @@ ALTER TABLE ONLY public.operational_events ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: party_individual_profiles id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_individual_profiles ALTER COLUMN id SET DEFAULT nextval('public.party_individual_profiles_id_seq'::regclass);
+
+
+--
+-- Name: party_records id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_records ALTER COLUMN id SET DEFAULT nextval('public.party_records_id_seq'::regclass);
+
+
+--
 -- Name: posting_batches id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -324,6 +533,30 @@ ALTER TABLE ONLY public.posting_batches ALTER COLUMN id SET DEFAULT nextval('pub
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: core_business_date_settings core_business_date_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_settings
+    ADD CONSTRAINT core_business_date_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deposit_account_parties deposit_account_parties_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_parties
+    ADD CONSTRAINT deposit_account_parties_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deposit_accounts deposit_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_accounts
+    ADD CONSTRAINT deposit_accounts_pkey PRIMARY KEY (id);
 
 
 --
@@ -359,6 +592,22 @@ ALTER TABLE ONLY public.operational_events
 
 
 --
+-- Name: party_individual_profiles party_individual_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_individual_profiles
+    ADD CONSTRAINT party_individual_profiles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: party_records party_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_records
+    ADD CONSTRAINT party_records_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: posting_batches posting_batches_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -372,6 +621,34 @@ ALTER TABLE ONLY public.posting_batches
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: index_dap_unique_open_active_per_account_party_role; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_dap_unique_open_active_per_account_party_role ON public.deposit_account_parties USING btree (deposit_account_id, party_record_id, role) WHERE (((status)::text = 'active'::text) AND (ended_on IS NULL));
+
+
+--
+-- Name: index_deposit_account_parties_on_deposit_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_account_parties_on_deposit_account_id ON public.deposit_account_parties USING btree (deposit_account_id);
+
+
+--
+-- Name: index_deposit_account_parties_on_party_record_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_account_parties_on_party_record_id ON public.deposit_account_parties USING btree (party_record_id);
+
+
+--
+-- Name: index_deposit_accounts_on_account_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_deposit_accounts_on_account_number ON public.deposit_accounts USING btree (account_number);
 
 
 --
@@ -438,6 +715,20 @@ CREATE UNIQUE INDEX index_operational_events_on_channel_and_idempotency_key ON p
 
 
 --
+-- Name: index_operational_events_on_source_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operational_events_on_source_account_id ON public.operational_events USING btree (source_account_id);
+
+
+--
+-- Name: index_party_individual_profiles_on_party_record_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_party_individual_profiles_on_party_record_id ON public.party_individual_profiles USING btree (party_record_id);
+
+
+--
 -- Name: index_posting_batches_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -463,6 +754,38 @@ CREATE CONSTRAINT TRIGGER journal_lines_balance_check AFTER INSERT OR DELETE OR 
 --
 
 CREATE TRIGGER journal_lines_immutability_check BEFORE DELETE OR UPDATE ON public.journal_lines FOR EACH ROW EXECUTE FUNCTION public.ledger_journal_lines_reject_mutations();
+
+
+--
+-- Name: deposit_account_parties fk_deposit_account_parties_deposit_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_parties
+    ADD CONSTRAINT fk_deposit_account_parties_deposit_account FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
+-- Name: deposit_account_parties fk_deposit_account_parties_party_record; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_parties
+    ADD CONSTRAINT fk_deposit_account_parties_party_record FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+
+
+--
+-- Name: operational_events fk_operational_events_source_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_operational_events_source_account FOREIGN KEY (source_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
+-- Name: party_individual_profiles fk_party_individual_profiles_party_record; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_individual_profiles
+    ADD CONSTRAINT fk_party_individual_profiles_party_record FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
 
 
 --
@@ -528,6 +851,12 @@ ALTER TABLE ONLY public.journal_lines
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422130007'),
+('20260422130005'),
+('20260422130004'),
+('20260422130003'),
+('20260422130002'),
+('20260422130001'),
 ('20260422120011'),
 ('20260422120010'),
 ('20260422120005'),

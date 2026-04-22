@@ -2,9 +2,16 @@
 
 module Party
   module Models
-    # Aggregate root for Party; physical schema in docs/adr/0009-initial-party-persistence-schema.md.
-    # Replace with ApplicationRecord subclass when party_records migration exists.
-    class PartyRecord
+    class PartyRecord < ApplicationRecord
+      self.table_name = "party_records"
+
+      INDIVIDUAL = "individual"
+
+      has_one :individual_profile, class_name: "Party::Models::PartyIndividualProfile", dependent: :restrict_with_exception,
+        inverse_of: :party_record
+
+      validates :name, presence: true
+      validates :party_type, presence: true
     end
   end
 end

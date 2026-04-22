@@ -143,7 +143,8 @@ Same columns, with `loan_account_id` (FK → `loan_accounts`) replacing `deposit
 * [ADR-0005](0005-product-configuration-framework.md) — product behavior vs party-on-account contract  
 * [ADR-0006](0006-canonical-party-cif-model.md) — conceptual party-to-account separation  
 * [ADR-0009](0009-initial-party-persistence-schema.md) — `party_records` / profiles (FK target for `party_record_id`)  
-* [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) — ledger tables do not encode CIF participation
+* [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) — ledger tables do not encode CIF participation  
+* [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) — **deposit-only** slice 1 addendum (`deposit_accounts`, first `OpenAccount`, defer `loan_*`)
 
 ---
 

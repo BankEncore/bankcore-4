@@ -153,7 +153,8 @@ GL accounts are seeded from **[docs/concepts/100-chart-of-accounts.tsv](../conce
 
 * [ADR-0002](0002-operational-event-model.md)  
 * [ADR-0003](0003-posting-journal-architecture.md)  
-* [ADR-0008](0008-money-currency-rounding-policy.md)
+* [ADR-0008](0008-money-currency-rounding-policy.md)  
+* [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) — `deposit_accounts` and future **`operational_events.source_account_id`** for slice 1
 
 ---
 
