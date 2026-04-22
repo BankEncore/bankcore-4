@@ -208,7 +208,7 @@ Duplicate submissions MUST NOT create duplicate financial impact. Persistence ru
 
 **Create replay:** If an event already exists for the same `(channel, idempotency_key)`, the application **returns the existing row** (same primary key and stable API representation) and **does not** insert a duplicate. This applies while the event is `pending` (e.g. posting not yet successful) and after `posted` (read-only replay).
 
-**Semantic mismatch:** If a request reuses `(channel, idempotency_key)` but differs in **material fields** from the stored event (MVP: at minimum `event_type`, `amount_minor_units`, `currency`; extend explicitly as new columns ship), respond with **409 Conflict** and a stable error code—do **not** return the existing event as if the new request succeeded.
+**Semantic mismatch:** If a request reuses `(channel, idempotency_key)` but differs in **material fields** from the stored event, respond with **409 Conflict** and a stable error code—do **not** return the existing event as if the new request succeeded. **Slice 1 `deposit.accepted`:** the application hashes a stable payload including **`event_type`**, **`channel`**, **`idempotency_key`**, **`amount_minor_units`**, **`currency`**, and **`source_account_id`** for mismatch detection (see **`Core::OperationalEvents::Commands::RecordEvent`**). Extend the fingerprint explicitly when new persisted columns participate in idempotency for other `event_type` values.
 
 **Strict posting alignment:** Replays against a `posted` event must not update the row; they only surface persisted state.
 
@@ -231,6 +231,8 @@ Authoritative **MVP column list** for the ledger slice is tabulated in [ADR-0010
 | Reversal FKs | not persisted | **Slice A** when reversal commands ship. |
 | JSON metadata | not persisted | **Slice C:** versioned payload per `event_type` when needed. |
 | `amount_cents` (§4 wording) | `amount_minor_units` (ADR-0008) | Naming: use minor units in schema (ADR-0010). |
+| `source_account_id` (§4.2) | persisted — nullable FK → **`deposit_accounts`** | **Slice 1:** required for **`deposit.accepted`** financial path; idempotency mismatch logic includes it alongside type/amount/currency ([ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) §2.5). |
+| `destination_account_id` (§4.2) | not persisted | **Future slice:** internal transfers and similar events. |
 
 ### 8.2 Audit and timestamps
 

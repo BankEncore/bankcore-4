@@ -84,7 +84,7 @@ Minimal MVP set:
 **Rule:** At most **one “open” participation** per `(account_id, party_record_id, role)` at a time, where **open** means: `status = active` **and** `ended_on IS NULL`.
 
 * **History:** Closing a participation sets `ended_on` (and typically `status` to `inactive`). **Adding** a new period for the same triple uses a **new row** with a new `effective_on` (and new `id`). Do not reuse the same row to span disjoint periods.
-* **Enforcement:** express as a **partial unique index** in a future migration (example condition: `status = 'active' AND ended_on IS NULL`). Until that migration ships, enforce in application commands.
+* **Enforcement:** **Application commands** in **Accounts** enforce the rule for all participation writes. **Database:** For **`deposit_account_parties`**, a **partial unique index** (`index_dap_unique_open_active_per_account_party_role`, condition `status = 'active' AND ended_on IS NULL` on `(deposit_account_id, party_record_id, role)`) ships in migration **`20260422130005_create_deposit_account_parties`** ([ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) slice 1). **`loan_account_parties`** still rely on commands until a loan slice adds an equivalent index.
 
 `pending` rows may temporarily overlap by product policy; if overlap becomes disallowed, state the rule in Accounts commands and optionally tighten the index.
 
@@ -150,4 +150,4 @@ Same columns, with `loan_account_id` (FK → `loan_accounts`) replacing `deposit
 
 ## 5. Summary
 
-BankCORE records party participation on deposit and loan accounts in **`deposit_account_parties`** and **`loan_account_parties`**, owned by **Accounts**, with documented role/status strings, business-date validity, and a single open active row per `(account, party, role)` enforced in domain and eventually by partial unique index. Party identity tables remain under **Party** per ADR-0009; posting and GL remain orthogonal per ADR-0003 / ADR-0010.
+BankCORE records party participation on deposit and loan accounts in **`deposit_account_parties`** and **`loan_account_parties`**, owned by **Accounts**, with documented role/status strings, business-date validity, and a single open active row per `(account, party, role)` enforced in **domain commands** and, for **deposit** slice 1, also by the **partial unique index** above. Party identity tables remain under **Party** per ADR-0009; posting and GL remain orthogonal per ADR-0003 / ADR-0010.

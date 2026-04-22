@@ -27,6 +27,12 @@ docker compose run --rm web bin/rubocop -A
 
 - Remote target: **`BankEncore/bankcore-4`** (public). Create/push with `gh` only after you are authenticated (`gh auth login`); do not paste tokens into chat.
 
+## Documentation pointers
+
+- **[docs/concepts/01-mvp-vs-core.md](docs/concepts/01-mvp-vs-core.md)** — MVP vs full-system boundaries (“branch safely”).
+- **[docs/architecture/bankcore-module-catalog.md](docs/architecture/bankcore-module-catalog.md)** — domain modules and ownership.
+- **[docs/roadmap.md](docs/roadmap.md)** — draft engineering sequence (does not redefine MVP scope).
+
 ## Cursor project rules (BankCORE)
 
 - **`.cursor/rules/bankcore-planning.mdc`** — always on: MVP gating, modular monolith, kernel vs operational events, doc sources under `docs/`.

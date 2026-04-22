@@ -70,6 +70,7 @@ Full lifecycle, idempotency scope, status vocabulary, column roadmap, and compos
 | `idempotency_key`  | string   | NOT NULL — unique **together with** `channel` (`UNIQUE (channel, idempotency_key)`); stored exactly as submitted (ADR-0002 §7.3). |
 | `amount_minor_units` | bigint | nullable (financial events) |
 | `currency`         | string   | nullable |
+| `source_account_id` | bigint  | nullable, FK → **`deposit_accounts`** — populated for slice-1 **`deposit.accepted`** (and future account-sourced events); see [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) §2.5. |
 | `created_at` / `updated_at` | datetime | |
 
 ---
@@ -154,10 +155,10 @@ GL accounts are seeded from **[docs/concepts/100-chart-of-accounts.tsv](../conce
 * [ADR-0002](0002-operational-event-model.md)  
 * [ADR-0003](0003-posting-journal-architecture.md)  
 * [ADR-0008](0008-money-currency-rounding-policy.md)  
-* [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) — `deposit_accounts` and future **`operational_events.source_account_id`** for slice 1
+* [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) — `deposit_accounts`, **`deposit_account_parties`**, and **`operational_events.source_account_id`** for slice-1 **`deposit.accepted`**
 
 ---
 
 ## 13. Summary
 
-`Core::Ledger` owns **`gl_accounts`**, **`journal_entries`**, **`journal_lines`** with ADR-0008-friendly amounts, commit-time balance validation, and immutable posted rows. **`posting_batches`** and minimal **`operational_events`** exist to satisfy ADR-0003 linkage. MVP seeds the full chart from the TSV; the first cash deposit posting rule still hard-codes GL account numbers (`1110` / `2110`), which is an explicit temporary exception to ADR-0003 §7.2.
+`Core::Ledger` owns **`gl_accounts`**, **`journal_entries`**, **`journal_lines`** with ADR-0008-friendly amounts, commit-time balance validation, and immutable posted rows. **`posting_batches`** and **`operational_events`** (including optional **`source_account_id`** for account-linked financial events) satisfy ADR-0003 linkage. MVP seeds the full chart from the TSV; the first cash deposit posting rule still hard-codes GL account numbers (`1110` / `2110`), which is an explicit temporary exception to ADR-0003 §7.2.
