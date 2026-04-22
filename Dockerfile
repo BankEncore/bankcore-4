@@ -11,6 +11,7 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     nano \
     libpq-dev \
     libvips42 \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 ENV BUNDLE_PATH="/usr/local/bundle" \

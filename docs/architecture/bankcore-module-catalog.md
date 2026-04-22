@@ -832,7 +832,7 @@ Each table family should have **one owning domain** even if all tables live in o
 | ------------------------------------------------------------ | ------------------------- |
 | `party_*`                                                    | `Party`                   |
 | `product_*`, `fee_*`, `interest_*`                           | `Products`                |
-| `deposit_accounts`, `loan_accounts`, `account_relationships` | `Accounts`                |
+| `deposit_accounts`, `loan_accounts`, `deposit_account_parties`, `loan_account_parties`, `account_relationships` | `Accounts`                |
 | `operational_events`, `reversal_links`                       | `Core::OperationalEvents` |
 | `posting_batches`, `posting_legs`                            | `Core::Posting`           |
 | `journal_entries`, `journal_lines`, `gl_accounts`            | `Core::Ledger`            |

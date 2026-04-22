@@ -1,6 +1,20 @@
-#!/usr/bin/env ruby
-require_relative "../config/boot"
-require "active_support/continuous_integration"
+#!/usr/bin/env bash
+# Run CI with the Gemfile Ruby (3.4.x). If the first `ruby` on PATH is too old
+# (e.g. macOS system Ruby 2.6), delegate to the Docker Compose `web` image.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
-CI = ActiveSupport::ContinuousIntegration
-require_relative "../config/ci.rb"
+ruby_patch="$(ruby -e "print(RUBY_VERSION)" 2>/dev/null || echo "0.0.0")"
+
+if [[ "$ruby_patch" == 3.4.* ]]; then
+  exec ruby "$ROOT/script/ci.rb" "$@"
+fi
+
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  exec docker compose run --rm web ruby script/ci.rb "$@"
+fi
+
+echo "bankcore-4: Gemfile needs Ruby 3.4.x (see .ruby-version); this shell has ${ruby_patch}." >&2
+echo "Use mise/rbenv/asdf, open the Dev Container, or start Docker Desktop and retry (bin/ci uses the compose web image when Docker is available)." >&2
+exit 1

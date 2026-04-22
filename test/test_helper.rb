@@ -1,5 +1,6 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
+require_relative "../lib/bank_core/seeds/gl_coa"
 require "rails/test_help"
 
 module ActiveSupport
