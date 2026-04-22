@@ -58,15 +58,16 @@ The posting engine **must not** hardcode GL accounts at steady state. **MVP:** s
 
 ## 5. `operational_events` (minimal slice columns)
 
-Full lifecycle fields will grow with [ADR-0002](0002-operational-event-model.md). MVP columns:
+Full lifecycle, idempotency scope, status vocabulary, column roadmap, and composition rules are specified in [ADR-0002](0002-operational-event-model.md) (**§3.2**, **§3.3**, **§7.3**, **§8**). This section lists **MVP persisted columns** for the ledger slice.
 
 | Column             | Type     | Notes |
 | ------------------ | -------- | ----- |
 | `id`               | bigint   | PK    |
 | `event_type`       | string   | NOT NULL |
-| `status`           | string   | NOT NULL — e.g. `pending`, `posted`, `reversed` (app enum) |
+| `status`           | string   | NOT NULL — app enum: `pending`, `posted` (cross-layer semantics: ADR-0002 §3.2; not `reversed` on the same row under ADR-0002 §6.1) |
 | `business_date`    | date     | NOT NULL |
-| `idempotency_key`  | string   | NOT NULL, UNIQUE |
+| `channel`          | string   | NOT NULL — submission path for **scoped idempotency** (e.g. `teller`, `api`, `batch`, `system`; ADR-0002 §7.3). |
+| `idempotency_key`  | string   | NOT NULL — unique **together with** `channel` (`UNIQUE (channel, idempotency_key)`); stored exactly as submitted (ADR-0002 §7.3). |
 | `amount_minor_units` | bigint | nullable (financial events) |
 | `currency`         | string   | nullable |
 | `created_at` / `updated_at` | datetime | |

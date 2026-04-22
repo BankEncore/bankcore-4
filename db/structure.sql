@@ -218,7 +218,8 @@ CREATE TABLE public.operational_events (
     amount_minor_units bigint,
     currency character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    channel character varying NOT NULL
 );
 
 
@@ -430,10 +431,10 @@ CREATE UNIQUE INDEX index_journal_lines_on_journal_entry_id_and_sequence_no ON p
 
 
 --
--- Name: index_operational_events_on_idempotency_key; Type: INDEX; Schema: public; Owner: -
+-- Name: index_operational_events_on_channel_and_idempotency_key; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_operational_events_on_idempotency_key ON public.operational_events USING btree (idempotency_key);
+CREATE UNIQUE INDEX index_operational_events_on_channel_and_idempotency_key ON public.operational_events USING btree (channel, idempotency_key);
 
 
 --
@@ -527,6 +528,7 @@ ALTER TABLE ONLY public.journal_lines
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260422120011'),
 ('20260422120010'),
 ('20260422120005'),
 ('20260422120004'),

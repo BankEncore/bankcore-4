@@ -68,6 +68,7 @@ class JournalBalanceAndImmutabilityTest < ActiveSupport::TestCase
       event_type: "deposit.accepted",
       status: "posted",
       business_date: Date.current,
+      channel: "batch",
       idempotency_key: "test-#{SecureRandom.hex(8)}",
       amount_minor_units: 500,
       currency: "USD"
