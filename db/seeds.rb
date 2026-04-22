@@ -7,3 +7,7 @@
 require_relative "../lib/bank_core/seeds/gl_coa"
 
 BankCore::Seeds::GlCoa.seed!
+
+if Core::BusinessDate::Models::BusinessDateSetting.none?
+  Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.current)
+end
