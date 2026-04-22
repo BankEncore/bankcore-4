@@ -44,7 +44,7 @@ This document **sequences** engineering work. It does **not** redefine scope: MV
 
 **Done — vertical slice 1 (“one cash deposit”)**  
 
-Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/integration/slice1_vertical_slice_proof_test.rb) (Docker: `docker compose run --rm web bin/rails test test/integration/slice1_vertical_slice_proof_test.rb`):
+Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/integration/slice1_vertical_slice_proof_test.rb):
 
 - Persisted business date (`Core::BusinessDate`)
 - Party (individual), deposit account, single owner participation ([ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md))
@@ -71,10 +71,10 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 
 ## 5. Phase 0 — Hygiene (optional / parallel)
 
-| Item | Rationale |
-| ---- | --------- |
-| Align stale prose checklists with the repo | Some Cursor-local “first slice” notes still describe commands/routes as pending; code has moved on. |
-| `bin/rails zeitwerk:check` in CI | Low-cost guardrail for `app/domains` autoload. |
+| Item | Status |
+| ---- | ------ |
+| Align ADR prose with slice 1 implementation (business date, `source_account_id`, partial participation index on `deposit_account_parties`, `RecordEvent` idempotency fingerprint per [ADR-0002 §7.3](adr/0002-operational-event-model.md)) | **Done** — [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md), [ADR-0010 §5](adr/0010-ledger-persistence-and-seeded-coa.md), [ADR-0007 §2.7](adr/0007-party-account-ownership.md), [ADR-0002 §7.3 / §8.1](adr/0002-operational-event-model.md). |
+| `bin/rails zeitwerk:check` in CI | **Done** — [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs Zeitwerk before tests. |
 
 ---
 

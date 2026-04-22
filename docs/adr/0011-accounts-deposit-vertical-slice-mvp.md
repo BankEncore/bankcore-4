@@ -45,7 +45,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 * **`role`:** `owner`
 * **`status`:** `active` (do **not** use `pending` for CIP gating in slice 1 unless a later ADR requires it)
-* **`effective_on`:** **`Core::BusinessDate`** current processing date when that service exists; until then, the command accepts an explicit `effective_on` **or** uses the same date source agreed for `RecordEvent` (document in command/tests—**must** align with bank-date semantics, not silent `Date.current` in production paths without review)
+* **`effective_on`:** Defaults to **`Core::BusinessDate::Services::CurrentBusinessDate`** (singleton `core_business_date_settings`, migration `20260422130001`; seeds create a row when none exist). **`OpenAccount`** may pass an explicit `effective_on:` for tests or controlled overrides; production paths **must** align with institution bank-date semantics (not silent `Date.current` without review).
 * **`ended_on`:** `NULL`
 
 **Joint / second party:** out of scope; **`OpenAccount`** accepts a **single** `party_record_id` only.
@@ -54,12 +54,13 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 * **`party_record_id`** MUST reference an existing **`party_records.id`** (Party domain is system-of-record; Accounts validates via read/query port, not direct mutation of Party tables).
 * Enforce ADR-0007 **§2.7** (“at most one open active row per `(deposit_account_id, party_record_id, role)`”) in **application commands** for slice 1.
-* Add a **partial unique index** matching ADR-0007 §2.7 when status values and migration ordering are stable (same PR or immediate follow-up).
+* **Database:** A **partial unique index** on `deposit_account_parties` (`index_dap_unique_open_active_per_account_party_role`, `WHERE status = 'active' AND ended_on IS NULL`) ships in migration **`20260422130005_create_deposit_account_parties`**, alongside non-unique indexes on `deposit_account_id` and `party_record_id`.
 
 ### 2.5 Linking operational events to the deposit account
 
-* **`operational_events`** does not yet carry account FKs in the ledger slice ([ADR-0010](0010-ledger-persistence-and-seeded-coa.md) §5).
-* When **`RecordEvent`** / financial **`deposit.accepted`** is implemented, add a migration introducing **`source_account_id`** (nullable bigint, FK → **`deposit_accounts`**, name may be adjusted to match ADR-0002 §8 column roadmap) **in the same work as or immediately before** event payloads that require it—not necessarily bundled with the first **`deposit_accounts`** migration, but **documented** so posting can resolve customer liability from the **account** path.
+* **`operational_events.source_account_id`** (nullable bigint, FK → **`deposit_accounts`**) is persisted for slice 1 (migration **`20260422130007_add_source_account_id_to_operational_events`**; column also listed in [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) §5). Nullable so non–account-linked event types can exist later.
+* **`Core::OperationalEvents::Commands::RecordEvent`** for financial **`deposit.accepted`** **requires** `source_account_id` (open deposit account), idempotency per `(channel, idempotency_key)`, and aligns **`business_date`** with **`CurrentBusinessDate`** unless overridden—see implementation and tests under `app/domains/core/operational_events/` and `test/integration/slice1_vertical_slice_proof_test.rb`.
+* **`Core::Posting::Commands::PostEvent`** uses the event row (including amount and `source_account_id` metadata) to post **`deposit.accepted`** to GL **1110** / **2110** per [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) §11.
 
 ---
 
@@ -74,7 +75,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 1. One **`deposit_accounts`** row: `account_number` unique, `currency: "USD"`, `status: "open"`, `product_code: "slice1_demand_deposit"`.
 2. One **`deposit_account_parties`** row: `deposit_account_id` → new account, `party_record_id: 42`, `role: "owner"`, `status: "active"`, `effective_on: 2026-04-22`, `ended_on: NULL`.
 
-**Later:** `RecordEvent` for `deposit.accepted` sets `source_account_id` to this `deposit_accounts.id` when that column exists.
+3. **`RecordEvent`** for `deposit.accepted` (with `source_account_id` set to the new **`deposit_accounts.id`**, channel, idempotency key, amount, currency) creates an **`operational_events`** row in **`pending`** status; **`PostEvent`** then moves it to **`posted`** with a balanced journal (1110 / 2110).
 
 ---
 
@@ -94,7 +95,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 **Negative:** **`product_code`** is not FK-enforced; typo risk until Products domain exists. **Loan** symmetry is deferred—first loan slice must add tables and revisit tests.
 
-**Neutral:** **`effective_on`** coupling to **`Core::BusinessDate`** may require a small command signature change when BusinessDate lands.
+**Neutral:** **`OpenAccount`** / **`RecordEvent`** already depend on **`Core::BusinessDate`**; future ADRs may split “processing date” vs “calendar close” semantics without changing the slice-1 column shape.
 
 ---
 
@@ -102,12 +103,12 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 * [ADR-0007](0007-party-account-ownership.md) — participation model (this ADR implements the **deposit** half first)
 * [ADR-0009](0009-initial-party-persistence-schema.md) — `party_records` FK target
-* [ADR-0002](0002-operational-event-model.md) — operational events; **`source_account_id`** when events reference accounts
-* [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) — current `operational_events` MVP columns; extend per §2.5 above
+* [ADR-0002](0002-operational-event-model.md) — operational events; idempotency and **`source_account_id`** for account-linked financial events
+* [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) — ledger tables and **`operational_events`** MVP columns including **`source_account_id`**
 * [ADR-0001](0001-modular-monolith-architecture-with-domain-boundaries.md) — `Accounts` vs `Party` vs `Core` boundaries
 
 ---
 
 ## 7. Summary
 
-Vertical slice 1 **ships `deposit_accounts` + `deposit_account_parties` only**, with **`OpenAccount`** creating one **`owner` / `active`** participation row, **`product_code`** string stub, **`USD`** default currency, ADR-0007 **§2.7** enforced in commands first, **`loan_*`** tables deferred, and **`operational_events.source_account_id`** (or equivalent) added when financial events reference an account.
+Vertical slice 1 **ships `deposit_accounts` + `deposit_account_parties`**, with **`OpenAccount`** creating one **`owner` / `active`** participation row, **`product_code`** string stub, **`USD`** default currency, ADR-0007 **§2.7** enforced in application commands **and** partial unique index in **`20260422130005`**, **`loan_*`** tables deferred, and **`operational_events.source_account_id`** plus **`RecordEvent`** / **`PostEvent`** / Teller JSON routes for **`deposit.accepted`** (`pending` → `posted`, GL **1110** / **2110**).
