@@ -87,7 +87,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | Id | Deliverable | Notes |
 | -- | ----------- | ----- |
 | **1A** | **Posting rule abstraction** | Introduce a resolver or template registry so `PostEvent` is not a growing `case` on `event_type`. ADR if invariant or ownership changes. |
-| **1B** | **Core money movement events** | Add `event_type` values and commands (e.g. `withdrawal.disbursed`, `transfer.completed`) with mappings: cash out (credit cash / debit liability), transfer (liability ↔ liability). Extend slice proof or add sibling integration tests per flow. |
+| **1B** | **Core money movement events** | Add `event_type` values and commands (e.g. `withdrawal.disbursed`, `transfer.completed`) with mappings: cash out (credit cash / debit liability), transfer (liability ↔ liability). Extend [slice proof test](../test/integration/slice1_vertical_slice_proof_test.rb) or add sibling tests per flow. |
 | **1C** | **Teller session + cash control** | `teller_sessions`, drawer/location model, open/close, expected vs actual, variance; supervisor approval for material variance. **New ADR** + catalog row for owning module. |
 | **1D** | **Reversals** | Implement reversal FKs from [ADR-0002](adr/0002-operational-event-model.md) column roadmap; compensating journals only; original event stays `posted`. |
 | **1E** | **Minimum balance model** | `holds` + derived or persisted **available** for authorization: `available = ledger - holds` ([ADR-0004](adr/0004-account-balance-model.md)). |
