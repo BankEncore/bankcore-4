@@ -13,6 +13,7 @@ When planning or designing features for this Rails application:
   - `docs/concepts/00-functional-domains.md` (business scope)
   - `docs/concepts/01-mvp-vs-core.md` (MVP boundaries)
   - `docs/architecture/bankcore-module-catalog.md` (modular monolith boundaries)
+- Use `docs/roadmap.md` for **sequencing and phasing** only; it must not contradict the sources above (update the roadmap if scope changes).
 
 ## Architectural stance
 
