@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run bin/rails inside the Docker "web" service (Ruby 3.4.9 from Dockerfile).
+# Use when your host `ruby` is macOS system Ruby (2.6) and Bundler cannot load the Gemfile.
+# Example: bin/docker-rails test test/domains/core/ledger/gl_coa_seed_test.rb
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec docker compose run --rm web bin/rails "$@"

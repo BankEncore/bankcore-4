@@ -1,4 +1,4 @@
-# Run using bin/ci
+# Run using bin/ci (see script/ci.rb; bin/ci may delegate to Docker when host Ruby is too old).
 
 CI.run do
   step "Setup", "bin/setup --skip-server"

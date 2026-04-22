@@ -224,7 +224,8 @@ The following MUST go through Posting Engine:
 ## 12\. Related ADRs
 
 * ADR-0001: Modular Monolith Architecture  
-* ADR-0002: Operational Event Model
+* ADR-0002: Operational Event Model  
+* ADR-0010: Ledger persistence, balancing triggers, and seeded COA (MVP relational shape)
 
 ---
 
