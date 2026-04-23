@@ -29,7 +29,9 @@ docker compose run --rm web bin/rubocop -A
 
 ## Teller JSON workspace (local / curl)
 
-After `bin/rails db:seed` in **development**, sample **`operators`** rows exist (teller and supervisor). Send **`X-Operator-Id: <id>`** on every `POST /teller/…` request (`Content-Type: application/json`). Use a **supervisor** operator id for **`POST /teller/reversals`** and for **`override.approved`** on **`POST /teller/overrides`**. See [docs/adr/0015-teller-workspace-authentication.md](docs/adr/0015-teller-workspace-authentication.md).
+After `bin/rails db:seed` in **development**, sample **`operators`** rows exist (teller and supervisor). Send **`X-Operator-Id: <id>`** on every `POST /teller/…` request (`Content-Type: application/json`). Use a **supervisor** operator id for **`POST /teller/reversals`**, **`override.approved`** on **`POST /teller/overrides`**, and **`POST /teller/teller_sessions/approve_variance`**. See [docs/adr/0015-teller-workspace-authentication.md](docs/adr/0015-teller-workspace-authentication.md).
+
+**Cash variance threshold:** `TELLER_VARIANCE_THRESHOLD_MINOR_UNITS` (integer, default **0**). If `abs(actual - expected)` is **greater** than this value when closing a session, status becomes **`pending_supervisor`** until a supervisor calls **`approve_variance`**. When the threshold is **0**, any non-zero variance requires supervisor approval.
 
 ## Documentation pointers
 

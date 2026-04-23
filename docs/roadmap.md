@@ -88,11 +88,11 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | -- | ----------- | ----- |
 | **1A** | **Posting rule abstraction** | Introduce a resolver or template registry so `PostEvent` is not a growing `case` on `event_type`. ADR if invariant or ownership changes. |
 | **1B** | **Core money movement events** | Add `event_type` values and commands (e.g. `withdrawal.disbursed`, `transfer.completed`) with mappings: cash out (credit cash / debit liability), transfer (liability ↔ liability). Extend [slice proof test](../test/integration/slice1_vertical_slice_proof_test.rb) or add sibling tests per flow. |
-| **1C** | **Teller session + cash control** | `teller_sessions`, drawer/location model, open/close, expected vs actual, variance; supervisor approval for material variance. **New ADR** + catalog row for owning module. |
+| **1C** | **Teller session + cash control** | `teller_sessions`, open/close, expected vs actual, variance threshold → **`pending_supervisor`**, supervisor **`approve_variance`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)). Drawer/location depth and GL cash adjustment for variance still TBD. |
 | **1D** | **Reversals** | Implement reversal FKs from [ADR-0002](adr/0002-operational-event-model.md) column roadmap; compensating journals only; original event stays `posted`. |
 | **1E** | **Minimum balance model** | `holds` + derived or persisted **available** for authorization: `available = ledger - holds` ([ADR-0004](adr/0004-account-balance-model.md)). |
 | **1F** | **Trial balance + EOD gates** | Read model or report: GL trial balance; branch checks (sessions closed, books balanced). |
-| **1G** | **RBAC** | Actor on events; roles **teller** / **supervisor**; approvals for reversal, override, variance. **Foundation shipped:** **`operators`** table, teller JSON **`X-Operator-Id`**, supervisor HTTP gates on **`POST /teller/reversals`** and **`override.approved`** ([ADR-0015](adr/0015-teller-workspace-authentication.md)). Variance / EOD / richer policy layers remain as needed. |
+| **1G** | **RBAC** | Actor on events; roles **teller** / **supervisor**; approvals for reversal, override, variance. **Foundation shipped:** **`operators`** table, teller JSON **`X-Operator-Id`**, supervisor HTTP gates on **`POST /teller/reversals`**, **`override.approved`**, and **`POST /teller/teller_sessions/approve_variance`** ([ADR-0015](adr/0015-teller-workspace-authentication.md)). EOD / finer policy layers remain as needed. |
 
 ### 6.2 Phase 1 exit criteria
 

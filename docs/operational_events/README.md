@@ -43,9 +43,9 @@ Copy the structure from any existing file in this folder when adding a new `even
 | [override-requested.md](override-requested.md) | `override.requested` | No | `RecordControlEvent` |
 | [override-approved.md](override-approved.md) | `override.approved` | No | `RecordControlEvent` |
 
-**Teller JSON routes (workspace):** `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`, `POST /teller/reversals`, `POST /teller/holds`, `POST /teller/holds/release`, `POST /teller/teller_sessions`, `POST /teller/teller_sessions/close`, `POST /teller/overrides` (see [config/routes.rb](../../config/routes.rb)).
+**Teller JSON routes (workspace):** `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`, `POST /teller/reversals`, `POST /teller/holds`, `POST /teller/holds/release`, `POST /teller/teller_sessions`, `POST /teller/teller_sessions/close`, `POST /teller/teller_sessions/approve_variance`, `POST /teller/overrides` (see [config/routes.rb](../../config/routes.rb)).
 
-**Request identity:** every teller JSON request must include header **`X-Operator-Id`** with the id of an active row in **`operators`** (see [ADR-0015](../adr/0015-teller-workspace-authentication.md)). **`POST /teller/reversals`** and **`override.approved`** on `POST /teller/overrides` require a **supervisor** operator; role is enforced from the database, not from client-supplied role headers.
+**Request identity:** every teller JSON request must include header **`X-Operator-Id`** with the id of an active row in **`operators`** (see [ADR-0015](../adr/0015-teller-workspace-authentication.md)). **`POST /teller/reversals`**, **`override.approved`** on `POST /teller/overrides`, and **`POST /teller/teller_sessions/approve_variance`** require a **supervisor** operator; role is enforced from the database, not from client-supplied role headers.
 
 ## Concept layering
 

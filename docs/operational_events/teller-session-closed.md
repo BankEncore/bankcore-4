@@ -14,9 +14,9 @@ Records that a teller drawer session **closed**: cash counts captured, **expecte
 
 ## Semantics
 
-- **Does not** replace the **`teller_sessions`** row state; the session table typically holds `closed_at`, expected/actual cash in minor units, variance.
-- **Material variance** may require **supervisor approval** before the close is accepted (link to `override.approved` or supervisor fields on session—implementation choice).
-- **Cash shortage/over** as an economic correction may later be a **separate financial** `event_type` if posted to GL; keep session **close** as control state, not mixed with adjustment posting unless ADR says otherwise.
+- **Authoritative state** for MVP lives on **`teller_sessions`**, not only on this optional OE: **`CloseSession`** / **`ApproveSessionVariance`** ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)) set **`open`**, **`pending_supervisor`** (material variance over configured threshold), or **`closed`** with **`closed_at`**, expected/actual cash, **`variance_minor_units`**, and when applicable **`supervisor_approved_at`** / **`supervisor_operator_id`**.
+- **Material variance** uses **`config.x.teller.variance_threshold_minor_units`** (env **`TELLER_VARIANCE_THRESHOLD_MINOR_UNITS`**); above threshold the session stays **not closed** until **`POST /teller/teller_sessions/approve_variance`** with a **supervisor** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). Separate **`override.approved`** OEs remain optional workflow glue.
+- **Cash shortage/over** as an economic correction may later be a **separate financial** `event_type` if posted to GL; session close stays **control state** unless an ADR merges adjustment posting here.
 
 ## Persistence
 
@@ -31,8 +31,8 @@ Records that a teller drawer session **closed**: cash counts captured, **expecte
 
 ## Lifecycle
 
-- If supervisor required: **`pending`** until approved, then **`posted`**.
-- If no variance gate: **`posted`** immediately with session row updated atomically.
+- **Table-first (implemented):** if variance is within threshold → **`teller_sessions.status = closed`** and **`closed_at`** set on close. If over threshold → **`pending_supervisor`** until supervisor approve → then **`closed`** with **`supervisor_approved_at`** set.
+- **If this OE row exists:** mirror the same story with **`pending` → `posted`** on the event row, or keep the OE as future-only while the table remains source of truth.
 
 ## Posting
 
@@ -59,6 +59,8 @@ Records that a teller drawer session **closed**: cash counts captured, **expecte
 ## References
 
 - [ADR-0002](../adr/0002-operational-event-model.md) §5.3
+- [ADR-0014](../adr/0014-teller-sessions-and-control-events.md) — session close, variance threshold, approve command
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — supervisor gate on approve_variance
 - [roadmap.md](../roadmap.md) — Phase 1 EOD / session closure
 
 ## Examples
