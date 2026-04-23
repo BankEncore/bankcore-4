@@ -2,6 +2,8 @@
 
 module Teller
   class ReversalsController < ApplicationController
+    before_action :require_supervisor!, only: [ :create ]
+
     def create
       attrs = params.require(:reversal).permit(:original_operational_event_id, :channel, :idempotency_key, :business_date).to_h.symbolize_keys
       attrs[:original_operational_event_id] = attrs[:original_operational_event_id].to_i
@@ -11,7 +13,7 @@ module Teller
         attrs.delete(:business_date)
       end
 
-      result = Core::OperationalEvents::Commands::RecordReversal.call(**attrs)
+      result = Core::OperationalEvents::Commands::RecordReversal.call(**attrs, actor_id: current_operator.id)
       status = result[:outcome] == :created ? :created : :ok
       render json: { id: result[:event].id, outcome: result[:outcome] }, status: status
     rescue Core::OperationalEvents::Commands::RecordReversal::InvalidRequest => e

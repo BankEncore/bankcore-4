@@ -8,6 +8,9 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
     Core::BusinessDate::Models::BusinessDateSetting.delete_all
     Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.new(2026, 4, 21))
 
+    teller_operator, = create_workspace_operators!
+    auth = teller_json_headers(teller_operator)
+
     post "/teller/parties",
       params: {
         party_type: "individual",
@@ -16,7 +19,7 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
         last_name: "Customer",
         name_suffix: "Sr."
       }.to_json,
-      headers: { "CONTENT_TYPE" => "application/json" }
+      headers: auth
     assert_response :created
     party_json = response.parsed_body
     party_id = party_json["id"]
@@ -24,7 +27,7 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
 
     post "/teller/deposit_accounts",
       params: { deposit_account: { party_record_id: party_id } }.to_json,
-      headers: { "CONTENT_TYPE" => "application/json" }
+      headers: auth
     assert_response :created
     account_id = response.parsed_body["id"]
     account_number = response.parsed_body["account_number"]
@@ -50,18 +53,19 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
           source_account_id: account_id
         }
       }.to_json,
-      headers: { "CONTENT_TYPE" => "application/json" }
+      headers: auth
     assert_response :created
     event_id = response.parsed_body["id"]
 
     event = Core::OperationalEvents::Models::OperationalEvent.find(event_id)
+    assert_equal teller_operator.id, event.actor_id
     assert_equal "pending", event.status
     assert_equal "teller", event.channel
     assert_equal idem, event.idempotency_key
     assert_equal account_id, event.source_account_id
     assert_equal account.id, event.source_account.id
 
-    post "/teller/operational_events/#{event_id}/post", headers: { "CONTENT_TYPE" => "application/json" }
+    post "/teller/operational_events/#{event_id}/post", headers: auth
     assert_response :created
 
     event.reload

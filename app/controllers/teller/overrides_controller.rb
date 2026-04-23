@@ -2,9 +2,11 @@
 
 module Teller
   class OverridesController < ApplicationController
+    before_action :require_supervisor_for_override_approval!, only: [ :create ]
+
     def create
-      attrs = params.require(:override).permit(:event_type, :channel, :idempotency_key, :reference_id, :actor_id, :business_date).to_h.symbolize_keys
-      attrs[:actor_id] = attrs[:actor_id].to_i if attrs[:actor_id].present?
+      attrs = params.require(:override).permit(:event_type, :channel, :idempotency_key, :reference_id, :business_date).to_h.symbolize_keys
+      attrs[:actor_id] = current_operator.id
       if attrs[:business_date].present?
         attrs[:business_date] = Date.iso8601(attrs[:business_date].to_s)
       else
@@ -18,6 +20,15 @@ module Teller
       render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
     rescue Core::OperationalEvents::Commands::RecordControlEvent::MismatchedIdempotency => e
       render json: { error: "idempotency_conflict", fingerprint: e.fingerprint }, status: :conflict
+    end
+
+    private
+
+    def require_supervisor_for_override_approval!
+      return if performed?
+      return unless params.dig(:override, :event_type).to_s == "override.approved"
+
+      require_supervisor!
     end
   end
 end

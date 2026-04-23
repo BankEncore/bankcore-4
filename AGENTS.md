@@ -27,6 +27,10 @@ docker compose run --rm web bin/rubocop -A
 
 - Remote target: **`BankEncore/bankcore-4`** (public). Create/push with `gh` only after you are authenticated (`gh auth login`); do not paste tokens into chat.
 
+## Teller JSON workspace (local / curl)
+
+After `bin/rails db:seed` in **development**, sample **`operators`** rows exist (teller and supervisor). Send **`X-Operator-Id: <id>`** on every `POST /teller/…` request (`Content-Type: application/json`). Use a **supervisor** operator id for **`POST /teller/reversals`** and for **`override.approved`** on **`POST /teller/overrides`**. See [docs/adr/0015-teller-workspace-authentication.md](docs/adr/0015-teller-workspace-authentication.md).
+
 ## Documentation pointers
 
 - **[docs/concepts/01-mvp-vs-core.md](docs/concepts/01-mvp-vs-core.md)** — MVP vs full-system boundaries (“branch safely”).

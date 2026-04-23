@@ -1,7 +1,7 @@
 # BankCORE development roadmap
 
 **Status:** Draft  
-**Last reviewed:** 2026-04-22  
+**Last reviewed:** 2026-04-24  
 
 This document **sequences** engineering work. It does **not** redefine scope: MVP boundaries stay in [docs/concepts/01-mvp-vs-core.md](concepts/01-mvp-vs-core.md); boundaries and ownership stay in [docs/architecture/bankcore-module-catalog.md](architecture/bankcore-module-catalog.md) and the ADRs under [docs/adr/](adr/).
 
@@ -64,7 +64,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 - End-to-end reversals (including `reversal_of_event_id` / `reversed_by_event_id` per [ADR-0002 §4 / column roadmap](adr/0002-operational-event-model.md))  
 - Available balance and holds ([ADR-0004](adr/0004-account-balance-model.md))  
 - Trial balance visibility and EOD reconciliation discipline  
-- Teller vs supervisor roles and approval paths  
+- Teller vs supervisor roles and approval paths — **partial:** teller workspace identity + supervisor gates for reversal and `override.approved` ([ADR-0015](adr/0015-teller-workspace-authentication.md)); variance approval workflow, EOD gates, and finer-grained RBAC still to align with product.  
 - Joint and multi-party accounts (deferred in ADR-0011; listed under MVP in the concept doc for the **full** institution MVP)
 
 ---
@@ -92,7 +92,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | **1D** | **Reversals** | Implement reversal FKs from [ADR-0002](adr/0002-operational-event-model.md) column roadmap; compensating journals only; original event stays `posted`. |
 | **1E** | **Minimum balance model** | `holds` + derived or persisted **available** for authorization: `available = ledger - holds` ([ADR-0004](adr/0004-account-balance-model.md)). |
 | **1F** | **Trial balance + EOD gates** | Read model or report: GL trial balance; branch checks (sessions closed, books balanced). |
-| **1G** | **RBAC** | Actor on events; roles **teller** / **supervisor**; approvals for reversal, override, variance. |
+| **1G** | **RBAC** | Actor on events; roles **teller** / **supervisor**; approvals for reversal, override, variance. **Foundation shipped:** **`operators`** table, teller JSON **`X-Operator-Id`**, supervisor HTTP gates on **`POST /teller/reversals`** and **`override.approved`** ([ADR-0015](adr/0015-teller-workspace-authentication.md)). Variance / EOD / richer policy layers remain as needed. |
 
 ### 6.2 Phase 1 exit criteria
 
@@ -165,3 +165,4 @@ After **1A (posting rules)**, ship **1B (withdrawal)** together with **1C (sessi
 | [bankcore-module-catalog.md](architecture/bankcore-module-catalog.md) | Monolith boundaries |
 | [101-operational_event_enums_concept.md](concepts/101-operational_event_enums_concept.md) | Longer-term parent/component event modeling ideas |
 | [AGENTS.md](../AGENTS.md) | Stack, Docker, Cursor rules index |
+| [ADR-0015](adr/0015-teller-workspace-authentication.md) | Teller workspace `operators`, `X-Operator-Id`, supervisor gates |

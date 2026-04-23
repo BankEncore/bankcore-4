@@ -31,6 +31,7 @@ Records an **internal transfer** of funds between two deposit accounts (same ins
 | `source_account_id` | Yes | From account (debited in economic sense on liability). |
 | `destination_account_id` | Yes | To account (credited). |
 | `teller_session_id` | Optional | May be omitted for internal transfer; policy choice. |
+| `actor_id` | Optional | Nullable FK → **`operators`**. On teller JSON, set from **`X-Operator-Id`** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). |
 
 > **`destination_account_id`** on `operational_events` is required for this type once the column exists (ADR-0002 §8.1 roadmap).
 
@@ -66,6 +67,7 @@ Records an **internal transfer** of funds between two deposit accounts (same ins
 - [ADR-0002](../adr/0002-operational-event-model.md)
 - [ADR-0004](../adr/0004-account-balance-model.md)
 - [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md)
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller `X-Operator-Id`, `actor_id`
 
 ## Examples
 

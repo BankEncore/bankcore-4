@@ -10,7 +10,7 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 | ----- | ----- |
 | **`event_type`** | `deposit.accepted` |
 | **Category** | Financial (ADR-0002 §5.1) |
-| **Phase** | Implemented (vertical slice 1); fields may extend in Phase 1 (session FK, actor). |
+| **Phase** | Implemented (vertical slice 1); Phase 1 may add `teller_session_id` discipline. **`actor_id`** populated on teller JSON per [ADR-0015](../adr/0015-teller-workspace-authentication.md). |
 
 ## Semantics
 
@@ -31,7 +31,7 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 | `currency` | Yes | MVP: `USD`. |
 | `source_account_id` | Yes | FK → `deposit_accounts` (account credited). |
 | `teller_session_id` | Phase 1 | When teller session discipline exists: ties activity to drawer. |
-| `actor_id` | Later | Per ADR-0002 §8.1 column roadmap. |
+| `actor_id` | Optional | Nullable FK → **`operators`**. On **`POST /teller/operational_events`**, set from **`X-Operator-Id`** when present ([ADR-0015](../adr/0015-teller-workspace-authentication.md)); other channels may omit until they authenticate. |
 
 ## Lifecycle
 
@@ -71,6 +71,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 - [ADR-0002](../adr/0002-operational-event-model.md) — lifecycle, idempotency, reversals.
 - [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md) — tables, GL seed.
 - [ADR-0011](../adr/0011-accounts-deposit-vertical-slice-mvp.md) — slice 1 deposit path.
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller JSON `X-Operator-Id`, `actor_id` → `operators`.
 
 ## Examples
 

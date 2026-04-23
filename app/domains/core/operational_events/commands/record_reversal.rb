@@ -23,7 +23,7 @@ module Core
 
         REVERSIBLE_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed].freeze
 
-        def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil)
+        def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
           RecordEvent.validate_channel!(channel)
 
           original = Models::OperationalEvent.find_by(id: original_operational_event_id)
@@ -59,7 +59,8 @@ module Core
                 currency: original.currency,
                 source_account_id: original.source_account_id,
                 destination_account_id: original.destination_account_id,
-                reversal_of_event_id: original.id
+                reversal_of_event_id: original.id,
+                actor_id: actor_id
               )
               { outcome: :created, event: event }
             end

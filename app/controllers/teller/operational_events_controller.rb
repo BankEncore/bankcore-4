@@ -25,7 +25,7 @@ module Teller
         attrs.delete(:business_date)
       end
 
-      result = Core::OperationalEvents::Commands::RecordEvent.call(**attrs)
+      result = Core::OperationalEvents::Commands::RecordEvent.call(**attrs, actor_id: current_operator.id)
       status = result[:outcome] == :created ? :created : :ok
       render json: {
         id: result[:event].id,

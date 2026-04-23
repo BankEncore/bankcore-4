@@ -16,4 +16,4 @@
 
 ## 2. API
 
-Teller JSON routes are listed in [docs/operational_events/README.md](../operational_events/README.md).
+Teller JSON routes are listed in [docs/operational_events/README.md](../operational_events/README.md). **Authentication and supervisor gates** for the teller workspace (`X-Operator-Id`, reversal / `override.approved`, and future variance approval) are defined in [ADR-0015](0015-teller-workspace-authentication.md).

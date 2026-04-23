@@ -14,3 +14,18 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
+
+class ActionDispatch::IntegrationTest
+  def teller_json_headers(operator)
+    {
+      "CONTENT_TYPE" => "application/json",
+      "X-Operator-Id" => operator.id.to_s
+    }
+  end
+
+  def create_workspace_operators!
+    teller = Workspace::Models::Operator.create!(role: "teller", display_name: "Test Teller", active: true)
+    supervisor = Workspace::Models::Operator.create!(role: "supervisor", display_name: "Test Supervisor", active: true)
+    [ teller, supervisor ]
+  end
+end
