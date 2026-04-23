@@ -9,6 +9,7 @@ class CoreOperationalEventsRecordEventTest < ActiveSupport::TestCase
     Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.new(2026, 4, 22))
     @party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Pat", last_name: "Lee")
     @account = Accounts::Commands::OpenAccount.call(party_record_id: @party.id)
+    @teller_session = Teller::Commands::OpenSession.call(drawer_code: "record-event-test-#{SecureRandom.hex(4)}")
   end
 
   test "creates pending deposit.accepted with source_account_id" do
@@ -36,6 +37,45 @@ class CoreOperationalEventsRecordEventTest < ActiveSupport::TestCase
       record_deposit!(idempotency_key: "idem-mix", amount: 11_00)
     end
     assert_predicate err.fingerprint, :present?
+  end
+
+  test "mismatch when same idempotency key replayed with different teller_session_id" do
+    other = Teller::Commands::OpenSession.call(drawer_code: "other-#{SecureRandom.hex(4)}")
+    record_deposit!(idempotency_key: "idem-session", amount: 10_00, teller_session_id: @teller_session.id)
+    assert_raises(Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency) do
+      record_deposit!(idempotency_key: "idem-session", amount: 10_00, teller_session_id: other.id)
+    end
+  end
+
+  test "deposit without teller_session_id raises when require_open_session_for_cash is true" do
+    err = assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordEvent.call(
+        event_type: "deposit.accepted",
+        channel: "teller",
+        idempotency_key: "no-session-#{SecureRandom.hex(4)}",
+        amount_minor_units: 100,
+        currency: "USD",
+        source_account_id: @account.id,
+        teller_session_id: nil
+      )
+    end
+    assert_match(/teller_session_id/i, err.message)
+  end
+
+  test "deposit without teller_session_id allowed when require_open_session_for_cash is false" do
+    prior = Rails.application.config.x.teller.require_open_session_for_cash
+    Rails.application.config.x.teller.require_open_session_for_cash = false
+    r = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "deposit.accepted",
+      channel: "teller",
+      idempotency_key: "gate-off-#{SecureRandom.hex(4)}",
+      amount_minor_units: 100,
+      currency: "USD",
+      source_account_id: @account.id
+    )
+    assert_equal :created, r[:outcome]
+  ensure
+    Rails.application.config.x.teller.require_open_session_for_cash = prior
   end
 
   test "posted replay raises" do
@@ -74,14 +114,15 @@ class CoreOperationalEventsRecordEventTest < ActiveSupport::TestCase
 
   private
 
-  def record_deposit!(idempotency_key:, amount:)
+  def record_deposit!(idempotency_key:, amount:, teller_session_id: @teller_session.id)
     Core::OperationalEvents::Commands::RecordEvent.call(
       event_type: "deposit.accepted",
       channel: "teller",
       idempotency_key: idempotency_key,
       amount_minor_units: amount,
       currency: "USD",
-      source_account_id: @account.id
+      source_account_id: @account.id,
+      teller_session_id: teller_session_id
     )
   end
 end

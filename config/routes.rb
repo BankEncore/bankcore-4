@@ -11,7 +11,10 @@ Rails.application.routes.draw do
     post "holds/release", to: "holds#release"
     post "teller_sessions", to: "teller_sessions#create"
     post "teller_sessions/close", to: "teller_sessions#close"
+    post "teller_sessions/approve_variance", to: "teller_sessions#approve_variance"
     post "overrides", to: "overrides#create"
+    get "reports/trial_balance", to: "reports#trial_balance"
+    get "reports/eod_readiness", to: "reports#eod_readiness"
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

@@ -8,6 +8,8 @@ module Teller
       class InvalidState < Error; end
 
       def self.call(teller_session_id:, expected_cash_minor_units:, actual_cash_minor_units:)
+        threshold = Rails.application.config.x.teller.variance_threshold_minor_units.to_i
+
         Teller::Models::TellerSession.transaction do
           session = Teller::Models::TellerSession.lock.find_by(id: teller_session_id)
           raise NotFound, "teller_session_id=#{teller_session_id}" if session.nil?
@@ -16,13 +18,24 @@ module Teller
           end
 
           variance = actual_cash_minor_units.to_i - expected_cash_minor_units.to_i
-          session.update!(
-            status: Teller::Models::TellerSession::STATUS_CLOSED,
-            closed_at: Time.current,
+          attrs = {
             expected_cash_minor_units: expected_cash_minor_units,
             actual_cash_minor_units: actual_cash_minor_units,
             variance_minor_units: variance
-          )
+          }
+
+          if variance.abs > threshold
+            session.update!(
+              **attrs,
+              status: Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR
+            )
+          else
+            session.update!(
+              **attrs,
+              status: Teller::Models::TellerSession::STATUS_CLOSED,
+              closed_at: Time.current
+            )
+          end
           session
         end
       end

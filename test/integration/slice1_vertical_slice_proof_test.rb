@@ -41,6 +41,10 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
     assert_equal "active", participation.status
     assert_equal Date.new(2026, 4, 21), participation.effective_on
 
+    post "/teller/teller_sessions", params: {}.to_json, headers: auth
+    assert_response :created
+    cash_session_id = response.parsed_body["id"]
+
     idem = "slice1-proof-#{SecureRandom.hex(8)}"
     post "/teller/operational_events",
       params: {
@@ -50,7 +54,8 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
           idempotency_key: idem,
           amount_minor_units: 10_000,
           currency: "USD",
-          source_account_id: account_id
+          source_account_id: account_id,
+          teller_session_id: cash_session_id
         }
       }.to_json,
       headers: auth

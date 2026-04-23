@@ -9,6 +9,8 @@ module Teller
       STATUS_CLOSED = "closed"
       STATUS_PENDING_SUPERVISOR = "pending_supervisor"
 
+      belongs_to :supervisor_operator, class_name: "Workspace::Models::Operator", optional: true
+
       has_many :operational_events, class_name: "Core::OperationalEvents::Models::OperationalEvent",
                                     inverse_of: :teller_session,
                                     dependent: :restrict_with_exception

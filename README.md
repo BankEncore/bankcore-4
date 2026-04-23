@@ -39,6 +39,13 @@ docker compose run --rm web bin/rails test
 
 Use **“Dev Containers: Reopen in Container”** in VS Code or Cursor. See [.devcontainer/devcontainer.json](.devcontainer/devcontainer.json).
 
+## Documentation
+
+- **[docs/roadmap.md](docs/roadmap.md)** — engineering sequence and **current code checkpoint** (§4).
+- **[docs/concepts/01-mvp-vs-core.md](docs/concepts/01-mvp-vs-core.md)** — MVP vs full-system framing.
+- **[docs/adr/](docs/adr/)** — architecture decisions.
+- **[docs/architecture/bankcore-module-catalog.md](docs/architecture/bankcore-module-catalog.md)** — modular monolith boundaries and table ownership.
+
 ## More
 
 See [AGENTS.md](AGENTS.md) for stack summary and agent-oriented notes.

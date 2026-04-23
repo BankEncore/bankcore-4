@@ -570,6 +570,7 @@ CREATE TABLE public.teller_sessions (
     supervisor_approved_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    supervisor_operator_id bigint,
     CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY ((ARRAY['open'::character varying, 'closed'::character varying, 'pending_supervisor'::character varying])::text[])))
 );
 
@@ -861,6 +862,13 @@ CREATE INDEX index_holds_on_released_by_operational_event_id ON public.holds USI
 
 
 --
+-- Name: index_journal_entries_on_business_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_journal_entries_on_business_date ON public.journal_entries USING btree (business_date);
+
+
+--
 -- Name: index_journal_entries_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -966,6 +974,13 @@ CREATE INDEX index_posting_batches_on_operational_event_id ON public.posting_bat
 
 
 --
+-- Name: index_teller_sessions_on_supervisor_operator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_teller_sessions_on_supervisor_operator_id ON public.teller_sessions USING btree (supervisor_operator_id);
+
+
+--
 -- Name: journal_entries journal_entries_immutability_check; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1067,6 +1082,14 @@ ALTER TABLE ONLY public.journal_entries
 
 
 --
+-- Name: teller_sessions fk_rails_86b8203f6d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.teller_sessions
+    ADD CONSTRAINT fk_rails_86b8203f6d FOREIGN KEY (supervisor_operator_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: operational_events fk_rails_8cf89c2939; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1153,6 +1176,8 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120002'),
+('20260424120001'),
 ('20260424120000'),
 ('20260423120005'),
 ('20260423120004'),

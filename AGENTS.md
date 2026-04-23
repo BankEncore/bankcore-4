@@ -29,7 +29,13 @@ docker compose run --rm web bin/rubocop -A
 
 ## Teller JSON workspace (local / curl)
 
-After `bin/rails db:seed` in **development**, sample **`operators`** rows exist (teller and supervisor). Send **`X-Operator-Id: <id>`** on every `POST /teller/…` request (`Content-Type: application/json`). Use a **supervisor** operator id for **`POST /teller/reversals`** and for **`override.approved`** on **`POST /teller/overrides`**. See [docs/adr/0015-teller-workspace-authentication.md](docs/adr/0015-teller-workspace-authentication.md).
+After `bin/rails db:seed` in **development**, sample **`operators`** rows exist (teller and supervisor). Send **`X-Operator-Id: <id>`** on every `POST /teller/…` and **`GET /teller/reports/…`** request (`Content-Type: application/json` on writes). Use a **supervisor** operator id for **`POST /teller/reversals`**, **`override.approved`** on **`POST /teller/overrides`**, and **`POST /teller/teller_sessions/approve_variance`**. See [docs/adr/0015-teller-workspace-authentication.md](docs/adr/0015-teller-workspace-authentication.md).
+
+**Trial balance / EOD readiness:** `GET /teller/reports/trial_balance` and `GET /teller/reports/eod_readiness` with optional query **`business_date`** (ISO **YYYY-MM-DD**); omit to use the current core business date. See [docs/adr/0016-trial-balance-and-eod-readiness.md](docs/adr/0016-trial-balance-and-eod-readiness.md).
+
+**Cash variance threshold:** `TELLER_VARIANCE_THRESHOLD_MINOR_UNITS` (integer, default **0**). If `abs(actual - expected)` is **greater** than this value when closing a session, status becomes **`pending_supervisor`** until a supervisor calls **`approve_variance`**. When the threshold is **0**, any non-zero variance requires supervisor approval.
+
+**Open session for teller cash:** `TELLER_REQUIRE_OPEN_SESSION_FOR_CASH` (default **true**). When enabled, **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** require **`teller_session_id`** referencing an **open** session (`transfer.completed` exempt). Set to **`false`**, **`0`**, or **`no`** to disable.
 
 ## Documentation pointers
 
