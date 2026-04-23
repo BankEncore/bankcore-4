@@ -6,6 +6,12 @@ Rails.application.routes.draw do
     post "deposit_accounts", to: "deposit_accounts#create"
     post "operational_events", to: "operational_events#create"
     post "operational_events/:id/post", to: "operational_event_posts#create"
+    post "reversals", to: "reversals#create"
+    post "holds", to: "holds#create"
+    post "holds/release", to: "holds#release"
+    post "teller_sessions", to: "teller_sessions#create"
+    post "teller_sessions/close", to: "teller_sessions#close"
+    post "overrides", to: "overrides#create"
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

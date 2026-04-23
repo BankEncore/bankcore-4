@@ -39,7 +39,7 @@ This includes:
 
 ### 2.2 Event `event_type` registry (MVP)
 
-Canonical **`event_type`** strings (dotted codes such as `deposit.accepted` in §5) are the **application registry** for MVP. [docs/concepts/101-operational_event_enums_concept.md](../concepts/101-operational_event_enums_concept.md) supplies **parent/component vocabulary** for product and analytics; mapping from persisted `event_type` to concept-101 families is **documentation or a future mapping ADR**, not a second source of truth in the row. New `event_type` values require catalog or ADR review so posting and reporting stay aligned.
+Canonical **`event_type`** strings (dotted codes such as `deposit.accepted` in §5) are the **application registry** for MVP. Per-type semantics, posting, and idempotency fields are elaborated in **[docs/operational_events/](../operational_events/README.md)**. [docs/concepts/101-operational_event_enums_concept.md](../concepts/101-operational_event_enums_concept.md) supplies **parent/component vocabulary** for product and analytics; mapping from persisted `event_type` to concept-101 families is **documentation or a future mapping ADR**, not a second source of truth in the row. New `event_type` values require catalog or ADR review so posting and reporting stay aligned.
 
 ---
 
@@ -225,14 +225,14 @@ Authoritative **MVP column list** for the ledger slice is tabulated in [ADR-0010
 | Conceptual field (§4) | MVP table today | Note |
 | --------------------- | ----------------- | ---- |
 | `effective_at` | not persisted | **Slice A:** add when integrations require server timestamp of intent. |
-| `actor_id` | not persisted | **Slice B:** workspace / operator identity. |
+| `actor_id` | persisted (nullable bigint stub) | Operator id when supplied; full identity tables deferred. |
 | `channel` | persisted (idempotency §7.3) | Required for scoped idempotency; aligns with §4.1. |
-| `reference_id` / correlation | not persisted | **Slice A:** external trace (wire ref, file id, etc.). |
-| Reversal FKs | not persisted | **Slice A** when reversal commands ship. |
+| `reference_id` / correlation | persisted (`reference_id`) | Control / correlation (MVP teller overrides, hold release ref). |
+| Reversal FKs | persisted | **`reversal_of_event_id`**, **`reversed_by_event_id`** — see [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) §5 and **`posting.reversal`** in [ADR-0012](0012-posting-rule-registry-and-journal-subledger.md). |
 | JSON metadata | not persisted | **Slice C:** versioned payload per `event_type` when needed. |
 | `amount_cents` (§4 wording) | `amount_minor_units` (ADR-0008) | Naming: use minor units in schema (ADR-0010). |
 | `source_account_id` (§4.2) | persisted — nullable FK → **`deposit_accounts`** | **Slice 1:** required for **`deposit.accepted`** financial path; idempotency mismatch logic includes it alongside type/amount/currency ([ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) §2.5). |
-| `destination_account_id` (§4.2) | not persisted | **Future slice:** internal transfers and similar events. |
+| `destination_account_id` (§4.2) | persisted — nullable FK → **`deposit_accounts`** | **`transfer.completed`** and mirrored on **`posting.reversal`**. |
 
 ### 8.2 Audit and timestamps
 

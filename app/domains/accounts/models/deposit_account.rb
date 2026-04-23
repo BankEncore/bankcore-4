@@ -13,7 +13,7 @@ module Accounts
 
       validates :account_number, presence: true, uniqueness: true
       validates :currency, presence: true
-      validates :status, presence: true, inclusion: { in: [STATUS_OPEN, STATUS_CLOSED] }
+      validates :status, presence: true, inclusion: { in: [ STATUS_OPEN, STATUS_CLOSED ] }
       validates :product_code, presence: true
     end
   end

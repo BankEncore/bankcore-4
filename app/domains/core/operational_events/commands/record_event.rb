@@ -23,7 +23,7 @@ module Core
           end
         end
 
-        SLICE_EVENT_TYPES = %w[deposit.accepted].freeze
+        FINANCIAL_EVENT_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed].freeze
         CHANNELS = %w[teller api batch system].freeze
 
         # @return [Hash] `{ outcome: :created|:replay, event: OperationalEvent }`
@@ -34,21 +34,28 @@ module Core
           amount_minor_units:,
           currency:,
           source_account_id:,
-          business_date: nil
+          destination_account_id: nil,
+          business_date: nil,
+          teller_session_id: nil
         )
           validate_channel!(channel)
           validate_event_type!(event_type)
-          validate_deposit_accepted!(amount_minor_units, currency, source_account_id)
+          validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
           validate_source_account!(source_account_id)
+          validate_destination_account!(event_type, destination_account_id)
+          validate_transfer_distinct!(event_type, source_account_id, destination_account_id)
+          validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
+          validate_transfer_available!(event_type, source_account_id, amount_minor_units)
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
-          incoming_fp = fingerprint(
+          incoming_fp = fingerprint_for(
             event_type: event_type,
             channel: channel,
             idempotency_key: idempotency_key,
             amount_minor_units: amount_minor_units,
             currency: currency,
-            source_account_id: source_account_id
+            source_account_id: source_account_id,
+            destination_account_id: destination_account_id
           )
 
           begin
@@ -66,7 +73,9 @@ module Core
                 idempotency_key: idempotency_key,
                 amount_minor_units: amount_minor_units,
                 currency: currency,
-                source_account_id: source_account_id
+                source_account_id: source_account_id,
+                destination_account_id: destination_account_id,
+                teller_session_id: teller_session_id
               )
               { outcome: :created, event: event }
             end
@@ -76,15 +85,19 @@ module Core
           end
         end
 
-        def self.fingerprint(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:)
+        def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
+                                destination_account_id: nil)
           payload = {
-            event_type: event_type,
-            channel: channel,
-            idempotency_key: idempotency_key,
+            event_type: event_type.to_s,
+            channel: channel.to_s,
+            idempotency_key: idempotency_key.to_s,
             amount_minor_units: amount_minor_units.to_i,
             currency: currency.to_s,
             source_account_id: source_account_id.to_i
           }
+          if event_type.to_s == "transfer.completed"
+            payload[:destination_account_id] = destination_account_id.to_i
+          end
           Digest::SHA256.hexdigest(payload.to_json)
         end
 
@@ -95,18 +108,21 @@ module Core
         end
 
         def self.validate_event_type!(event_type)
-          return if SLICE_EVENT_TYPES.include?(event_type.to_s)
+          return if FINANCIAL_EVENT_TYPES.include?(event_type.to_s)
 
-          raise InvalidRequest, "event_type not supported in slice 1: #{event_type.inspect}"
+          raise InvalidRequest, "event_type not supported: #{event_type.inspect}"
         end
 
-        def self.validate_deposit_accepted!(amount_minor_units, currency, source_account_id)
+        def self.validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
           if amount_minor_units.nil? || amount_minor_units.to_i <= 0
             raise InvalidRequest, "amount_minor_units must be a positive integer"
           end
           raise InvalidRequest, "currency is required" if currency.blank?
-          raise InvalidRequest, "currency must be USD for slice 1" unless currency.to_s == "USD"
-          raise InvalidRequest, "source_account_id is required for deposit.accepted" if source_account_id.blank?
+          raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
+          raise InvalidRequest, "source_account_id is required" if source_account_id.blank?
+          if event_type.to_s == "transfer.completed" && destination_account_id.blank?
+            raise InvalidRequest, "destination_account_id is required for transfer.completed"
+          end
         end
 
         def self.validate_source_account!(source_account_id)
@@ -115,14 +131,44 @@ module Core
           raise InvalidRequest, "source account must be open" unless acc.status == Accounts::Models::DepositAccount::STATUS_OPEN
         end
 
+        def self.validate_destination_account!(event_type, destination_account_id)
+          return unless event_type.to_s == "transfer.completed"
+
+          acc = Accounts::Models::DepositAccount.find_by(id: destination_account_id)
+          raise InvalidRequest, "destination_account_id not found" if acc.nil?
+          raise InvalidRequest, "destination account must be open" unless acc.status == Accounts::Models::DepositAccount::STATUS_OPEN
+        end
+
+        def self.validate_transfer_distinct!(event_type, source_account_id, destination_account_id)
+          return unless event_type.to_s == "transfer.completed"
+          return if source_account_id.to_i != destination_account_id.to_i
+
+          raise InvalidRequest, "transfer requires distinct source and destination accounts"
+        end
+
+        def self.validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
+          return unless event_type.to_s == "withdrawal.posted"
+
+          available = Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: source_account_id)
+          raise InvalidRequest, "insufficient available balance" if available < amount_minor_units.to_i
+        end
+
+        def self.validate_transfer_available!(event_type, source_account_id, amount_minor_units)
+          return unless event_type.to_s == "transfer.completed"
+
+          available = Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: source_account_id)
+          raise InvalidRequest, "insufficient available balance" if available < amount_minor_units.to_i
+        end
+
         def self.handle_existing(existing, incoming_fp)
-          existing_fp = fingerprint(
+          existing_fp = fingerprint_for(
             event_type: existing.event_type,
             channel: existing.channel,
             idempotency_key: existing.idempotency_key,
             amount_minor_units: existing.amount_minor_units,
             currency: existing.currency,
-            source_account_id: existing.source_account_id
+            source_account_id: existing.source_account_id,
+            destination_account_id: existing.destination_account_id
           )
           raise MismatchedIdempotency.new(incoming_fp) if existing_fp != incoming_fp
           raise PostedReplay if existing.status == Models::OperationalEvent::STATUS_POSTED

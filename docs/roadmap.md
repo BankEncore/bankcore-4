@@ -149,7 +149,7 @@ After **1A (posting rules)**, ship **1B (withdrawal)** together with **1C (sessi
 
 ## 12. Open decisions (track in ADRs or short design notes)
 
-- Canonical **`event_type`** strings for each reversal variant vs [ADR-0002](adr/0002-operational-event-model.md) registry.  
+- ~~Canonical **`event_type`** strings for each reversal variant~~ — **`posting.reversal`** + `RecordReversal` ([ADR-0012](adr/0012-posting-rule-registry-and-journal-subledger.md)); see [compensating-reversal.md](operational_events/compensating-reversal.md).  
 - **Module ownership** for drawer cash vs approval workflow.  
 - **Available balance**: compute-on-read vs materialized projection for volume.  
 - How **trial balance** is exposed (internal JSON vs operator report vs both).

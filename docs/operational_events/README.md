@@ -30,18 +30,20 @@ Copy the structure from any existing file in this folder when adding a new `even
 
 ## Index
 
-| Spec | `event_type` | GL posting |
-| ---- | ------------ | ---------- |
-| [deposit-accepted.md](deposit-accepted.md) | `deposit.accepted` | Yes |
-| [withdrawal-posted.md](withdrawal-posted.md) | `withdrawal.posted` | Yes |
-| [transfer-completed.md](transfer-completed.md) | `transfer.completed` | Yes |
-| [compensating-reversal.md](compensating-reversal.md) | TBD (see spec) | Yes |
-| [hold-placed.md](hold-placed.md) | `hold.placed` | No (typical) |
-| [hold-released.md](hold-released.md) | `hold.released` | No (typical) |
-| [teller-session-opened.md](teller-session-opened.md) | `teller_session.opened` | No |
-| [teller-session-closed.md](teller-session-closed.md) | `teller_session.closed` | No |
-| [override-requested.md](override-requested.md) | `override.requested` | No |
-| [override-approved.md](override-approved.md) | `override.approved` | No |
+| Spec | `event_type` | GL posting | Record command |
+| ---- | ------------ | ---------- | ---------------- |
+| [deposit-accepted.md](deposit-accepted.md) | `deposit.accepted` | Yes | `RecordEvent` |
+| [withdrawal-posted.md](withdrawal-posted.md) | `withdrawal.posted` | Yes | `RecordEvent` |
+| [transfer-completed.md](transfer-completed.md) | `transfer.completed` | Yes | `RecordEvent` |
+| [compensating-reversal.md](compensating-reversal.md) | `posting.reversal` | Yes | `RecordReversal` |
+| [hold-placed.md](hold-placed.md) | `hold.placed` | No | `Accounts::Commands::PlaceHold` |
+| [hold-released.md](hold-released.md) | `hold.released` | No | `Accounts::Commands::ReleaseHold` |
+| [teller-session-opened.md](teller-session-opened.md) | (table-first MVP; OE optional) | No | `Teller::Commands::OpenSession` |
+| [teller-session-closed.md](teller-session-closed.md) | (table-first MVP; OE optional) | No | `Teller::Commands::CloseSession` |
+| [override-requested.md](override-requested.md) | `override.requested` | No | `RecordControlEvent` |
+| [override-approved.md](override-approved.md) | `override.approved` | No | `RecordControlEvent` |
+
+**Teller JSON routes (workspace):** `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`, `POST /teller/reversals`, `POST /teller/holds`, `POST /teller/holds/release`, `POST /teller/teller_sessions`, `POST /teller/teller_sessions/close`, `POST /teller/overrides` (see [config/routes.rb](../../config/routes.rb)).
 
 ## Concept layering
 

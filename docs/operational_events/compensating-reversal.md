@@ -9,13 +9,13 @@ This document is **pattern-first**. The canonical **`event_type`** string for re
 - **Per original type:** e.g. `deposit.accepted.reversal`
 - **Generic:** e.g. `financial_event.reversed` with payload identifying original event id and rule selection
 
-Implementation **must** pick one approach and register it alongside posting rules.
+Implementation uses a **generic** `posting.reversal` plus `Core::OperationalEvents::Commands::RecordReversal`; posting rules mirror the original journal ([ADR-0012](../adr/0012-posting-rule-registry-and-journal-subledger.md)).
 
 ## Registry
 
 | Field | Value |
 | ----- | ----- |
-| **`event_type`** | **TBD** — single chosen string or small family documented in posting registry. |
+| **`event_type`** | **`posting.reversal`** — generic compensating row; original id in **`reversal_of_event_id`**. |
 | **Category** | Financial (produces GL) |
 | **Phase** | Phase 1 (reversal path + linkage + two journals). |
 
