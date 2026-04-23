@@ -283,7 +283,7 @@ CREATE TABLE public.journal_lines (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT journal_lines_amount_non_negative CHECK ((amount_minor_units >= 0)),
-    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY (ARRAY[('debit'::character varying)::text, ('credit'::character varying)::text])))
+    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY ((ARRAY['debit'::character varying, 'credit'::character varying])::text[])))
 );
 
 
@@ -757,35 +757,19 @@ CREATE TRIGGER journal_lines_immutability_check BEFORE DELETE OR UPDATE ON publi
 
 
 --
--- Name: deposit_account_parties fk_deposit_account_parties_deposit_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: deposit_account_parties fk_rails_0245a491be; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.deposit_account_parties
-    ADD CONSTRAINT fk_deposit_account_parties_deposit_account FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+    ADD CONSTRAINT fk_rails_0245a491be FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
 
 
 --
--- Name: deposit_account_parties fk_deposit_account_parties_party_record; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.deposit_account_parties
-    ADD CONSTRAINT fk_deposit_account_parties_party_record FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
-
-
---
--- Name: operational_events fk_operational_events_source_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: operational_events fk_rails_0f986cd613; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.operational_events
-    ADD CONSTRAINT fk_operational_events_source_account FOREIGN KEY (source_account_id) REFERENCES public.deposit_accounts(id);
-
-
---
--- Name: party_individual_profiles fk_party_individual_profiles_party_record; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.party_individual_profiles
-    ADD CONSTRAINT fk_party_individual_profiles_party_record FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+    ADD CONSTRAINT fk_rails_0f986cd613 FOREIGN KEY (source_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
@@ -794,6 +778,14 @@ ALTER TABLE ONLY public.party_individual_profiles
 
 ALTER TABLE ONLY public.posting_batches
     ADD CONSTRAINT fk_rails_1a3b38f450 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: party_individual_profiles fk_rails_22a835d5da; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_individual_profiles
+    ADD CONSTRAINT fk_rails_22a835d5da FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
 
 
 --
@@ -818,6 +810,14 @@ ALTER TABLE ONLY public.journal_entries
 
 ALTER TABLE ONLY public.journal_lines
     ADD CONSTRAINT fk_rails_92eda40cad FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id);
+
+
+--
+-- Name: deposit_account_parties fk_rails_bf2b31365a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_parties
+    ADD CONSTRAINT fk_rails_bf2b31365a FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
