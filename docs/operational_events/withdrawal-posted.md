@@ -35,6 +35,7 @@ Records that the institution **disbursed cash** to the customer and **debited** 
 | `source_account_id` | Yes | Account debited. |
 | `teller_session_id` | Recommended | When Phase 1 teller sessions exist. |
 | `destination_account_id` | No | Not used for simple cash withdrawal. |
+| `actor_id` | Optional | Nullable FK → **`operators`**. On teller JSON, set from **`X-Operator-Id`** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). |
 
 ## Lifecycle
 
@@ -70,6 +71,7 @@ Same pattern as `deposit.accepted`: **`pending`** until posting completes, then 
 - [ADR-0002](../adr/0002-operational-event-model.md)
 - [ADR-0004](../adr/0004-account-balance-model.md) — available balance.
 - [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md)
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller `X-Operator-Id`, `actor_id`
 
 ## Examples
 

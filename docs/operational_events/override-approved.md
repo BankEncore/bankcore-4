@@ -27,7 +27,7 @@ Records that a **supervisor** (or role with equivalent authority) **approved** a
 | `channel` | Yes | Often `teller` or `system`. |
 | `idempotency_key` | Yes | |
 | `reference_id` / request link | Yes | What was approved. |
-| `actor_id` | Yes when available | Approving supervisor. |
+| `actor_id` | Yes (teller workspace) | Approving supervisor: FK → **`operators`**; HTTP **requires** supervisor role; value is server-derived from **`X-Operator-Id`**, not client body ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). |
 
 ## Lifecycle
 
@@ -57,6 +57,7 @@ Usually **single-step `posted`** on insert: approval is immediate once validated
 ## References
 
 - [ADR-0002](../adr/0002-operational-event-model.md) §5.3
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller headers and supervisor-only approval
 - [roadmap.md](../roadmap.md) — Phase 1 supervisor approval
 
 ## Examples

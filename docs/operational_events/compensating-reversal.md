@@ -38,6 +38,7 @@ Implementation uses a **generic** `posting.reversal` plus `Core::OperationalEven
 | `amount_minor_units` | Typically | Matches original reversal magnitude for full reversal MVP. |
 | `currency`, `channel`, `idempotency_key` | Yes | Same idempotency rules as other events. |
 | `source_account_id` / `destination_account_id` | As needed | Often mirror original for posting rule resolution. |
+| `actor_id` | Optional | Nullable FK → **`operators`**. On **`POST /teller/reversals`**, set from **`X-Operator-Id`**; HTTP requires **supervisor** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). |
 
 **Original row (updates allowed only for linkage fields, not business mutation):**
 
@@ -49,14 +50,14 @@ Implementation uses a **generic** `posting.reversal` plus `Core::OperationalEven
 
 ## Lifecycle
 
-1. Record reversal event **`pending`** (after supervisor gate if required).
+1. Record reversal event **`pending`** (teller JSON: **supervisor** gate before `RecordReversal`; see [ADR-0015](../adr/0015-teller-workspace-authentication.md)).
 2. `PostEvent` writes compensating lines; batch **`posted`**; event **`posted`**.
 3. Original remains **`posted`**; linkage columns record the relationship.
 
 ## Posting
 
 - **Yes** — compensating legs are the **mirror** of the original journal for a full reversal (same amounts, debits become credits and vice versa on the same GL / subledger accounts).
-- **Supervisor:** Phase 1 exit criteria may require approval before `RecordEvent` or `PostEvent` for reversals.
+- **Supervisor:** Teller workspace enforces supervisor before recording the reversal event ([ADR-0015](../adr/0015-teller-workspace-authentication.md)); command layer does not re-check for MVP.
 
 ## Idempotency
 
@@ -81,6 +82,7 @@ Implementation uses a **generic** `posting.reversal` plus `Core::OperationalEven
 - [ADR-0002](../adr/0002-operational-event-model.md) §6, §8.1
 - [ADR-0003](../adr/0003-posting-journal-architecture.md) — reversal postings
 - [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md) §7 — journal reversal FKs
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller `X-Operator-Id`, supervisor gate on reversals
 
 ## Examples
 

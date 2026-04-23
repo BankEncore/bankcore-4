@@ -26,7 +26,7 @@ Records that an operator **requested** an exception to normal policy (e.g. large
 | `channel` | Yes | |
 | `idempotency_key` | Yes | If API-driven. |
 | `reference_id` | Recommended | Target entity (session id, event id, etc.) when column exists. |
-| `actor_id` | Phase 1+ | Requesting operator (ADR-0002 §8.1). |
+| `actor_id` | Recommended | Requesting operator: FK → **`operators`**, set from authenticated operator on teller **`POST /teller/overrides`** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). |
 
 ## Lifecycle
 
@@ -55,6 +55,7 @@ Records that an operator **requested** an exception to normal policy (e.g. large
 ## References
 
 - [ADR-0002](../adr/0002-operational-event-model.md) §5.3
+- [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller headers and `actor_id`
 
 ## Examples
 

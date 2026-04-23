@@ -70,4 +70,4 @@ Define explicitly whether this row is always **`posted`** on insert or uses **`p
 }
 ```
 
-**Note:** Drawer id, `actor_id`, and branch may live on `teller_sessions` or JSON metadata once columns exist.
+**Note:** Drawer id and branch may live on `teller_sessions` or JSON metadata once columns exist. **Who opened the session** may later reference **`operators.id`** (same table as `operational_events.actor_id` per [ADR-0015](../adr/0015-teller-workspace-authentication.md)); table-first MVP may omit a dedicated OE row.

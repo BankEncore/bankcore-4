@@ -45,6 +45,8 @@ Copy the structure from any existing file in this folder when adding a new `even
 
 **Teller JSON routes (workspace):** `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`, `POST /teller/reversals`, `POST /teller/holds`, `POST /teller/holds/release`, `POST /teller/teller_sessions`, `POST /teller/teller_sessions/close`, `POST /teller/overrides` (see [config/routes.rb](../../config/routes.rb)).
 
+**Request identity:** every teller JSON request must include header **`X-Operator-Id`** with the id of an active row in **`operators`** (see [ADR-0015](../adr/0015-teller-workspace-authentication.md)). **`POST /teller/reversals`** and **`override.approved`** on `POST /teller/overrides` require a **supervisor** operator; role is enforced from the database, not from client-supplied role headers.
+
 ## Concept layering
 
 [Concept 101](../concepts/101-operational_event_enums_concept.md) parent/component vocabulary is **analytical**; it does not replace the `event_type` strings in this folder. Mapping from `event_type` → concept 101 belongs in documentation or a future mapping table, per ADR-0002 §2.2.

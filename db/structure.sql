@@ -408,6 +408,40 @@ ALTER SEQUENCE public.operational_events_id_seq OWNED BY public.operational_even
 
 
 --
+-- Name: operators; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.operators (
+    id bigint NOT NULL,
+    role character varying NOT NULL,
+    display_name character varying,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT operators_role_check CHECK (((role)::text = ANY ((ARRAY['teller'::character varying, 'supervisor'::character varying])::text[])))
+);
+
+
+--
+-- Name: operators_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.operators_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: operators_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.operators_id_seq OWNED BY public.operators.id;
+
+
+--
 -- Name: party_individual_profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -616,6 +650,13 @@ ALTER TABLE ONLY public.operational_events ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: operators id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operators ALTER COLUMN id SET DEFAULT nextval('public.operators_id_seq'::regclass);
+
+
+--
 -- Name: party_individual_profiles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -713,6 +754,14 @@ ALTER TABLE ONLY public.journal_lines
 
 ALTER TABLE ONLY public.operational_events
     ADD CONSTRAINT operational_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: operators operators_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operators
+    ADD CONSTRAINT operators_pkey PRIMARY KEY (id);
 
 
 --
@@ -1034,6 +1083,14 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: operational_events fk_rails_a650da481b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_rails_a650da481b FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: deposit_account_parties fk_rails_bf2b31365a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1096,6 +1153,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120000'),
 ('20260423120005'),
 ('20260423120004'),
 ('20260423120003'),

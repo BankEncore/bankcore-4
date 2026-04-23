@@ -75,7 +75,7 @@ Full lifecycle, idempotency scope, status vocabulary, column roadmap, and compos
 | `reversal_of_event_id` / `reversed_by_event_id` | bigint | nullable, self-FK — compensating **`posting.reversal`** linkage (ADR-0002 §6). |
 | `teller_session_id` | bigint | nullable, FK → **`teller_sessions`**. |
 | `reference_id` | string | nullable — control events, external correlation. |
-| `actor_id` | bigint | nullable — operator stub until identity tables land. |
+| `actor_id` | bigint | nullable, FK → **`operators`** — who acted; populated from authenticated operator on teller JSON and similar paths ([ADR-0015](0015-teller-workspace-authentication.md)). |
 | `created_at` / `updated_at` | datetime | |
 
 ---

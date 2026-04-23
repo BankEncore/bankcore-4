@@ -36,7 +36,8 @@ module Core
           source_account_id:,
           destination_account_id: nil,
           business_date: nil,
-          teller_session_id: nil
+          teller_session_id: nil,
+          actor_id: nil
         )
           validate_channel!(channel)
           validate_event_type!(event_type)
@@ -75,7 +76,8 @@ module Core
                 currency: currency,
                 source_account_id: source_account_id,
                 destination_account_id: destination_account_id,
-                teller_session_id: teller_session_id
+                teller_session_id: teller_session_id,
+                actor_id: actor_id
               )
               { outcome: :created, event: event }
             end

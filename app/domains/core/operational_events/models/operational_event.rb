@@ -14,6 +14,7 @@ module Core
         belongs_to :reversal_of_event, class_name: "Core::OperationalEvents::Models::OperationalEvent", optional: true
         belongs_to :reversed_by_event, class_name: "Core::OperationalEvents::Models::OperationalEvent", optional: true
         belongs_to :teller_session, class_name: "Teller::Models::TellerSession", optional: true
+        belongs_to :actor, class_name: "Workspace::Models::Operator", foreign_key: :actor_id, optional: true
 
         has_many :posting_batches, class_name: "Core::Posting::Models::PostingBatch", dependent: :restrict_with_exception
         has_many :journal_entries, class_name: "Core::Ledger::Models::JournalEntry", dependent: :restrict_with_exception

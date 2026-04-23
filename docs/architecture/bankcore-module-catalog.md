@@ -838,6 +838,7 @@ Each table family should have **one owning domain** even if all tables live in o
 | `journal_entries`, `journal_lines`, `gl_accounts`            | `Core::Ledger`            |
 | `holds`                                                      | `Accounts`                |
 | `authorization_decisions`                                    | `Limits`                  |
+| `operators`                                                  | `Workspace`               |
 | `teller_sessions`, `teller_transactions`                     | `Teller`                  |
 | `cash_locations`, `vault_transfers`, `cash_counts`           | `Cash`                    |
 | `approval_requests`, `approval_decisions`                    | `Workflow`                |
