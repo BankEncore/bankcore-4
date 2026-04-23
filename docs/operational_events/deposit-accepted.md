@@ -1,0 +1,90 @@
+# Deposit accepted (`deposit.accepted`)
+
+## Summary
+
+Records that the institution **accepted** a cash deposit and intends to **credit** a specific demand deposit account for the stated amount. Posting completes the economic booking (cash asset up, customer liability up).
+
+## Registry
+
+| Field | Value |
+| ----- | ----- |
+| **`event_type`** | `deposit.accepted` |
+| **Category** | Financial (ADR-0002 §5.1) |
+| **Phase** | Implemented (vertical slice 1); fields may extend in Phase 1 (session FK, actor). |
+
+## Semantics
+
+- **Must** reference an **open** `deposit_accounts` row via `source_account_id` (the account being credited).
+- **Must** carry a positive `amount_minor_units` and supported `currency` (MVP: USD).
+- Represents **cash-in** tender only in the current slice; mixed tender (cash + checks) is a future composition pattern (ADR-0002 §3.3).
+
+## Persistence
+
+| Column / concept | Required | Notes |
+| ---------------- | -------- | ----- |
+| `event_type` | Yes | Literal `deposit.accepted`. |
+| `status` | Yes | `pending` until posting succeeds; then `posted`. Never “un-posted” via row mutation. |
+| `business_date` | Yes | From `Core::BusinessDate` when not supplied. |
+| `channel` | Yes | e.g. `teller`; scopes idempotency. |
+| `idempotency_key` | Yes | Opaque client key; unique with `channel`. |
+| `amount_minor_units` | Yes | Positive integer (ADR-0008 minor units). |
+| `currency` | Yes | MVP: `USD`. |
+| `source_account_id` | Yes | FK → `deposit_accounts` (account credited). |
+| `teller_session_id` | Phase 1 | When teller session discipline exists: ties activity to drawer. |
+| `actor_id` | Later | Per ADR-0002 §8.1 column roadmap. |
+
+## Lifecycle
+
+1. **`pending`** — Row inserted by `RecordEvent`; no balanced journal yet (or batch not `posted`).
+2. **`posted`** — `PostEvent` committed: posting batch `posted`, journal exists, event updated in same transaction.
+
+Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `operational_events.status` with `failed`).
+
+## Posting
+
+- **Runs through** `Core::Posting::Commands::PostEvent` (or equivalent posting rule).
+- **MVP legs (illustrative):** Debit GL **1110** (cash in vaults / drawer); Credit GL **2110** (DDA liability).
+- **Subledger:** Liability line **must** carry customer attribution (e.g. `journal_lines.deposit_account_id` → same as `source_account_id`) once per-account balance is required for Phase 1.
+
+## Idempotency
+
+- **Scope:** `(channel, idempotency_key)` at most one row (ADR-0002 §7.3).
+- **Fingerprint (material fields):** include `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id` (extend when new columns are material to replay semantics).
+
+## Reversals
+
+- Original row stays **`posted`** after a reversal (ADR-0002 §6).
+- Correction is a **new** operational event with compensating journal; see [compensating-reversal.md](compensating-reversal.md). Supervisor approval may be required (Phase 1 RBAC).
+
+## Relationships
+
+- **`source_account_id`:** account credited.
+- **`teller_session_id`:** optional until Phase 1; used for drawer / EOD correlation.
+
+## Module ownership
+
+- **Record / validate:** `Core::OperationalEvents` (with `Accounts` invariants for open account).
+- **Post:** `Core::Posting` (posting rules); journal rows `Core::Ledger`.
+
+## References
+
+- [ADR-0002](../adr/0002-operational-event-model.md) — lifecycle, idempotency, reversals.
+- [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md) — tables, GL seed.
+- [ADR-0011](../adr/0011-accounts-deposit-vertical-slice-mvp.md) — slice 1 deposit path.
+
+## Examples
+
+**Record (conceptual JSON):**
+
+```json
+{
+  "event_type": "deposit.accepted",
+  "channel": "teller",
+  "idempotency_key": "idem-2026-04-22-001",
+  "amount_minor_units": 10000,
+  "currency": "USD",
+  "source_account_id": 42
+}
+```
+
+**Posting sketch:** Dr 1110 / Cr 2110 (`deposit_account_id` on Cr line = 42), amount 10_000.

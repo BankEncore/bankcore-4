@@ -17,7 +17,25 @@ CREATE FUNCTION public.ledger_journal_entries_reject_mutations() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'journal_entries are append-only (immutable)';
+  END IF;
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.reversing_journal_entry_id IS NULL
+       AND NEW.reversing_journal_entry_id IS NOT NULL
+       AND OLD.id = NEW.id
+       AND OLD.posting_batch_id IS NOT DISTINCT FROM NEW.posting_batch_id
+       AND OLD.operational_event_id IS NOT DISTINCT FROM NEW.operational_event_id
+       AND OLD.business_date IS NOT DISTINCT FROM NEW.business_date
+       AND OLD.currency IS NOT DISTINCT FROM NEW.currency
+       AND OLD.narrative IS NOT DISTINCT FROM NEW.narrative
+       AND OLD.effective_at IS NOT DISTINCT FROM NEW.effective_at
+       AND OLD.status IS NOT DISTINCT FROM NEW.status
+       AND OLD.reverses_journal_entry_id IS NOT DISTINCT FROM NEW.reverses_journal_entry_id
+       AND OLD.created_at IS NOT DISTINCT FROM NEW.created_at
+    THEN
+      RETURN NEW;
+    END IF;
     RAISE EXCEPTION 'journal_entries are append-only (immutable)';
   END IF;
   RETURN NEW;
@@ -230,6 +248,44 @@ ALTER SEQUENCE public.gl_accounts_id_seq OWNED BY public.gl_accounts.id;
 
 
 --
+-- Name: holds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.holds (
+    id bigint NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    amount_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    placed_by_operational_event_id bigint,
+    released_by_operational_event_id bigint,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT holds_amount_positive CHECK ((amount_minor_units > 0)),
+    CONSTRAINT holds_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'released'::character varying, 'expired'::character varying])::text[])))
+);
+
+
+--
+-- Name: holds_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.holds_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: holds_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.holds_id_seq OWNED BY public.holds.id;
+
+
+--
 -- Name: journal_entries; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -282,8 +338,9 @@ CREATE TABLE public.journal_lines (
     narrative character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    deposit_account_id bigint,
     CONSTRAINT journal_lines_amount_non_negative CHECK ((amount_minor_units >= 0)),
-    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY (ARRAY[('debit'::character varying)::text, ('credit'::character varying)::text])))
+    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY ((ARRAY['debit'::character varying, 'credit'::character varying])::text[])))
 );
 
 
@@ -321,7 +378,13 @@ CREATE TABLE public.operational_events (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     channel character varying NOT NULL,
-    source_account_id bigint
+    source_account_id bigint,
+    destination_account_id bigint,
+    reversal_of_event_id bigint,
+    reversed_by_event_id bigint,
+    teller_session_id bigint,
+    reference_id character varying,
+    actor_id bigint
 );
 
 
@@ -458,6 +521,45 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: teller_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.teller_sessions (
+    id bigint NOT NULL,
+    status character varying DEFAULT 'open'::character varying NOT NULL,
+    opened_at timestamp(6) without time zone NOT NULL,
+    closed_at timestamp(6) without time zone,
+    drawer_code character varying,
+    expected_cash_minor_units bigint,
+    actual_cash_minor_units bigint,
+    variance_minor_units bigint,
+    supervisor_approved_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY ((ARRAY['open'::character varying, 'closed'::character varying, 'pending_supervisor'::character varying])::text[])))
+);
+
+
+--
+-- Name: teller_sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.teller_sessions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: teller_sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.teller_sessions_id_seq OWNED BY public.teller_sessions.id;
+
+
+--
 -- Name: core_business_date_settings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -483,6 +585,13 @@ ALTER TABLE ONLY public.deposit_accounts ALTER COLUMN id SET DEFAULT nextval('pu
 --
 
 ALTER TABLE ONLY public.gl_accounts ALTER COLUMN id SET DEFAULT nextval('public.gl_accounts_id_seq'::regclass);
+
+
+--
+-- Name: holds id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds ALTER COLUMN id SET DEFAULT nextval('public.holds_id_seq'::regclass);
 
 
 --
@@ -528,6 +637,13 @@ ALTER TABLE ONLY public.posting_batches ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
+-- Name: teller_sessions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.teller_sessions ALTER COLUMN id SET DEFAULT nextval('public.teller_sessions_id_seq'::regclass);
+
+
+--
 -- Name: ar_internal_metadata ar_internal_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -565,6 +681,14 @@ ALTER TABLE ONLY public.deposit_accounts
 
 ALTER TABLE ONLY public.gl_accounts
     ADD CONSTRAINT gl_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: holds holds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds
+    ADD CONSTRAINT holds_pkey PRIMARY KEY (id);
 
 
 --
@@ -624,6 +748,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: teller_sessions teller_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.teller_sessions
+    ADD CONSTRAINT teller_sessions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: index_dap_unique_open_active_per_account_party_role; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -659,6 +791,27 @@ CREATE UNIQUE INDEX index_gl_accounts_on_account_number ON public.gl_accounts US
 
 
 --
+-- Name: index_holds_on_deposit_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_holds_on_deposit_account_id ON public.holds USING btree (deposit_account_id);
+
+
+--
+-- Name: index_holds_on_placed_by_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_holds_on_placed_by_operational_event_id ON public.holds USING btree (placed_by_operational_event_id);
+
+
+--
+-- Name: index_holds_on_released_by_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_holds_on_released_by_operational_event_id ON public.holds USING btree (released_by_operational_event_id);
+
+
+--
 -- Name: index_journal_entries_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -684,6 +837,13 @@ CREATE INDEX index_journal_entries_on_reverses_journal_entry_id ON public.journa
 --
 
 CREATE INDEX index_journal_entries_on_reversing_journal_entry_id ON public.journal_entries USING btree (reversing_journal_entry_id);
+
+
+--
+-- Name: index_journal_lines_on_deposit_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_journal_lines_on_deposit_account_id ON public.journal_lines USING btree (deposit_account_id);
 
 
 --
@@ -715,10 +875,31 @@ CREATE UNIQUE INDEX index_operational_events_on_channel_and_idempotency_key ON p
 
 
 --
+-- Name: index_operational_events_on_destination_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operational_events_on_destination_account_id ON public.operational_events USING btree (destination_account_id);
+
+
+--
 -- Name: index_operational_events_on_source_account_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_operational_events_on_source_account_id ON public.operational_events USING btree (source_account_id);
+
+
+--
+-- Name: index_operational_events_on_teller_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operational_events_on_teller_session_id ON public.operational_events USING btree (teller_session_id);
+
+
+--
+-- Name: index_operational_events_one_reversal_per_original; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_operational_events_one_reversal_per_original ON public.operational_events USING btree (reversal_of_event_id) WHERE (reversal_of_event_id IS NOT NULL);
 
 
 --
@@ -757,35 +938,19 @@ CREATE TRIGGER journal_lines_immutability_check BEFORE DELETE OR UPDATE ON publi
 
 
 --
--- Name: deposit_account_parties fk_deposit_account_parties_deposit_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: deposit_account_parties fk_rails_0245a491be; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.deposit_account_parties
-    ADD CONSTRAINT fk_deposit_account_parties_deposit_account FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+    ADD CONSTRAINT fk_rails_0245a491be FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
 
 
 --
--- Name: deposit_account_parties fk_deposit_account_parties_party_record; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.deposit_account_parties
-    ADD CONSTRAINT fk_deposit_account_parties_party_record FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
-
-
---
--- Name: operational_events fk_operational_events_source_account; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: operational_events fk_rails_0f986cd613; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.operational_events
-    ADD CONSTRAINT fk_operational_events_source_account FOREIGN KEY (source_account_id) REFERENCES public.deposit_accounts(id);
-
-
---
--- Name: party_individual_profiles fk_party_individual_profiles_party_record; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.party_individual_profiles
-    ADD CONSTRAINT fk_party_individual_profiles_party_record FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+    ADD CONSTRAINT fk_rails_0f986cd613 FOREIGN KEY (source_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
@@ -797,11 +962,51 @@ ALTER TABLE ONLY public.posting_batches
 
 
 --
+-- Name: party_individual_profiles fk_rails_22a835d5da; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_individual_profiles
+    ADD CONSTRAINT fk_rails_22a835d5da FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+
+
+--
+-- Name: operational_events fk_rails_29073cc426; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_rails_29073cc426 FOREIGN KEY (teller_session_id) REFERENCES public.teller_sessions(id);
+
+
+--
+-- Name: journal_lines fk_rails_2b0c279a73; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.journal_lines
+    ADD CONSTRAINT fk_rails_2b0c279a73 FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
 -- Name: journal_entries fk_rails_3417d84ffc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.journal_entries
     ADD CONSTRAINT fk_rails_3417d84ffc FOREIGN KEY (reversing_journal_entry_id) REFERENCES public.journal_entries(id);
+
+
+--
+-- Name: holds fk_rails_4283210e70; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds
+    ADD CONSTRAINT fk_rails_4283210e70 FOREIGN KEY (released_by_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: holds fk_rails_4c0c5bf773; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds
+    ADD CONSTRAINT fk_rails_4c0c5bf773 FOREIGN KEY (placed_by_operational_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -813,6 +1018,14 @@ ALTER TABLE ONLY public.journal_entries
 
 
 --
+-- Name: operational_events fk_rails_8cf89c2939; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_rails_8cf89c2939 FOREIGN KEY (reversal_of_event_id) REFERENCES public.operational_events(id);
+
+
+--
 -- Name: journal_lines fk_rails_92eda40cad; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -821,11 +1034,27 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: deposit_account_parties fk_rails_bf2b31365a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_parties
+    ADD CONSTRAINT fk_rails_bf2b31365a FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
 -- Name: journal_entries fk_rails_d329a9d82b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.journal_entries
     ADD CONSTRAINT fk_rails_d329a9d82b FOREIGN KEY (posting_batch_id) REFERENCES public.posting_batches(id);
+
+
+--
+-- Name: operational_events fk_rails_e1fee9a69d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_rails_e1fee9a69d FOREIGN KEY (reversed_by_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -845,12 +1074,34 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: holds fk_rails_ecf3d13b03; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds
+    ADD CONSTRAINT fk_rails_ecf3d13b03 FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
+-- Name: operational_events fk_rails_f4a7a6dc52; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_rails_f4a7a6dc52 FOREIGN KEY (destination_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260423120005'),
+('20260423120004'),
+('20260423120003'),
+('20260423120002'),
+('20260423120001'),
+('20260423120000'),
 ('20260422130007'),
 ('20260422130005'),
 ('20260422130004'),

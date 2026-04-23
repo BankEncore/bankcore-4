@@ -71,6 +71,11 @@ Full lifecycle, idempotency scope, status vocabulary, column roadmap, and compos
 | `amount_minor_units` | bigint | nullable (financial events) |
 | `currency`         | string   | nullable |
 | `source_account_id` | bigint  | nullable, FK → **`deposit_accounts`** — populated for slice-1 **`deposit.accepted`** (and future account-sourced events); see [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) §2.5. |
+| `destination_account_id` | bigint | nullable, FK → **`deposit_accounts`** — **`transfer.completed`**. |
+| `reversal_of_event_id` / `reversed_by_event_id` | bigint | nullable, self-FK — compensating **`posting.reversal`** linkage (ADR-0002 §6). |
+| `teller_session_id` | bigint | nullable, FK → **`teller_sessions`**. |
+| `reference_id` | string | nullable — control events, external correlation. |
+| `actor_id` | bigint | nullable — operator stub until identity tables land. |
 | `created_at` / `updated_at` | datetime | |
 
 ---
@@ -122,6 +127,7 @@ Persist **only balanced** entries in the same transaction as their lines (ADR-00
 | `amount_minor_units`   | bigint | NOT NULL, **CHECK (amount_minor_units >= 0)** (ADR-0008 §5.1) |
 | `narrative`            | string | nullable |
 | `created_at` / `updated_at` | datetime | |
+| `deposit_account_id` | bigint | nullable, FK → **`deposit_accounts`** — **subledger** for customer DDA liability on **2110** legs (ADR-0012); null for cash (1110) legs and legacy rows. |
 
 ---
 
@@ -137,7 +143,7 @@ Persist **only balanced** entries in the same transaction as their lines (ADR-00
 ## 10. Immutability
 
 - **`journal_lines`:** append-only — **no UPDATE or DELETE** enforced with a **BEFORE UPDATE OR DELETE** trigger that raises.
-- **`journal_entries`:** no UPDATE or DELETE after insert (same pattern) for MVP.
+- **`journal_entries`:** no UPDATE or DELETE after insert **except** one narrow case: setting **`reversing_journal_entry_id`** on the **original** entry when a compensating reversal entry is persisted (ADR-0003 reversal linkage). A replacement trigger function allows **only** that column to change from NULL to the new entry’s id when all other business columns are unchanged (migration `AllowJournalEntryReversalLinkUpdate`).
 - Enforcement is **DB-level** for defense in depth; domain code must still treat models as read-only after create.
 
 ---

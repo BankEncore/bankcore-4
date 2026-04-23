@@ -24,7 +24,9 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal 12_34, lines.sum { |l| l.side == "debit" ? l.amount_minor_units : 0 }
     assert_equal 12_34, lines.sum { |l| l.side == "credit" ? l.amount_minor_units : 0 }
     assert_equal Core::Ledger::Models::GlAccount.find_by!(account_number: "1110").id, lines.find_by(side: "debit").gl_account_id
-    assert_equal Core::Ledger::Models::GlAccount.find_by!(account_number: "2110").id, lines.find_by(side: "credit").gl_account_id
+    credit = lines.find_by(side: "credit")
+    assert_equal Core::Ledger::Models::GlAccount.find_by!(account_number: "2110").id, credit.gl_account_id
+    assert_equal @account.id, credit.deposit_account_id
   end
 
   test "second post is idempotent" do

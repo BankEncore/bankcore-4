@@ -76,6 +76,7 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
     assert_equal 10_000, debits
     gl_nums = lines.includes(:gl_account).map { |l| l.gl_account.account_number }.sort
     assert_equal %w[1110 2110], gl_nums
+    assert_equal account_id, lines.find_by(side: "credit").deposit_account_id
     assert_equal account_number, account.account_number
   end
 end
