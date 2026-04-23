@@ -51,11 +51,12 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 - `deposit.accepted` operational event (`pending` → `posted`)
 - Posting to GL **1110** / **2110** via [`Core::Posting::Commands::PostEvent`](../app/domains/core/posting/commands/post_event.rb)
 - Teller JSON routes: `POST /teller/parties`, `POST /teller/deposit_accounts`, `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`
+- Read-only **`GET /teller/reports/trial_balance`** and **`GET /teller/reports/eod_readiness`** (trial balance + EOD readiness summary; [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md))
 
 **Still slice-1 shaped**
 
-- `PostEvent` only recognizes **`deposit.accepted`** and uses **hard-coded** GL legs (no rule resolver).
-- No withdrawals, transfers, reversals, trial balance API, drawer sessions, holds, or RBAC beyond whatever the controllers implicitly assume.
+- `PostEvent` supports a **fixed registry** of `event_type` values (deposit, withdrawal, transfer, posting reversal) — not the full future event catalog.
+- **Formal business-date close** (locks, checkpoints) is not implemented; **read-only** trial balance and EOD readiness are documented in [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md).
 
 **Gap vs [01-mvp-vs-core.md](concepts/01-mvp-vs-core.md) MVP checklist**
 
@@ -63,7 +64,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 - Teller drawer session control and cash variance  
 - End-to-end reversals (including `reversal_of_event_id` / `reversed_by_event_id` per [ADR-0002 §4 / column roadmap](adr/0002-operational-event-model.md))  
 - Available balance and holds ([ADR-0004](adr/0004-account-balance-model.md))  
-- Trial balance visibility and EOD reconciliation discipline  
+- **Partial:** trial balance + EOD readiness **reads** ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)); policy-enforced day close / multi-branch scope remain open.  
 - Teller vs supervisor roles and approval paths — **partial:** teller workspace identity + supervisor gates for reversal and `override.approved` ([ADR-0015](adr/0015-teller-workspace-authentication.md)); variance approval workflow, EOD gates, and finer-grained RBAC still to align with product.  
 - Joint and multi-party accounts (deferred in ADR-0011; listed under MVP in the concept doc for the **full** institution MVP)
 
@@ -91,7 +92,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | **1C** | **Teller session + cash control** | `teller_sessions`, open/close, expected vs actual, variance threshold → **`pending_supervisor`**, supervisor **`approve_variance`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)). Drawer/location depth and GL cash adjustment for variance still TBD. |
 | **1D** | **Reversals** | Implement reversal FKs from [ADR-0002](adr/0002-operational-event-model.md) column roadmap; compensating journals only; original event stays `posted`. |
 | **1E** | **Minimum balance model** | `holds` + derived or persisted **available** for authorization: `available = ledger - holds` ([ADR-0004](adr/0004-account-balance-model.md)). |
-| **1F** | **Trial balance + EOD gates** | Read model or report: GL trial balance; branch checks (sessions closed, books balanced). |
+| **1F** | **Trial balance + EOD gates** | **MVP read APIs:** `GET /teller/reports/trial_balance`, `GET /teller/reports/eod_readiness` ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)). Formal day-close / locks: Phase 2. |
 | **1G** | **RBAC** | Actor on events; roles **teller** / **supervisor**; approvals for reversal, override, variance. **Foundation shipped:** **`operators`** table, teller JSON **`X-Operator-Id`**, supervisor HTTP gates on **`POST /teller/reversals`**, **`override.approved`**, and **`POST /teller/teller_sessions/approve_variance`** ([ADR-0015](adr/0015-teller-workspace-authentication.md)). EOD / finer policy layers remain as needed. |
 
 ### 6.2 Phase 1 exit criteria
@@ -152,7 +153,7 @@ After **1A (posting rules)**, ship **1B (withdrawal)** together with **1C (sessi
 - ~~Canonical **`event_type`** strings for each reversal variant~~ — **`posting.reversal`** + `RecordReversal` ([ADR-0012](adr/0012-posting-rule-registry-and-journal-subledger.md)); see [compensating-reversal.md](operational_events/compensating-reversal.md).  
 - **Module ownership** for drawer cash vs approval workflow.  
 - **Available balance**: compute-on-read vs materialized projection for volume.  
-- How **trial balance** is exposed (internal JSON vs operator report vs both).
+- ~~How **trial balance** is exposed~~ — **MVP:** teller JSON **`GET /teller/reports/trial_balance`** and **`GET /teller/reports/eod_readiness`** ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)); operator PDF/HTML reports remain product choice.
 
 ---
 
@@ -166,3 +167,4 @@ After **1A (posting rules)**, ship **1B (withdrawal)** together with **1C (sessi
 | [101-operational_event_enums_concept.md](concepts/101-operational_event_enums_concept.md) | Longer-term parent/component event modeling ideas |
 | [AGENTS.md](../AGENTS.md) | Stack, Docker, Cursor rules index |
 | [ADR-0015](adr/0015-teller-workspace-authentication.md) | Teller workspace `operators`, `X-Operator-Id`, supervisor gates |
+| [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md) | Trial balance query + EOD readiness reads |

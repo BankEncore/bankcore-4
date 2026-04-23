@@ -862,6 +862,13 @@ CREATE INDEX index_holds_on_released_by_operational_event_id ON public.holds USI
 
 
 --
+-- Name: index_journal_entries_on_business_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_journal_entries_on_business_date ON public.journal_entries USING btree (business_date);
+
+
+--
 -- Name: index_journal_entries_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1169,6 +1176,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120002'),
 ('20260424120001'),
 ('20260424120000'),
 ('20260423120005'),
