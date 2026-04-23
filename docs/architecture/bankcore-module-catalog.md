@@ -522,6 +522,8 @@ Examples:
 
 **Purpose:** workstation-facing transactional flows.
 
+**MVP implementation:** drawer lifecycle, expected vs actual cash, variance, and supervisor approval live on **`teller_sessions`** with HTTP under `app/controllers/teller/*` ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md), [ADR-0015](../adr/0015-teller-workspace-authentication.md)). Financial effect still flows through **`Core::OperationalEvents`** + **`Core::Posting`**; read-only **trial balance / EOD readiness** composition lives in `Teller::Queries::EodReadiness` ([ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md)).
+
 **Owns:**
 
 * teller sessions

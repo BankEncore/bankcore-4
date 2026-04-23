@@ -20,6 +20,6 @@
 
 ## 2. API
 
-Teller JSON routes are listed in [docs/operational_events/README.md](../operational_events/README.md). **Authentication and supervisor gates** for the teller workspace (`X-Operator-Id`, reversal / `override.approved`, **`POST /teller/teller_sessions/approve_variance`**) are defined in [ADR-0015](0015-teller-workspace-authentication.md).
+Teller workspace routes (including **`GET /teller/reports/*`** per [ADR-0016](0016-trial-balance-and-eod-readiness.md)) are listed in [docs/operational_events/README.md](../operational_events/README.md). **Authentication and supervisor gates** for the teller workspace (`X-Operator-Id`, reversal / `override.approved`, **`POST /teller/teller_sessions/approve_variance`**) are defined in [ADR-0015](0015-teller-workspace-authentication.md).
 
 **Approve variance body (JSON):** `{ "teller_session_approve_variance": { "teller_session_id": <id> } }` with supervisor **`X-Operator-Id`**.
