@@ -33,7 +33,7 @@ Records that the institution **disbursed cash** to the customer and **debited** 
 | `amount_minor_units` | Yes | Positive. |
 | `currency` | Yes | MVP: USD. |
 | `source_account_id` | Yes | Account debited. |
-| `teller_session_id` | Recommended | When Phase 1 teller sessions exist. |
+| `teller_session_id` | Conditional | On **`channel: teller`**, required (open session) when **`require_open_session_for_cash`** is true ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)). |
 | `destination_account_id` | No | Not used for simple cash withdrawal. |
 | `actor_id` | Optional | Nullable FK → **`operators`**. On teller JSON, set from **`X-Operator-Id`** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). |
 
@@ -50,7 +50,7 @@ Same pattern as `deposit.accepted`: **`pending`** until posting completes, then 
 ## Idempotency
 
 - **Scope:** `(channel, idempotency_key)`.
-- **Fingerprint:** at minimum `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id`; add `teller_session_id` when it becomes material to replay semantics.
+- **Fingerprint:** `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id`; when the teller cash session gate applies, **`teller_session_id`** is included ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)).
 
 ## Reversals
 
@@ -71,6 +71,7 @@ Same pattern as `deposit.accepted`: **`pending`** until posting completes, then 
 - [ADR-0002](../adr/0002-operational-event-model.md)
 - [ADR-0004](../adr/0004-account-balance-model.md) — available balance.
 - [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md)
+- [ADR-0014](../adr/0014-teller-sessions-and-control-events.md) — open session gate, fingerprint
 - [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller `X-Operator-Id`, `actor_id`
 
 ## Examples

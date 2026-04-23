@@ -33,13 +33,16 @@ party = Party::Commands::CreateParty.call(
 
 account = Accounts::Commands::OpenAccount.call(party_record_id: party.id)
 
+cash_session = Teller::Commands::OpenSession.call(drawer_code: "dev-sample-#{stamp}")
+
 posted = Core::OperationalEvents::Commands::RecordEvent.call(
   event_type: "deposit.accepted",
   channel: "teller",
   idempotency_key: "dev-seed-#{stamp}-posted",
   amount_minor_units: 100_00,
   currency: "USD",
-  source_account_id: account.id
+  source_account_id: account.id,
+  teller_session_id: cash_session.id
 )
 
 posted_result = Core::Posting::Commands::PostEvent.call(operational_event_id: posted[:event].id)
@@ -50,7 +53,8 @@ pending = Core::OperationalEvents::Commands::RecordEvent.call(
   idempotency_key: "dev-seed-#{stamp}-pending",
   amount_minor_units: 25_00,
   currency: "USD",
-  source_account_id: account.id
+  source_account_id: account.id,
+  teller_session_id: cash_session.id
 )
 
 puts <<~SUMMARY

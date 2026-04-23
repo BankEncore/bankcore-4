@@ -15,6 +15,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
 
     @teller_operator, @supervisor_operator = create_workspace_operators!
 
+    @cash_session_id = Teller::Commands::OpenSession.call(drawer_code: "money-flows-#{SecureRandom.hex(4)}").id
+
     record_and_post_deposit!(@account_a, 50_000, "seed-a-#{SecureRandom.hex(4)}")
   end
 
@@ -27,7 +29,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
           idempotency_key: "wd-no-op-#{SecureRandom.hex(4)}",
           amount_minor_units: 100,
           currency: "USD",
-          source_account_id: @account_a.id
+          source_account_id: @account_a.id,
+          teller_session_id: @cash_session_id
         }
       }.to_json,
       headers: { "CONTENT_TYPE" => "application/json" }
@@ -45,7 +48,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
           idempotency_key: idem,
           amount_minor_units: 5_000,
           currency: "USD",
-          source_account_id: @account_a.id
+          source_account_id: @account_a.id,
+          teller_session_id: @cash_session_id
         }
       }.to_json,
       headers: teller_json_headers(@teller_operator)
@@ -106,7 +110,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
           idempotency_key: idem,
           amount_minor_units: 8_000,
           currency: "USD",
-          source_account_id: @account_a.id
+          source_account_id: @account_a.id,
+          teller_session_id: @cash_session_id
         }
       }.to_json,
       headers: teller_json_headers(@teller_operator)
@@ -138,7 +143,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
           idempotency_key: idem,
           amount_minor_units: 8_000,
           currency: "USD",
-          source_account_id: @account_a.id
+          source_account_id: @account_a.id,
+          teller_session_id: @cash_session_id
         }
       }.to_json,
       headers: teller_json_headers(@teller_operator)
@@ -197,7 +203,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
           idempotency_key: "wd-big-#{SecureRandom.hex(6)}",
           amount_minor_units: 5_000,
           currency: "USD",
-          source_account_id: @account_a.id
+          source_account_id: @account_a.id,
+          teller_session_id: @cash_session_id
         }
       }.to_json,
       headers: teller_json_headers(@teller_operator)
@@ -206,7 +213,9 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
   end
 
   test "teller session open close override requested teller override approved supervisor" do
-    post "/teller/teller_sessions", params: {}.to_json, headers: teller_json_headers(@teller_operator)
+    post "/teller/teller_sessions",
+      params: { drawer_code: "override-flow-#{SecureRandom.hex(6)}" }.to_json,
+      headers: teller_json_headers(@teller_operator)
     assert_response :created
     sid = response.parsed_body["id"]
 
@@ -271,7 +280,8 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
       idempotency_key: idem,
       amount_minor_units: amount,
       currency: "USD",
-      source_account_id: account.id
+      source_account_id: account.id,
+      teller_session_id: @cash_session_id
     )
     Core::Posting::Commands::PostEvent.call(operational_event_id: r[:event].id)
     r[:event]

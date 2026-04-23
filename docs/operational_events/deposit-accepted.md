@@ -10,7 +10,7 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 | ----- | ----- |
 | **`event_type`** | `deposit.accepted` |
 | **Category** | Financial (ADR-0002 §5.1) |
-| **Phase** | Implemented (vertical slice 1); Phase 1 may add `teller_session_id` discipline. **`actor_id`** populated on teller JSON per [ADR-0015](../adr/0015-teller-workspace-authentication.md). |
+| **Phase** | Implemented; **`actor_id`** on teller JSON per [ADR-0015](../adr/0015-teller-workspace-authentication.md). **`teller_session_id`** required for teller-channel cash when [ADR-0014](../adr/0014-teller-sessions-and-control-events.md) gate is on. |
 
 ## Semantics
 
@@ -30,7 +30,7 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 | `amount_minor_units` | Yes | Positive integer (ADR-0008 minor units). |
 | `currency` | Yes | MVP: `USD`. |
 | `source_account_id` | Yes | FK → `deposit_accounts` (account credited). |
-| `teller_session_id` | Phase 1 | When teller session discipline exists: ties activity to drawer. |
+| `teller_session_id` | Conditional | On **`channel: teller`**, required (open session) when **`config.x.teller.require_open_session_for_cash`** is true ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)); optional for other channels. |
 | `actor_id` | Optional | Nullable FK → **`operators`**. On **`POST /teller/operational_events`**, set from **`X-Operator-Id`** when present ([ADR-0015](../adr/0015-teller-workspace-authentication.md)); other channels may omit until they authenticate. |
 
 ## Lifecycle
@@ -49,7 +49,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 ## Idempotency
 
 - **Scope:** `(channel, idempotency_key)` at most one row (ADR-0002 §7.3).
-- **Fingerprint (material fields):** include `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id` (extend when new columns are material to replay semantics).
+- **Fingerprint (material fields):** include `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id`. When the teller cash session gate applies, **`teller_session_id`** is included ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)).
 
 ## Reversals
 
@@ -59,7 +59,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 ## Relationships
 
 - **`source_account_id`:** account credited.
-- **`teller_session_id`:** optional until Phase 1; used for drawer / EOD correlation.
+- **`teller_session_id`:** drawer correlation; required for teller cash when policy enabled ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)).
 
 ## Module ownership
 
@@ -71,6 +71,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 - [ADR-0002](../adr/0002-operational-event-model.md) — lifecycle, idempotency, reversals.
 - [ADR-0010](../adr/0010-ledger-persistence-and-seeded-coa.md) — tables, GL seed.
 - [ADR-0011](../adr/0011-accounts-deposit-vertical-slice-mvp.md) — slice 1 deposit path.
+- [ADR-0014](../adr/0014-teller-sessions-and-control-events.md) — open session gate for teller cash, fingerprint.
 - [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller JSON `X-Operator-Id`, `actor_id` → `operators`.
 
 ## Examples

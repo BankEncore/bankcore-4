@@ -47,6 +47,8 @@ Copy the structure from any existing file in this folder when adding a new `even
 
 **Request identity:** every teller JSON request must include header **`X-Operator-Id`** with the id of an active row in **`operators`** (see [ADR-0015](../adr/0015-teller-workspace-authentication.md)). **`POST /teller/reversals`**, **`override.approved`** on `POST /teller/overrides`, and **`POST /teller/teller_sessions/approve_variance`** require a **supervisor** operator; role is enforced from the database, not from client-supplied role headers.
 
+**Teller cash and drawer:** when **`TELLER_REQUIRE_OPEN_SESSION_FOR_CASH`** is enabled (default **true**), **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** on **`POST /teller/operational_events`** must include **`teller_session_id`** for an **open** session ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)). **`transfer.completed`** is exempt.
+
 ## Concept layering
 
 [Concept 101](../concepts/101-operational_event_enums_concept.md) parent/component vocabulary is **analytical**; it does not replace the `event_type` strings in this folder. Mapping from `event_type` → concept 101 belongs in documentation or a future mapping table, per ADR-0002 §2.2.
