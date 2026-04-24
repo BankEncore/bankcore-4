@@ -111,6 +111,39 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: core_business_date_close_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.core_business_date_close_events (
+    id bigint NOT NULL,
+    closed_on date NOT NULL,
+    closed_at timestamp(6) without time zone NOT NULL,
+    closed_by_operator_id bigint,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: core_business_date_close_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.core_business_date_close_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: core_business_date_close_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.core_business_date_close_events_id_seq OWNED BY public.core_business_date_close_events.id;
+
+
+--
 -- Name: core_business_date_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -630,6 +663,13 @@ ALTER SEQUENCE public.teller_sessions_id_seq OWNED BY public.teller_sessions.id;
 
 
 --
+-- Name: core_business_date_close_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_close_events ALTER COLUMN id SET DEFAULT nextval('public.core_business_date_close_events_id_seq'::regclass);
+
+
+--
 -- Name: core_business_date_settings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -733,6 +773,14 @@ ALTER TABLE ONLY public.teller_sessions ALTER COLUMN id SET DEFAULT nextval('pub
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: core_business_date_close_events core_business_date_close_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_close_events
+    ADD CONSTRAINT core_business_date_close_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -853,6 +901,20 @@ ALTER TABLE ONLY public.schema_migrations
 
 ALTER TABLE ONLY public.teller_sessions
     ADD CONSTRAINT teller_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_core_business_date_close_events_on_closed_by_operator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_core_business_date_close_events_on_closed_by_operator_id ON public.core_business_date_close_events USING btree (closed_by_operator_id);
+
+
+--
+-- Name: index_core_business_date_close_events_on_closed_on; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_core_business_date_close_events_on_closed_on ON public.core_business_date_close_events USING btree (closed_on);
 
 
 --
@@ -1074,6 +1136,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 
 --
+-- Name: core_business_date_close_events fk_rails_0ba4d8ef2f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_close_events
+    ADD CONSTRAINT fk_rails_0ba4d8ef2f FOREIGN KEY (closed_by_operator_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: operational_events fk_rails_0f986cd613; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1248,6 +1318,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120005'),
 ('20260424120004'),
 ('20260424120003'),
 ('20260424120002'),

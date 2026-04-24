@@ -97,7 +97,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** always 
 
 **Negative:** **`product_code`** is not FK-enforced; typo risk until Products domain exists. **Loan** symmetry is deferred—first loan slice must add tables and revisit tests.
 
-**Neutral:** **`OpenAccount`** / **`RecordEvent`** already depend on **`Core::BusinessDate`**; future ADRs may split “processing date” vs “calendar close” semantics without changing the slice-1 column shape.
+**Neutral:** **`OpenAccount`** / **`RecordEvent`** already depend on **`Core::BusinessDate`**; formal day close and the open-day posting invariant are specified in [ADR-0018](0018-business-date-close-and-posting-invariant.md); further split of “processing date” vs “calendar close” semantics remains a future ADR if needed.
 
 ---
 
@@ -108,6 +108,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** always 
 * [ADR-0002](0002-operational-event-model.md) — operational events; idempotency and **`source_account_id`** for account-linked financial events
 * [ADR-0010](0010-ledger-persistence-and-seeded-coa.md) — ledger tables and **`operational_events`** MVP columns including **`source_account_id`**
 * [ADR-0001](0001-modular-monolith-architecture-with-domain-boundaries.md) — `Accounts` vs `Party` vs `Core` boundaries
+* [ADR-0018](0018-business-date-close-and-posting-invariant.md) — supervised business date close and posting-day rules
 
 ---
 

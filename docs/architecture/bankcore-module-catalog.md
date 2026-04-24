@@ -343,15 +343,16 @@ Examples:
 * close validations
 * EOD orchestration
 
-**Typical contents:**
+**Shipped (narrow Phase 2 slice — [ADR-0018](../adr/0018-business-date-close-and-posting-invariant.md)):**
 
-* `BusinessDay`
-* `BusinessDayCheckpoint`
-* `CurrentBusinessDate`
-* `OpenDay`
-* `CloseDay`
-* `AdvanceDay`
-* `EndOfDayOrchestrator`
+* `Core::BusinessDate::Models::BusinessDateSetting` / `BusinessDateCloseEvent`
+* `Core::BusinessDate::Services::CurrentBusinessDate`, `AssertOpenPostingDate`
+* `Core::BusinessDate::Commands::SetBusinessDate`, `CloseBusinessDate` (EOD-gated advance + audit); `AdvanceBusinessDate` **test-only**
+* `Teller::Queries::EodReadiness` (readiness composition; [ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md))
+
+**Still aspirational / later ADRs:**
+
+* `BusinessDayCheckpoint`, multi-entity dates, `EndOfDayOrchestrator`, day **reopen**
 
 ---
 

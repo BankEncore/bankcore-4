@@ -15,6 +15,7 @@ Rails.application.routes.draw do
     post "overrides", to: "overrides#create"
     get "reports/trial_balance", to: "reports#trial_balance"
     get "reports/eod_readiness", to: "reports#eod_readiness"
+    post "business_date/close", to: "business_date_closes#create"
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

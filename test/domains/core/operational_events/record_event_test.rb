@@ -112,6 +112,20 @@ class CoreOperationalEventsRecordEventTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects explicit business_date not equal to current open day" do
+    assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordEvent.call(
+        event_type: "deposit.accepted",
+        channel: "batch",
+        idempotency_key: "bad-bd-#{SecureRandom.hex(4)}",
+        amount_minor_units: 100,
+        currency: "USD",
+        source_account_id: @account.id,
+        business_date: Date.new(2026, 4, 21)
+      )
+    end
+  end
+
   private
 
   def record_deposit!(idempotency_key:, amount:, teller_session_id: @teller_session.id)

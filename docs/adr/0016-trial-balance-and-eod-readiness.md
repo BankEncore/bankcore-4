@@ -47,3 +47,4 @@ Phase 1 needs **read-only** visibility into whether **GL activity for a business
 ## 4. References
 
 - Implementation: `Core::Ledger::Queries::TrialBalanceForBusinessDate`, `JournalBalanceCheckForBusinessDate`, `Teller::Queries::EodReadiness`, `Teller::ReportsController`.
+- Formal day close and posting-day invariant: [ADR-0018](0018-business-date-close-and-posting-invariant.md).

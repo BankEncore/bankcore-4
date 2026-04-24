@@ -59,12 +59,12 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 **Still slice-1 shaped (narrative)**
 
 - The registry covers a **small fixed set** of `event_type` values — not the full future event catalog (Phase 2+).
-- **Formal business-date close** (locks, checkpoints) is not implemented; EOD posture today is **read APIs** plus operational discipline ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)).
+- **Formal business-date close** — **narrow supervisor close + posting invariant shipped** ([ADR-0018](adr/0018-business-date-close-and-posting-invariant.md)); **read APIs** plus EOD discipline remain in [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md). Deeper locks, checkpoints, and multi-entity dates are not implemented.
 
 **Gap vs [01-mvp-vs-core.md](concepts/01-mvp-vs-core.md) (institution MVP vs this repo)**
 
 - **In repo today** (single-owner, single–business-date framing): deposits, withdrawals, transfers, reversals with FK columns, teller sessions and variance workflow, holds with available checks for configured paths, trial balance / EOD readiness **GET**s — each cross-linked to ADRs above.
-- **Partial / Phase 2+:** **Formal “day closed”** transition and **multi-branch / multi-entity GL** (Phase 2 below); **full joint / multi-party** servicing (3+ at open, post-open add/remove, additional roles) vs institution MVP in the concept doc — **narrow two-party joint at open** is in [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3; **automatic GL cash adjustment** for drawer variance (ADR-0014 non-goal until a dedicated financial event); **available / holds** depth beyond MVP authorization ([ADR-0004](adr/0004-account-balance-model.md), Phase 3).
+- **Partial / Phase 2+:** **Full “day closed”** orchestration (multi-branch, checkpoints, reopen) and **multi-branch / multi-entity GL** (Phase 2 below); **full joint / multi-party** servicing (3+ at open, post-open add/remove, additional roles) vs institution MVP in the concept doc — **narrow two-party joint at open** is in [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3; **narrow business date close** in [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md); **automatic GL cash adjustment** for drawer variance (ADR-0014 non-goal until a dedicated financial event); **available / holds** depth beyond MVP authorization ([ADR-0004](adr/0004-account-balance-model.md), Phase 3).
 - **Teller vs supervisor** — identity and supervisor gates shipped ([ADR-0015](adr/0015-teller-workspace-authentication.md)); finer roles and supervisor-only **read** APIs remain product choice.
 
 ---
@@ -91,7 +91,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | **1C** | **Teller session + cash control** | **Shipped (MVP):** `teller_sessions`, open/close, variance threshold → **`pending_supervisor`**, **`approve_variance`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)). Drawer/location depth and **GL cash adjustment** for variance still TBD. |
 | **1D** | **Reversals** | **Shipped (MVP):** `posting.reversal`, `RecordReversal`, FK columns, compensating journals ([ADR-0002](adr/0002-operational-event-model.md), [ADR-0012](adr/0012-posting-rule-registry-and-journal-subledger.md)). |
 | **1E** | **Minimum balance model** | **Partial:** holds + **available** checks on configured paths ([ADR-0013](adr/0013-holds-available-and-servicing-events.md), [ADR-0004](adr/0004-account-balance-model.md)); deeper balance projections = Phase 2/3. |
-| **1F** | **Trial balance + EOD gates** | **MVP read APIs shipped:** `GET /teller/reports/trial_balance`, `GET /teller/reports/eod_readiness` ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)). Formal day-close / locks: Phase 2. |
+| **1F** | **Trial balance + EOD gates** | **MVP read APIs shipped:** `GET /teller/reports/trial_balance`, `GET /teller/reports/eod_readiness` ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)). **Supervisor day close + posting invariant:** Phase 2 narrow slice [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md). |
 | **1G** | **RBAC** | **Foundation shipped:** **`operators`**, **`X-Operator-Id`**, supervisor gates on **`POST /teller/reversals`**, **`override.approved`**, **`POST /teller/teller_sessions/approve_variance`** ([ADR-0015](adr/0015-teller-workspace-authentication.md)). Finer roles / EOD policy layers = product follow-up. |
 
 ### 6.2 Phase 1 exit criteria
@@ -112,7 +112,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | **Products** | **Narrow slice shipped:** `deposit_products` + `deposit_accounts.deposit_product_id` + cached `product_code` ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md)). Full ADR-0005 resolvers / per-product GL remain open. |
 | **Event catalog** | Fees (`fee.assessed`, `fee.waived`), interest (`interest.accrued`, `interest.posted`), NSF / overdraft-style events as needed—each with posting templates. |
 | **Observability** | Searchable event index; filters by date, account, teller; traceability **event ↔ posting batch ↔ journal ↔ session**. |
-| **Business date close** | Formal “day closed” transition, optional balance snapshots, lock prior day posting—extend `Core::BusinessDate` commands with ADR if semantics split. |
+| **Business date close** | **Narrow slice shipped:** supervisor **`POST /teller/business_date/close`** after ADR-0016 readiness; singleton advance + append-only close audit; **open-day posting invariant** (ADR-0018). Multi-branch, snapshots, day reopen remain open. |
 
 ---
 
@@ -170,3 +170,4 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | [ADR-0015](adr/0015-teller-workspace-authentication.md) | Teller workspace `operators`, `X-Operator-Id`, supervisor gates |
 | [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md) | Trial balance query + EOD readiness reads |
 | [ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) | `deposit_products` + account FK (narrow Phase 2 slice) |
+| [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md) | Business date close + open-day posting invariant (narrow Phase 2 slice) |

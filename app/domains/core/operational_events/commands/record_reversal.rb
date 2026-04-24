@@ -39,6 +39,11 @@ module Core
           end
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
+          begin
+            Core::BusinessDate::Services::AssertOpenPostingDate.call!(date: on_date)
+          rescue Core::BusinessDate::Errors::InvalidPostingBusinessDate => e
+            raise InvalidRequest, e.message
+          end
           incoming_fp = fingerprint(original_operational_event_id: original_operational_event_id, channel: channel,
                                     idempotency_key: idempotency_key)
 

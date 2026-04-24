@@ -29,6 +29,11 @@ module Core
           raise InvalidRequest, "reference_id is required" if reference_id.blank?
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
+          begin
+            Core::BusinessDate::Services::AssertOpenPostingDate.call!(date: on_date)
+          rescue Core::BusinessDate::Errors::InvalidPostingBusinessDate => e
+            raise InvalidRequest, e.message
+          end
           incoming_fp = fingerprint(event_type: type, channel: channel, idempotency_key: idempotency_key,
                                       reference_id: reference_id.to_s, actor_id: actor_id)
 
