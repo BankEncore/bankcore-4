@@ -109,7 +109,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | Track | Content |
 | ----- | ------- |
 | **Ownership** | Joint and additional roles per [ADR-0007](adr/0007-party-account-ownership.md); effective dating already in ADR—enforce in commands and indexes. |
-| **Products** | `deposit_products` (or equivalent) per [ADR-0005](adr/0005-product-configuration-framework.md); migrate off literal `slice1_demand_deposit` stub toward FK + config. |
+| **Products** | **Narrow slice shipped:** `deposit_products` + `deposit_accounts.deposit_product_id` + cached `product_code` ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md)). Full ADR-0005 resolvers / per-product GL remain open. |
 | **Event catalog** | Fees (`fee.assessed`, `fee.waived`), interest (`interest.accrued`, `interest.posted`), NSF / overdraft-style events as needed—each with posting templates. |
 | **Observability** | Searchable event index; filters by date, account, teller; traceability **event ↔ posting batch ↔ journal ↔ session**. |
 | **Business date close** | Formal “day closed” transition, optional balance snapshots, lock prior day posting—extend `Core::BusinessDate` commands with ADR if semantics split. |
@@ -169,3 +169,4 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | [AGENTS.md](../AGENTS.md) | Stack, Docker, Cursor rules index |
 | [ADR-0015](adr/0015-teller-workspace-authentication.md) | Teller workspace `operators`, `X-Operator-Id`, supervisor gates |
 | [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md) | Trial balance query + EOD readiness reads |
+| [ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) | `deposit_products` + account FK (narrow Phase 2 slice) |

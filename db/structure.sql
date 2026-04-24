@@ -188,7 +188,8 @@ CREATE TABLE public.deposit_accounts (
     status character varying NOT NULL,
     product_code character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    deposit_product_id bigint NOT NULL
 );
 
 
@@ -209,6 +210,40 @@ CREATE SEQUENCE public.deposit_accounts_id_seq
 --
 
 ALTER SEQUENCE public.deposit_accounts_id_seq OWNED BY public.deposit_accounts.id;
+
+
+--
+-- Name: deposit_products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_products (
+    id bigint NOT NULL,
+    product_code character varying NOT NULL,
+    name character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: deposit_products_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_products_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_products_id_seq OWNED BY public.deposit_products.id;
 
 
 --
@@ -616,6 +651,13 @@ ALTER TABLE ONLY public.deposit_accounts ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: deposit_products id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_products ALTER COLUMN id SET DEFAULT nextval('public.deposit_products_id_seq'::regclass);
+
+
+--
 -- Name: gl_accounts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -715,6 +757,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 ALTER TABLE ONLY public.deposit_accounts
     ADD CONSTRAINT deposit_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deposit_products deposit_products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_products
+    ADD CONSTRAINT deposit_products_pkey PRIMARY KEY (id);
 
 
 --
@@ -831,6 +881,20 @@ CREATE INDEX index_deposit_account_parties_on_party_record_id ON public.deposit_
 --
 
 CREATE UNIQUE INDEX index_deposit_accounts_on_account_number ON public.deposit_accounts USING btree (account_number);
+
+
+--
+-- Name: index_deposit_accounts_on_deposit_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_accounts_on_deposit_product_id ON public.deposit_accounts USING btree (deposit_product_id);
+
+
+--
+-- Name: index_deposit_products_on_product_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_deposit_products_on_product_code ON public.deposit_products USING btree (product_code);
 
 
 --
@@ -1074,6 +1138,14 @@ ALTER TABLE ONLY public.holds
 
 
 --
+-- Name: deposit_accounts fk_rails_71f0b9310a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_accounts
+    ADD CONSTRAINT fk_rails_71f0b9310a FOREIGN KEY (deposit_product_id) REFERENCES public.deposit_products(id);
+
+
+--
 -- Name: journal_entries fk_rails_7f9a73cda9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1176,6 +1248,8 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120004'),
+('20260424120003'),
 ('20260424120002'),
 ('20260424120001'),
 ('20260424120000'),

@@ -5,8 +5,10 @@
 # The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
 
 require_relative "../lib/bank_core/seeds/gl_coa"
+require_relative "../lib/bank_core/seeds/deposit_products"
 
 BankCore::Seeds::GlCoa.seed!
+BankCore::Seeds::DepositProducts.seed!
 
 if Core::BusinessDate::Models::BusinessDateSetting.none?
   Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.current)

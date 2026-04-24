@@ -32,10 +32,11 @@ The **Accounts** module owns a new **`deposit_accounts`** table with at least:
 | `account_number`  | string   | NOT NULL, **UNIQUE** — institution-unique display/reference; generation strategy is implementation detail (tests may use random; production may use sequential or another allocator later). |
 | `currency`        | string   | NOT NULL, default **`USD`** (ADR-0008 single-currency MVP). |
 | `status`          | string   | NOT NULL — application enum for slice 1: **`open`**, **`closed`** (extend only via ADR/catalog when needed). |
-| `product_code`    | string   | NOT NULL — **stub** until Products ([ADR-0005](0005-product-configuration-framework.md)); `OpenAccount` sets the **canonical slice-1 literal** below. No `deposit_products` FK in slice 1. |
+| `deposit_product_id` | bigint | NOT NULL, FK → **`deposit_products`** — Phase 2 narrow implementation ([ADR-0017](0017-deposit-products-fk-narrow-scope.md)). |
+| `product_code`    | string   | NOT NULL — **denormalized cache** of `deposit_products.product_code` for cheap reads and stable JSON; `OpenAccount` sets it from the resolved product row. **Immutable** `deposit_products.product_code` is policy until a later ADR allows renames. |
 | `created_at` / `updated_at` | datetime | |
 
-**Canonical `product_code` (slice 1):** the string **`slice1_demand_deposit`** — use in `OpenAccount`, seeds, and slice-1 integration tests so posting and accounts stay aligned until Products replaces it.
+**Canonical slice-1 product row:** `deposit_products.product_code` **`slice1_demand_deposit`** — seeded in migration / `BankCore::Seeds::DepositProducts`; `OpenAccount` defaults to this product when callers omit `deposit_product_id` / `product_code`.
 
 **Must not** in slice 1: `account_relationships`, restrictions, notes, available balance, holds (see **§4 Non-goals**).
 
@@ -72,7 +73,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 **Result:**
 
-1. One **`deposit_accounts`** row: `account_number` unique, `currency: "USD"`, `status: "open"`, `product_code: "slice1_demand_deposit"`.
+1. One **`deposit_accounts`** row: `account_number` unique, `currency: "USD"`, `status: "open"`, **`deposit_product_id`** → seeded **`deposit_products`** row, `product_code: "slice1_demand_deposit"` (cache).
 2. One **`deposit_account_parties`** row: `deposit_account_id` → new account, `party_record_id: 42`, `role: "owner"`, `status: "active"`, `effective_on: 2026-04-22`, `ended_on: NULL`.
 
 3. **`RecordEvent`** for `deposit.accepted` (with `source_account_id` set to the new **`deposit_accounts.id`**, channel, idempotency key, amount, currency) creates an **`operational_events`** row in **`pending`** status; **`PostEvent`** then moves it to **`posted`** with a balanced journal (1110 / 2110).

@@ -32,6 +32,8 @@ class Slice1VerticalSliceProofTest < ActionDispatch::IntegrationTest
     account_id = response.parsed_body["id"]
     account_number = response.parsed_body["account_number"]
     assert_equal Accounts::SLICE1_PRODUCT_CODE, response.parsed_body["product_code"]
+    assert response.parsed_body["deposit_product_id"].present?
+    assert response.parsed_body["product_name"].present?
 
     account = Accounts::Models::DepositAccount.find(account_id)
     assert_equal "open", account.status

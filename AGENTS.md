@@ -37,6 +37,8 @@ After `bin/rails db:seed` in **development**, sample **`operators`** rows exist 
 
 **Open session for teller cash:** `TELLER_REQUIRE_OPEN_SESSION_FOR_CASH` (default **true**). When enabled, **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** require **`teller_session_id`** referencing an **open** session (`transfer.completed` exempt). Set to **`false`**, **`0`**, or **`no`** to disable.
 
+**Deposit products:** `POST /teller/deposit_accounts` accepts optional **`deposit_product_id`** and **`product_code`** on `deposit_account` (defaults to seeded slice-1 product). Response includes **`deposit_product_id`**, **`product_code`**, and **`product_name`**. See [docs/adr/0017-deposit-products-fk-narrow-scope.md](docs/adr/0017-deposit-products-fk-narrow-scope.md).
+
 ## Documentation pointers
 
 - **[docs/concepts/01-mvp-vs-core.md](docs/concepts/01-mvp-vs-core.md)** — MVP vs full-system boundaries (“branch safely”).
