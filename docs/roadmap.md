@@ -5,6 +5,8 @@
 
 This document **sequences** engineering work. It does **not** redefine scope: MVP boundaries stay in [docs/concepts/01-mvp-vs-core.md](concepts/01-mvp-vs-core.md); boundaries and ownership stay in [docs/architecture/bankcore-module-catalog.md](architecture/bankcore-module-catalog.md) and the ADRs under [docs/adr/](adr/).
 
+For completion planning on the deferred items called out below, see [roadmap-deferred-completion.md](roadmap-deferred-completion.md).
+
 ---
 
 ## 1. How to use this roadmap
@@ -133,11 +135,17 @@ All **six** Phase 2 tracks above have a **shipped narrow slice** in this repo; e
 ## 8. Phase 3 — Product and financial depth
 (Preliminary Plan)[/Users/syckot/.cursor/plans/phase_3_financial_depth_e3ea12de.plan.md]
 
-- Interest engine (accrual, periodic post, day-count conventions).  
-- Fee engine (rules, waivers, conditions).  
-- Holds depth (expiration, partial holds, deposit-based holds).  
-- Overdraft handling (allow/deny, fee side effects).  
-- Customer-visible history and statements (from posted events + journals, not ad-hoc mutation; first slice in [ADR-0024](adr/0024-customer-visible-history-and-statements.md)).
+| Track | Current position |
+| --- | --- |
+| **Interest engine** | **Narrow slice shipped:** explicit `system`-channel `interest.accrued` / `interest.posted` events, posting rules **5100 / 2510 / 2110**, payout linkage, duplicate-payout guard, and accrual reversal guard ([ADR-0021](adr/0021-interest-accrual-and-payout-slice.md)). **Deferred:** rate engine, day-count conventions, compounding, product interest profiles, sub-minor/microcent accumulator tables, and periodic scheduler. |
+| **Fee engine** | **Narrow slice shipped:** product-owned `deposit_product_fee_rules`, active monthly-maintenance resolver, `Accounts::Commands::AssessMonthlyMaintenanceFees`, deterministic idempotency, and `fee.assessed` audit reference convention ([ADR-0022](adr/0022-monthly-maintenance-fee-engine.md)). **Deferred:** broader fee catalog, waiver/condition rules, richer schedules, fee profiles, and statement-copy fees. |
+| **Holds depth** | **Narrow slice shipped:** deposit-linked holds reference a posted `deposit.accepted`, enforce same-account/currency and active-hold sum limits, and block deposit reversal while active linked holds remain ([ADR-0013](adr/0013-holds-available-and-servicing-events.md)). **Deferred:** expiration engine, partial release/adjust workflows, Reg CC / collected-funds schedules. |
+| **Overdraft handling** | **Narrow slice shipped:** product-owned `deposit_product_overdraft_policies`, deny-NSF authorization path for withdrawals/transfers, no-GL `overdraft.nsf_denied` audit event, and forced NSF `fee.assessed` side effect ([ADR-0023](adr/0023-overdraft-nsf-deny-and-fee.md)). **Deferred:** allowed overdraft limits, opt-in/eligibility rules, representment, returned-item lifecycle, and separate NSF GL mapping. |
+| **Customer-visible history and statements** | **Narrow slice shipped:** product-owned `deposit_product_statement_profiles`, `Deposits::Commands::GenerateDepositStatements`, immutable `deposit_statements` JSON snapshots, and line items derived from posted GL **2110** journal lines plus selected no-GL servicing events ([ADR-0024](adr/0024-customer-visible-history-and-statements.md)). **Deferred:** teller/customer HTTP surface, PDF/document generation, delivery preferences, notifications, daily reporting snapshots, and statement fees. |
+
+**Phase 3 — current position (narrow slices)**  
+
+All **five** Phase 3 tracks above have a **shipped narrow slice** in this repo. The table is the checkpoint for “what runs in branch today”; each row’s trailing sentence still lists the deeper product and operational scope that remains open.
 
 ---
 
