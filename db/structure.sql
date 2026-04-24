@@ -329,6 +329,7 @@ CREATE TABLE public.holds (
     released_by_operational_event_id bigint,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    placed_for_operational_event_id bigint,
     CONSTRAINT holds_amount_positive CHECK ((amount_minor_units > 0)),
     CONSTRAINT holds_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'released'::character varying, 'expired'::character varying])::text[])))
 );
@@ -981,6 +982,20 @@ CREATE INDEX index_holds_on_placed_by_operational_event_id ON public.holds USING
 
 
 --
+-- Name: index_holds_on_placed_for_oe_id_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_holds_on_placed_for_oe_id_active ON public.holds USING btree (placed_for_operational_event_id) WHERE (((status)::text = 'active'::text) AND (placed_for_operational_event_id IS NOT NULL));
+
+
+--
+-- Name: index_holds_on_placed_for_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_holds_on_placed_for_operational_event_id ON public.holds USING btree (placed_for_operational_event_id);
+
+
+--
 -- Name: index_holds_on_released_by_operational_event_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1133,6 +1148,14 @@ CREATE TRIGGER journal_lines_immutability_check BEFORE DELETE OR UPDATE ON publi
 
 ALTER TABLE ONLY public.deposit_account_parties
     ADD CONSTRAINT fk_rails_0245a491be FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+
+
+--
+-- Name: holds fk_rails_09b889824c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds
+    ADD CONSTRAINT fk_rails_09b889824c FOREIGN KEY (placed_for_operational_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -1318,6 +1341,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120006'),
 ('20260424120005'),
 ('20260424120004'),
 ('20260424120003'),

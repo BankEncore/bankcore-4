@@ -28,7 +28,7 @@ Records that an **active hold** was applied against a deposit account so **avail
 | `amount_minor_units` | Yes | Hold amount. |
 | `currency` | Yes | |
 | `source_account_id` | Yes | Account under hold (deposit account). |
-| **`holds` table** | Recommended | Columns per ADR-0004 §6: account, amount, status, timestamps, reason, optional link to this event id. |
+| **`holds` table** | Recommended | Columns per ADR-0004 §6: account, amount, status, timestamps, reason, FK **`placed_by_operational_event_id`** → this `hold.placed` row. Optional **`placed_for_operational_event_id`** → a **posted** **`deposit.accepted`** on the same account (ADR-0013 §3). |
 
 ## Lifecycle
 
@@ -44,7 +44,7 @@ Records that an **active hold** was applied against a deposit account so **avail
 
 ## Idempotency
 
-- Fingerprint includes account, amount, currency, and any fields that distinguish two legitimate distinct holds (e.g. reason code when added).
+- Replays validate **`deposit_account_id`**, **amount**, **currency**, and optional **`placed_for_operational_event_id`** against the persisted **`holds`** row for the same **`(channel, idempotency_key)`**.
 
 ## Reversals
 
@@ -63,6 +63,7 @@ Records that an **active hold** was applied against a deposit account so **avail
 
 - [ADR-0002](../adr/0002-operational-event-model.md) §5.2
 - [ADR-0004](../adr/0004-account-balance-model.md) §5–6
+- [ADR-0013](../adr/0013-holds-available-and-servicing-events.md) §3 (deposit-linked holds)
 
 ## Examples
 

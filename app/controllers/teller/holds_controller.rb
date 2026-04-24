@@ -4,9 +4,14 @@ module Teller
   class HoldsController < ApplicationController
     def create
       attrs = params.require(:hold).permit(:deposit_account_id, :amount_minor_units, :currency, :channel, :idempotency_key,
-                                           :business_date).to_h.symbolize_keys
+                                           :business_date, :placed_for_operational_event_id).to_h.symbolize_keys
       attrs[:deposit_account_id] = attrs[:deposit_account_id].to_i
       attrs[:amount_minor_units] = attrs[:amount_minor_units].to_i
+      if attrs[:placed_for_operational_event_id].present?
+        attrs[:placed_for_operational_event_id] = attrs[:placed_for_operational_event_id].to_i
+      else
+        attrs.delete(:placed_for_operational_event_id)
+      end
       if attrs[:business_date].present?
         attrs[:business_date] = Date.iso8601(attrs[:business_date].to_s)
       else

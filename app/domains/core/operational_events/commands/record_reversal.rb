@@ -37,6 +37,13 @@ module Core
           if Models::OperationalEvent.exists?(reversal_of_event_id: original.id)
             raise InvalidRequest, "original event already has a reversal"
           end
+          if original.event_type == "deposit.accepted" &&
+              Accounts::Models::Hold.exists?(
+                placed_for_operational_event_id: original.id,
+                status: Accounts::Models::Hold::STATUS_ACTIVE
+              )
+            raise InvalidRequest, "active deposit-linked holds must be released before reversing this deposit"
+          end
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
           begin
