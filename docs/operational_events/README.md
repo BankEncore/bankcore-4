@@ -42,6 +42,7 @@ Copy the structure from any existing file in this folder when adding a new `even
 | [teller-session-closed.md](teller-session-closed.md) | (table-first MVP; OE optional) | No | `Teller::Commands::CloseSession` |
 | [override-requested.md](override-requested.md) | `override.requested` | No | `RecordControlEvent` |
 | [override-approved.md](override-approved.md) | `override.approved` | No | `RecordControlEvent` |
+| [overdraft-nsf-denied.md](overdraft-nsf-denied.md) | `overdraft.nsf_denied` | No | `RecordControlEvent` |
 | [fee-assessed.md](fee-assessed.md) | `fee.assessed` | Yes | `RecordEvent` |
 | [fee-waived.md](fee-waived.md) | `fee.waived` | Yes | `RecordEvent` |
 | [interest-accrued.md](interest-accrued.md) | `interest.accrued` | Yes | `RecordEvent` (`system` only; see [ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)) |
@@ -57,6 +58,8 @@ Copy the structure from any existing file in this folder when adding a new `even
 **Drawer variance to GL (optional):** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is enabled, **`CloseSession`** / **`ApproveSessionVariance`** create and post **`teller.drawer.variance.posted`** (`system` channel) for non-zero variance ([ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)). This type is **not** accepted via **`POST /teller/operational_events`** from operators.
 
 **Interest (P3-2):** **`interest.accrued`** and **`interest.posted`** are **`system`** channel financial events. Accrual posts **5100 / 2510**; payout references the posted accrual via **`reference_id`** and posts **2510 / 2110** ([ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)).
+
+**Overdraft / NSF (P3-4):** teller **`withdrawal.posted`** and **`transfer.completed`** create requests route through explicit authorization. If available balance is insufficient under a product **`deny_nsf`** policy, the attempted transaction is not posted; a no-GL **`overdraft.nsf_denied`** event is recorded and a forced NSF **`fee.assessed`** may be posted with `reference_id = "nsf_denial:<denial_event_id>"` ([ADR-0023](../adr/0023-overdraft-nsf-deny-and-fee.md)).
 
 ## Concept layering
 

@@ -287,6 +287,48 @@ ALTER SEQUENCE public.deposit_product_fee_rules_id_seq OWNED BY public.deposit_p
 
 
 --
+-- Name: deposit_product_overdraft_policies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_product_overdraft_policies (
+    id bigint NOT NULL,
+    deposit_product_id bigint NOT NULL,
+    mode character varying NOT NULL,
+    nsf_fee_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    description character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT deposit_product_od_policies_ended_on_after_effective_on CHECK (((ended_on IS NULL) OR (ended_on >= effective_on))),
+    CONSTRAINT deposit_product_od_policies_mode_enum CHECK (((mode)::text = 'deny_nsf'::text)),
+    CONSTRAINT deposit_product_od_policies_nsf_fee_positive CHECK ((nsf_fee_minor_units > 0)),
+    CONSTRAINT deposit_product_od_policies_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+
+--
+-- Name: deposit_product_overdraft_policies_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_product_overdraft_policies_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_product_overdraft_policies_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_product_overdraft_policies_id_seq OWNED BY public.deposit_product_overdraft_policies.id;
+
+
+--
 -- Name: deposit_products; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -740,6 +782,13 @@ ALTER TABLE ONLY public.deposit_product_fee_rules ALTER COLUMN id SET DEFAULT ne
 
 
 --
+-- Name: deposit_product_overdraft_policies id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_product_overdraft_policies ALTER COLUMN id SET DEFAULT nextval('public.deposit_product_overdraft_policies_id_seq'::regclass);
+
+
+--
 -- Name: deposit_products id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -865,6 +914,14 @@ ALTER TABLE ONLY public.deposit_product_fee_rules
 
 
 --
+-- Name: deposit_product_overdraft_policies deposit_product_overdraft_policies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_product_overdraft_policies
+    ADD CONSTRAINT deposit_product_overdraft_policies_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: deposit_products deposit_products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -968,6 +1025,13 @@ CREATE INDEX idx_deposit_product_fee_rules_resolver ON public.deposit_product_fe
 
 
 --
+-- Name: idx_deposit_product_od_policies_resolver; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_product_od_policies_resolver ON public.deposit_product_overdraft_policies USING btree (deposit_product_id, mode, status, effective_on, ended_on);
+
+
+--
 -- Name: index_core_business_date_close_events_on_closed_by_operator_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1021,6 +1085,13 @@ CREATE INDEX index_deposit_accounts_on_deposit_product_id ON public.deposit_acco
 --
 
 CREATE INDEX index_deposit_product_fee_rules_on_deposit_product_id ON public.deposit_product_fee_rules USING btree (deposit_product_id);
+
+
+--
+-- Name: index_deposit_product_overdraft_policies_on_deposit_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_product_overdraft_policies_on_deposit_product_id ON public.deposit_product_overdraft_policies USING btree (deposit_product_id);
 
 
 --
@@ -1309,6 +1380,14 @@ ALTER TABLE ONLY public.holds
 
 
 --
+-- Name: deposit_product_overdraft_policies fk_rails_5d1e409444; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_product_overdraft_policies
+    ADD CONSTRAINT fk_rails_5d1e409444 FOREIGN KEY (deposit_product_id) REFERENCES public.deposit_products(id);
+
+
+--
 -- Name: deposit_accounts fk_rails_71f0b9310a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1419,6 +1498,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120008'),
 ('20260424120007'),
 ('20260424120006'),
 ('20260424120005'),

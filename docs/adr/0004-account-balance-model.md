@@ -198,6 +198,15 @@ The system should produce a structured decision such as:
 * declined for insufficient funds  
 * requires override/approval
 
+### 7.4 P3-4 deny + NSF first slice
+
+The first shipped overdraft slice is documented in [ADR-0023](0023-overdraft-nsf-deny-and-fee.md):
+
+* `withdrawal.posted` and `transfer.completed` attempts that exceed available balance are denied, not posted;
+* denial is audited with posted no-GL `overdraft.nsf_denied`;
+* a product-configured NSF fee may be force-posted as `fee.assessed`, linked to the denial by `reference_id`;
+* allowing overdrafts into a limit remains a future slice.
+
 ---
 
 ## 8\. Posting interaction

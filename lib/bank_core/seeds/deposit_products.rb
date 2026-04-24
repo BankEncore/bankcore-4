@@ -20,6 +20,16 @@ module BankCore
             rule.status = Products::Models::DepositProductFeeRule::STATUS_ACTIVE
             rule.description = "Seeded monthly maintenance fee for P3-3"
           end
+          Products::Models::DepositProductOverdraftPolicy.find_or_create_by!(
+            deposit_product: product,
+            mode: Products::Models::DepositProductOverdraftPolicy::MODE_DENY_NSF,
+            effective_on: Date.new(2026, 4, 1)
+          ) do |policy|
+            policy.nsf_fee_minor_units = 3_500
+            policy.currency = product.currency
+            policy.status = Products::Models::DepositProductOverdraftPolicy::STATUS_ACTIVE
+            policy.description = "Seeded deny-NSF policy for P3-4"
+          end
         end
       end
     end

@@ -233,7 +233,7 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
     assert_equal rev_entry.id, orig_entry.reversing_journal_entry_id
   end
 
-  test "hold reduces available and withdrawal fails when insufficient" do
+  test "hold reduces available and withdrawal is denied NSF when insufficient" do
     post "/teller/holds",
       params: {
         hold: {
@@ -261,7 +261,11 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
       }.to_json,
       headers: teller_json_headers(@teller_operator)
     assert_response :unprocessable_entity
-    assert_match(/insufficient/i, response.parsed_body["message"].to_s)
+    assert_equal "nsf_denied", response.parsed_body["error"]
+    assert Core::OperationalEvents::Models::OperationalEvent.exists?(
+      id: response.parsed_body["denial_event_id"],
+      event_type: "overdraft.nsf_denied"
+    )
   end
 
   test "teller session open close override requested teller override approved supervisor" do

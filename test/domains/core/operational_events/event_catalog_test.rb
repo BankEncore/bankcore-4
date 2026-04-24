@@ -27,4 +27,11 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
     assert_includes types, "interest.accrued"
     assert_includes types, "interest.posted"
   end
+
+  test "overdraft NSF denial appears in API array as no-GL event" do
+    entry = Core::OperationalEvents::EventCatalog.entry_for("overdraft.nsf_denied")
+    assert entry
+    assert_not entry.posts_to_gl
+    assert_equal "RecordControlEvent", entry.record_command
+  end
 end

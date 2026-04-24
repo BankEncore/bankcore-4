@@ -63,7 +63,17 @@ module Teller
       end
       attrs[:reference_id] = attrs[:reference_id].presence
 
-      result = Core::OperationalEvents::Commands::RecordEvent.call(**attrs, actor_id: current_operator.id)
+      result = record_operational_event(attrs)
+      if result[:outcome].in?([ Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED, Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED_REPLAY ])
+        render json: {
+          error: "nsf_denied",
+          outcome: result[:outcome],
+          denial_event_id: result[:denial_event].id,
+          fee_event_id: result[:fee_event].id
+        }, status: :unprocessable_entity
+        return
+      end
+
       status = result[:outcome] == :created ? :created : :ok
       render json: {
         id: result[:event].id,
@@ -72,6 +82,8 @@ module Teller
       }, status: status
     rescue Core::OperationalEvents::Commands::RecordEvent::InvalidRequest => e
       render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
+    rescue Accounts::Commands::AuthorizeDebit::InvalidRequest => e
+      render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
     rescue Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency => e
       render json: { error: "idempotency_conflict", fingerprint: e.fingerprint }, status: :conflict
     rescue Core::OperationalEvents::Commands::RecordEvent::PostedReplay => e
@@ -79,6 +91,14 @@ module Teller
     end
 
     private
+
+    def record_operational_event(attrs)
+      if %w[withdrawal.posted transfer.completed].include?(attrs[:event_type].to_s)
+        Accounts::Commands::AuthorizeDebit.call(**attrs, actor_id: current_operator.id)
+      else
+        Core::OperationalEvents::Commands::RecordEvent.call(**attrs, actor_id: current_operator.id)
+      end
+    end
 
     def index_query_params
       p = params.permit(

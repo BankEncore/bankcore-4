@@ -40,7 +40,9 @@ module Core
         Entry.new("override.requested", "operational", false, "RecordControlEvent", false, nil,
           "Supervisor override requested"),
         Entry.new("override.approved", "operational", false, "RecordControlEvent", false, nil,
-          "Supervisor override approved")
+          "Supervisor override approved"),
+        Entry.new("overdraft.nsf_denied", "operational", false, "RecordControlEvent", false, "fee.assessed",
+          "Denied overdraft/NSF debit attempt; may trigger linked NSF fee")
       ].freeze
 
       def self.all_entries
