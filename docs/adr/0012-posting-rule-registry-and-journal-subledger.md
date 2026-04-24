@@ -34,6 +34,8 @@ Per-account liability on GL **2110** cannot be inferred from aggregate GL rows a
 | `fee.assessed` | Dr **2110** (`deposit_account_id` = `source_account_id`) / Cr **4510** ([ADR-0019](0019-event-catalog-and-fee-events.md)). |
 | `fee.waived` | Dr **4510** / Cr **2110** (`deposit_account_id` = `source_account_id`) ([ADR-0019](0019-event-catalog-and-fee-events.md)). |
 | `teller.drawer.variance.posted` | Shortage: Dr **5190** / Cr **1110**; overage: Dr **1110** / Cr **5190**; magnitude `abs(amount_minor_units)`; signed amount on event ([ADR-0020](0020-teller-drawer-variance-gl-posting.md)). |
+| `interest.accrued` | Dr **5100** / Cr **2510** (`deposit_account_id` = `source_account_id` on 2510 payable leg) ([ADR-0021](0021-interest-accrual-and-payout-slice.md)). |
+| `interest.posted` | Dr **2510** / Cr **2110** (`deposit_account_id` = `source_account_id` on both legs) ([ADR-0021](0021-interest-accrual-and-payout-slice.md)). |
 
 ---
 
@@ -50,3 +52,5 @@ Per-account liability on GL **2110** cannot be inferred from aggregate GL rows a
 - [docs/operational_events/withdrawal-posted.md](../operational_events/withdrawal-posted.md)
 - [docs/operational_events/transfer-completed.md](../operational_events/transfer-completed.md)
 - [docs/operational_events/compensating-reversal.md](../operational_events/compensating-reversal.md)
+- [docs/operational_events/interest-accrued.md](../operational_events/interest-accrued.md)
+- [docs/operational_events/interest-posted.md](../operational_events/interest-posted.md)

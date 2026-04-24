@@ -30,6 +30,11 @@
 
 - Automated test asserts every key in **`PostingRules::PostingRules::Registry::HANDLERS`** has a matching **`EventCatalog`** entry with **`posts_to_gl: true`** (and consistent `event_type`).
 
+### 2.4 Automated fee assessment (P3-3)
+
+- **P3-3 monthly maintenance engine:** [ADR-0022](0022-monthly-maintenance-fee-engine.md) adds product-owned monthly maintenance fee rules and a system command that creates and posts existing **`fee.assessed`** events.
+- No new event type is introduced for routine monthly maintenance fees. Engine-created fees are distinguished by deterministic idempotency keys and **`reference_id`** convention (`monthly_maintenance:<rule_id>:<business_date>`).
+
 ---
 
 ## 3. Non-goals (this ADR)

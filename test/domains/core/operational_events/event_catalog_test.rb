@@ -21,4 +21,17 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
     types = Core::OperationalEvents::EventCatalog.as_api_array.map { |h| h[:event_type] }
     assert_includes types, "teller.drawer.variance.posted"
   end
+
+  test "interest types appear in API array" do
+    types = Core::OperationalEvents::EventCatalog.as_api_array.map { |h| h[:event_type] }
+    assert_includes types, "interest.accrued"
+    assert_includes types, "interest.posted"
+  end
+
+  test "overdraft NSF denial appears in API array as no-GL event" do
+    entry = Core::OperationalEvents::EventCatalog.entry_for("overdraft.nsf_denied")
+    assert entry
+    assert_not entry.posts_to_gl
+    assert_equal "RecordControlEvent", entry.record_command
+  end
 end

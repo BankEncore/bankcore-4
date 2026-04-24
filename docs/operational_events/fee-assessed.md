@@ -18,12 +18,14 @@ Records a **deposit service charge** assessed to a demand deposit account (`sour
 - **Must** carry a positive `amount_minor_units` and `currency` (MVP: USD).
 - **Available balance:** must be sufficient (same projection as `withdrawal.posted` per [ADR-0004](../adr/0004-account-balance-model.md)).
 - **Not** a teller-cash drawer movement: **`teller_session_id`** is **not** required for `channel: teller` when the cash session gate is on.
+- P3-3 monthly maintenance engine creates this same event with **`channel: "system"`**; no separate event type is used for engine-origin fees.
+- P3-4 NSF fees are forced **`channel: "system"`** assessments linked to a posted `overdraft.nsf_denied` event. This is the only first-slice exception to the available-balance guard.
 
 ## Persistence
 
 | Column / concept | Required | Notes |
 | ---------------- | -------- | ----- |
-| `reference_id` | No | Unused on assess. |
+| `reference_id` | No | Manual fees leave this blank. Engine-created monthly maintenance fees use `monthly_maintenance:<rule_id>:<business_date>` ([ADR-0022](../adr/0022-monthly-maintenance-fee-engine.md)). NSF fees use `nsf_denial:<denial_event_id>` ([ADR-0023](../adr/0023-overdraft-nsf-deny-and-fee.md)). |
 
 ## Lifecycle
 
@@ -38,7 +40,7 @@ Records a **deposit service charge** assessed to a demand deposit account (`sour
 
 ## Idempotency
 
-Fingerprint: `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id` (no `reference_id`).
+Fingerprint: `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id`; includes **`reference_id`** when present for engine-created fees.
 
 ## Reversals
 
@@ -52,3 +54,5 @@ Fingerprint: `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `
 
 - [ADR-0019](../adr/0019-event-catalog-and-fee-events.md)
 - [ADR-0012](../adr/0012-posting-rule-registry-and-journal-subledger.md)
+- [ADR-0022](../adr/0022-monthly-maintenance-fee-engine.md)
+- [ADR-0023](../adr/0023-overdraft-nsf-deny-and-fee.md)

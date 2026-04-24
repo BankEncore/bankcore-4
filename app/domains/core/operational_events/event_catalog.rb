@@ -27,6 +27,10 @@ module Core
           "Deposit service charge assessed to DDA"),
         Entry.new("fee.waived", "financial", true, "RecordEvent", false, nil,
           "Waives a prior posted fee.assessed (reference_id = original event id)"),
+        Entry.new("interest.accrued", "financial", true, "RecordEvent", true, "posting.reversal",
+          "Accrues deposit interest expense and payable (system channel only; ADR-0021)"),
+        Entry.new("interest.posted", "financial", true, "RecordEvent", true, "posting.reversal",
+          "Pays a posted interest.accrued into DDA (reference_id = accrual event id; ADR-0021)"),
         Entry.new("teller.drawer.variance.posted", "financial", true, "RecordEvent", false, nil,
           "GL adjustment for non-zero teller drawer cash variance (system channel only; ADR-0020)"),
         Entry.new("hold.placed", "servicing", false, "PlaceHold", false, nil,
@@ -36,7 +40,9 @@ module Core
         Entry.new("override.requested", "operational", false, "RecordControlEvent", false, nil,
           "Supervisor override requested"),
         Entry.new("override.approved", "operational", false, "RecordControlEvent", false, nil,
-          "Supervisor override approved")
+          "Supervisor override approved"),
+        Entry.new("overdraft.nsf_denied", "operational", false, "RecordControlEvent", false, "fee.assessed",
+          "Denied overdraft/NSF debit attempt; may trigger linked NSF fee")
       ].freeze
 
       def self.all_entries

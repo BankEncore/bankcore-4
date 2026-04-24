@@ -9,6 +9,37 @@ module BankCore
           p.name = "Slice 1 demand deposit (seeded)"
           p.status = Products::Models::DepositProduct::STATUS_ACTIVE
           p.currency = "USD"
+        end.tap do |product|
+          Products::Models::DepositProductFeeRule.find_or_create_by!(
+            deposit_product: product,
+            fee_code: Products::Models::DepositProductFeeRule::FEE_CODE_MONTHLY_MAINTENANCE,
+            effective_on: Date.new(2026, 4, 1)
+          ) do |rule|
+            rule.amount_minor_units = 500
+            rule.currency = product.currency
+            rule.status = Products::Models::DepositProductFeeRule::STATUS_ACTIVE
+            rule.description = "Seeded monthly maintenance fee for P3-3"
+          end
+          Products::Models::DepositProductOverdraftPolicy.find_or_create_by!(
+            deposit_product: product,
+            mode: Products::Models::DepositProductOverdraftPolicy::MODE_DENY_NSF,
+            effective_on: Date.new(2026, 4, 1)
+          ) do |policy|
+            policy.nsf_fee_minor_units = 3_500
+            policy.currency = product.currency
+            policy.status = Products::Models::DepositProductOverdraftPolicy::STATUS_ACTIVE
+            policy.description = "Seeded deny-NSF policy for P3-4"
+          end
+          Products::Models::DepositProductStatementProfile.find_or_create_by!(
+            deposit_product: product,
+            frequency: Products::Models::DepositProductStatementProfile::FREQUENCY_MONTHLY,
+            effective_on: Date.new(2026, 4, 1)
+          ) do |profile|
+            profile.cycle_day = 1
+            profile.currency = product.currency
+            profile.status = Products::Models::DepositProductStatementProfile::STATUS_ACTIVE
+            profile.description = "Seeded monthly statement profile for P3-5"
+          end
         end
       end
     end
