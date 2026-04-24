@@ -160,6 +160,9 @@ module Core
           if event_type.to_s == "fee.waived" && reference_id.present?
             payload[:reference_id] = reference_id.to_s
           end
+          if event_type.to_s == "fee.assessed" && reference_id.present?
+            payload[:reference_id] = reference_id.to_s
+          end
           if event_type.to_s == "interest.posted" && reference_id.present?
             payload[:reference_id] = reference_id.to_s
           end

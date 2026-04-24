@@ -246,6 +246,47 @@ ALTER SEQUENCE public.deposit_accounts_id_seq OWNED BY public.deposit_accounts.i
 
 
 --
+-- Name: deposit_product_fee_rules; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_product_fee_rules (
+    id bigint NOT NULL,
+    deposit_product_id bigint NOT NULL,
+    fee_code character varying NOT NULL,
+    amount_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    description character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT deposit_product_fee_rules_amount_positive CHECK ((amount_minor_units > 0)),
+    CONSTRAINT deposit_product_fee_rules_ended_on_after_effective_on CHECK (((ended_on IS NULL) OR (ended_on >= effective_on))),
+    CONSTRAINT deposit_product_fee_rules_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+
+--
+-- Name: deposit_product_fee_rules_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_product_fee_rules_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_product_fee_rules_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_product_fee_rules_id_seq OWNED BY public.deposit_product_fee_rules.id;
+
+
+--
 -- Name: deposit_products; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -692,6 +733,13 @@ ALTER TABLE ONLY public.deposit_accounts ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: deposit_product_fee_rules id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_product_fee_rules ALTER COLUMN id SET DEFAULT nextval('public.deposit_product_fee_rules_id_seq'::regclass);
+
+
+--
 -- Name: deposit_products id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -809,6 +857,14 @@ ALTER TABLE ONLY public.deposit_accounts
 
 
 --
+-- Name: deposit_product_fee_rules deposit_product_fee_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_product_fee_rules
+    ADD CONSTRAINT deposit_product_fee_rules_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: deposit_products deposit_products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -905,6 +961,13 @@ ALTER TABLE ONLY public.teller_sessions
 
 
 --
+-- Name: idx_deposit_product_fee_rules_resolver; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_product_fee_rules_resolver ON public.deposit_product_fee_rules USING btree (deposit_product_id, fee_code, status, effective_on, ended_on);
+
+
+--
 -- Name: index_core_business_date_close_events_on_closed_by_operator_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -951,6 +1014,13 @@ CREATE UNIQUE INDEX index_deposit_accounts_on_account_number ON public.deposit_a
 --
 
 CREATE INDEX index_deposit_accounts_on_deposit_product_id ON public.deposit_accounts USING btree (deposit_product_id);
+
+
+--
+-- Name: index_deposit_product_fee_rules_on_deposit_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_product_fee_rules_on_deposit_product_id ON public.deposit_product_fee_rules USING btree (deposit_product_id);
 
 
 --
@@ -1191,6 +1261,14 @@ ALTER TABLE ONLY public.party_individual_profiles
 
 
 --
+-- Name: deposit_product_fee_rules fk_rails_23d035fa30; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_product_fee_rules
+    ADD CONSTRAINT fk_rails_23d035fa30 FOREIGN KEY (deposit_product_id) REFERENCES public.deposit_products(id);
+
+
+--
 -- Name: operational_events fk_rails_29073cc426; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1341,6 +1419,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120007'),
 ('20260424120006'),
 ('20260424120005'),
 ('20260424120004'),
