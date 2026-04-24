@@ -30,6 +30,16 @@ module BankCore
             policy.status = Products::Models::DepositProductOverdraftPolicy::STATUS_ACTIVE
             policy.description = "Seeded deny-NSF policy for P3-4"
           end
+          Products::Models::DepositProductStatementProfile.find_or_create_by!(
+            deposit_product: product,
+            frequency: Products::Models::DepositProductStatementProfile::FREQUENCY_MONTHLY,
+            effective_on: Date.new(2026, 4, 1)
+          ) do |profile|
+            profile.cycle_day = 1
+            profile.currency = product.currency
+            profile.status = Products::Models::DepositProductStatementProfile::STATUS_ACTIVE
+            profile.description = "Seeded monthly statement profile for P3-5"
+          end
         end
       end
     end

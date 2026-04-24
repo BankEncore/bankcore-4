@@ -137,7 +137,7 @@ All **six** Phase 2 tracks above have a **shipped narrow slice** in this repo; e
 - Fee engine (rules, waivers, conditions).  
 - Holds depth (expiration, partial holds, deposit-based holds).  
 - Overdraft handling (allow/deny, fee side effects).  
-- Customer-visible history and statements (from posted events + journals, not ad-hoc mutation).
+- Customer-visible history and statements (from posted events + journals, not ad-hoc mutation; first slice in [ADR-0024](adr/0024-customer-visible-history-and-statements.md)).
 
 ---
 

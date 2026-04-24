@@ -246,6 +246,10 @@ Transaction history should distinguish between:
 
 The UI MUST avoid presenting derived or provisional balances as though they were booked ledger truth.
 
+### 9.3 P3-5 generated statements
+
+Generated deposit statements are immutable snapshots owned by the `Deposits` domain and configured by product-owned statement profiles. Statement ledger lines are derived from posted GL **2110** `journal_lines` for the account subledger; selected no-GL servicing events such as holds and NSF denials may appear as non-ledger activity. See [ADR-0024](0024-customer-visible-history-and-statements.md).
+
 ---
 
 ## 10\. Daily snapshots and reporting

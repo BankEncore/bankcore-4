@@ -12,6 +12,9 @@ module Accounts
         inverse_of: :deposit_account
 
       belongs_to :deposit_product, class_name: "Products::Models::DepositProduct"
+      has_many :deposit_statements, class_name: "Deposits::Models::DepositStatement",
+                                    inverse_of: :deposit_account,
+                                    dependent: :restrict_with_exception
 
       validates :account_number, presence: true, uniqueness: true
       validates :currency, presence: true
