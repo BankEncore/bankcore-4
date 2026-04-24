@@ -21,7 +21,7 @@ module Core
         class PostedReplay < Error
         end
 
-        REVERSIBLE_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed].freeze
+        REVERSIBLE_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed interest.accrued interest.posted].freeze
 
         def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
           RecordEvent.validate_channel!(channel)
@@ -43,6 +43,14 @@ module Core
                 status: Accounts::Models::Hold::STATUS_ACTIVE
               )
             raise InvalidRequest, "active deposit-linked holds must be released before reversing this deposit"
+          end
+          if original.event_type == "interest.accrued" &&
+              Models::OperationalEvent.exists?(
+                event_type: "interest.posted",
+                status: Models::OperationalEvent::STATUS_POSTED,
+                reference_id: original.id.to_s
+              )
+            raise InvalidRequest, "linked interest payout must be resolved before reversing this accrual"
           end
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call

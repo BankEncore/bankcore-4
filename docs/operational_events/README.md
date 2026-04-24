@@ -44,6 +44,8 @@ Copy the structure from any existing file in this folder when adding a new `even
 | [override-approved.md](override-approved.md) | `override.approved` | No | `RecordControlEvent` |
 | [fee-assessed.md](fee-assessed.md) | `fee.assessed` | Yes | `RecordEvent` |
 | [fee-waived.md](fee-waived.md) | `fee.waived` | Yes | `RecordEvent` |
+| [interest-accrued.md](interest-accrued.md) | `interest.accrued` | Yes | `RecordEvent` (`system` only; see [ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)) |
+| [interest-posted.md](interest-posted.md) | `interest.posted` | Yes | `RecordEvent` (`system` only; see [ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)) |
 | [teller-drawer-variance-posted.md](teller-drawer-variance-posted.md) | `teller.drawer.variance.posted` | Yes (optional flag) | `RecordEvent` (`system` only; see [ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)) |
 
 **Teller JSON routes (workspace):** `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`, `POST /teller/reversals`, `POST /teller/holds` (optional **`placed_for_operational_event_id`** on `hold` per [hold-placed.md](hold-placed.md) / [ADR-0013](../adr/0013-holds-available-and-servicing-events.md) §3), `POST /teller/holds/release`, `POST /teller/teller_sessions`, `POST /teller/teller_sessions/close`, `POST /teller/teller_sessions/approve_variance`, `POST /teller/overrides`, **`GET /teller/event_types`** ([ADR-0019](../adr/0019-event-catalog-and-fee-events.md)), **`GET /teller/operational_events`** ([ADR-0017](../adr/0017-deposit-products-fk-narrow-scope.md) §2.5), **`GET /teller/reports/trial_balance`**, **`GET /teller/reports/eod_readiness`** ([ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md)) — see [config/routes.rb](../../config/routes.rb).
@@ -53,6 +55,8 @@ Copy the structure from any existing file in this folder when adding a new `even
 **Teller cash and drawer:** when **`TELLER_REQUIRE_OPEN_SESSION_FOR_CASH`** is enabled (default **true**), **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** on **`POST /teller/operational_events`** must include **`teller_session_id`** for an **open** session ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)). **`transfer.completed`** is exempt.
 
 **Drawer variance to GL (optional):** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is enabled, **`CloseSession`** / **`ApproveSessionVariance`** create and post **`teller.drawer.variance.posted`** (`system` channel) for non-zero variance ([ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)). This type is **not** accepted via **`POST /teller/operational_events`** from operators.
+
+**Interest (P3-2):** **`interest.accrued`** and **`interest.posted`** are **`system`** channel financial events. Accrual posts **5100 / 2510**; payout references the posted accrual via **`reference_id`** and posts **2510 / 2110** ([ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)).
 
 ## Concept layering
 

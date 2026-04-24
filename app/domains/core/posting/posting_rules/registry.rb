@@ -11,6 +11,8 @@ module Core
           "posting.reversal" => PostingReversal,
           "fee.assessed" => FeeAssessed,
           "fee.waived" => FeeWaived,
+          "interest.accrued" => InterestAccrued,
+          "interest.posted" => InterestPosted,
           "teller.drawer.variance.posted" => TellerDrawerVariancePosted
         }.freeze
 

@@ -24,9 +24,11 @@ module Core
         end
 
         DRAWER_VARIANCE_POSTED = "teller.drawer.variance.posted"
+        INTEREST_EVENT_TYPES = %w[interest.accrued interest.posted].freeze
 
         FINANCIAL_EVENT_TYPES = (
-          %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived] + [ DRAWER_VARIANCE_POSTED ]
+          %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived] +
+            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED ]
         ).freeze
         CHANNELS = %w[teller api batch system].freeze
         TELLER_CASH_EVENT_TYPES = %w[deposit.accepted withdrawal.posted].freeze
@@ -55,6 +57,8 @@ module Core
           validate_transfer_available!(event_type, source_account_id, amount_minor_units)
           validate_fee_assessed_available!(event_type, source_account_id, amount_minor_units)
           validate_fee_waived!(event_type, source_account_id, amount_minor_units, reference_id)
+          validate_interest_system_channel!(event_type, channel)
+          validate_interest_posted!(event_type, source_account_id, amount_minor_units, currency, reference_id)
           validate_teller_cash_session!(channel, event_type, teller_session_id)
           validate_drawer_variance!(event_type, channel, amount_minor_units, teller_session_id)
 
@@ -87,6 +91,13 @@ module Core
                 ref_key = reference_id.to_s
                 if Models::OperationalEvent.exists?(event_type: "fee.waived", reference_id: ref_key)
                   raise InvalidRequest, "fee waiver already recorded for this assessment"
+                end
+              end
+
+              if event_type.to_s == "interest.posted" && reference_id.present?
+                ref_key = reference_id.to_s
+                if Models::OperationalEvent.exists?(event_type: "interest.posted", reference_id: ref_key)
+                  raise InvalidRequest, "interest payout already recorded for this accrual"
                 end
               end
 
@@ -147,6 +158,9 @@ module Core
             payload[:teller_session_id] = teller_session_id&.to_i
           end
           if event_type.to_s == "fee.waived" && reference_id.present?
+            payload[:reference_id] = reference_id.to_s
+          end
+          if event_type.to_s == "interest.posted" && reference_id.present?
             payload[:reference_id] = reference_id.to_s
           end
           Digest::SHA256.hexdigest(payload.to_json)
@@ -270,6 +284,36 @@ module Core
           end
         end
         private_class_method :validate_fee_waived!
+
+        def self.validate_interest_system_channel!(event_type, channel)
+          return unless INTEREST_EVENT_TYPES.include?(event_type.to_s)
+
+          raise InvalidRequest, "#{event_type} may only use channel system" unless channel.to_s == "system"
+        end
+        private_class_method :validate_interest_system_channel!
+
+        def self.validate_interest_posted!(event_type, source_account_id, amount_minor_units, currency, reference_id)
+          return unless event_type.to_s == "interest.posted"
+
+          raise InvalidRequest, "reference_id is required for interest.posted" if reference_id.blank?
+
+          ref_key = reference_id.to_s
+          unless ref_key.match?(/\A\d+\z/)
+            raise InvalidRequest, "reference_id must be the numeric id of an interest.accrued event"
+          end
+
+          orig = Models::OperationalEvent.find_by(id: ref_key.to_i)
+          raise InvalidRequest, "referenced interest accrual not found" if orig.nil?
+          unless orig.event_type == "interest.accrued" && orig.status == Models::OperationalEvent::STATUS_POSTED
+            raise InvalidRequest, "reference_id must identify a posted interest.accrued event"
+          end
+          unless orig.source_account_id.to_i == source_account_id.to_i &&
+              orig.amount_minor_units.to_i == amount_minor_units.to_i &&
+              orig.currency.to_s == currency.to_s
+            raise InvalidRequest, "interest.posted must match original accrual account, amount, and currency"
+          end
+        end
+        private_class_method :validate_interest_posted!
 
         def self.validate_teller_cash_session!(channel, event_type, teller_session_id)
           return unless teller_cash_session_gate?(channel, event_type)
