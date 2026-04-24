@@ -31,6 +31,8 @@ Per-account liability on GL **2110** cannot be inferred from aggregate GL rows a
 | `withdrawal.posted` | Dr 2110 (`deposit_account_id` = source) / Cr 1110. |
 | `transfer.completed` | Dr 2110 (source) / Cr 2110 (destination). |
 | `posting.reversal` | Mirror lines of the original journal (see [ADR-0003](0003-posting-journal-architecture.md) reversals); subledger ids copied per line. |
+| `fee.assessed` | Dr **2110** (`deposit_account_id` = `source_account_id`) / Cr **4510** ([ADR-0019](0019-event-catalog-and-fee-events.md)). |
+| `fee.waived` | Dr **4510** / Cr **2110** (`deposit_account_id` = `source_account_id`) ([ADR-0019](0019-event-catalog-and-fee-events.md)). |
 
 ---
 

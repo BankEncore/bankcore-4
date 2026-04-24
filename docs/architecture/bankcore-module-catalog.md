@@ -269,6 +269,11 @@ Examples:
 
 * `Core::OperationalEvents::Queries::ListOperationalEvents` — bounded listing by `business_date` with product-aware account context and posting/journal id traceability (read-only).
 
+**Shipped (code-first event catalog — [ADR-0019](../adr/0019-event-catalog-and-fee-events.md)):**
+
+* `Core::OperationalEvents::EventCatalog` — metadata for known `event_type` strings (not a second DB truth); CI drift checks align catalog **financial** rows with `PostingRules::Registry::HANDLERS`.
+* Teller **`GET /teller/event_types`** — discovery JSON for clients (same operator header as other teller reads).
+
 **Rules:**
 
 * all material banking actions should become durable operational events

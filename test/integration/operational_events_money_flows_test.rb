@@ -20,6 +20,58 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
     record_and_post_deposit!(@account_a, 50_000, "seed-a-#{SecureRandom.hex(4)}")
   end
 
+  test "GET event_types returns catalog including fee types" do
+    get "/teller/event_types", headers: teller_json_headers(@teller_operator)
+    assert_response :success
+    types = response.parsed_body.fetch("event_types")
+    codes = types.map { |h| h["event_type"] }
+    assert_includes codes, "fee.assessed"
+    assert_includes codes, "fee.waived"
+    fee = types.find { |h| h["event_type"] == "fee.assessed" }
+    assert fee["posts_to_gl"]
+    assert_equal "fee.waived", fee["compensating_event_type"]
+  end
+
+  test "fee assessed post waive posts end to end via teller JSON" do
+    idem_fee = "fee-http-#{SecureRandom.hex(6)}"
+    post "/teller/operational_events",
+      params: {
+        operational_event: {
+          event_type: "fee.assessed",
+          channel: "teller",
+          idempotency_key: idem_fee,
+          amount_minor_units: 1_000,
+          currency: "USD",
+          source_account_id: @account_a.id,
+          teller_session_id: @cash_session_id
+        }
+      }.to_json,
+      headers: teller_json_headers(@teller_operator)
+    assert_response :created
+    fee_id = response.parsed_body["id"]
+    post "/teller/operational_events/#{fee_id}/post", headers: teller_json_headers(@teller_operator)
+    assert_response :created
+
+    idem_w = "fee-w-http-#{SecureRandom.hex(6)}"
+    post "/teller/operational_events",
+      params: {
+        operational_event: {
+          event_type: "fee.waived",
+          channel: "teller",
+          idempotency_key: idem_w,
+          amount_minor_units: 1_000,
+          currency: "USD",
+          source_account_id: @account_a.id,
+          reference_id: fee_id.to_s
+        }
+      }.to_json,
+      headers: teller_json_headers(@teller_operator)
+    assert_response :created
+    waive_id = response.parsed_body["id"]
+    post "/teller/operational_events/#{waive_id}/post", headers: teller_json_headers(@teller_operator)
+    assert_response :created
+  end
+
   test "missing X-Operator-Id returns unauthorized for teller JSON" do
     post "/teller/operational_events",
       params: {

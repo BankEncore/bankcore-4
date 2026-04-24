@@ -38,7 +38,7 @@ module Teller
     def create
       attrs = params.require(:operational_event).permit(
         :event_type, :channel, :idempotency_key, :amount_minor_units, :currency, :source_account_id,
-        :destination_account_id, :teller_session_id, :business_date
+        :destination_account_id, :teller_session_id, :business_date, :reference_id
       ).to_h.symbolize_keys
       attrs[:amount_minor_units] = attrs[:amount_minor_units].to_i
       attrs[:source_account_id] = attrs[:source_account_id].to_i
@@ -57,6 +57,7 @@ module Teller
       else
         attrs.delete(:business_date)
       end
+      attrs[:reference_id] = attrs[:reference_id].presence
 
       result = Core::OperationalEvents::Commands::RecordEvent.call(**attrs, actor_id: current_operator.id)
       status = result[:outcome] == :created ? :created : :ok

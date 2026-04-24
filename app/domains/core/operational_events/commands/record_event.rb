@@ -23,7 +23,9 @@ module Core
           end
         end
 
-        FINANCIAL_EVENT_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed].freeze
+        FINANCIAL_EVENT_TYPES = %w[
+          deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived
+        ].freeze
         CHANNELS = %w[teller api batch system].freeze
         TELLER_CASH_EVENT_TYPES = %w[deposit.accepted withdrawal.posted].freeze
 
@@ -38,7 +40,8 @@ module Core
           destination_account_id: nil,
           business_date: nil,
           teller_session_id: nil,
-          actor_id: nil
+          actor_id: nil,
+          reference_id: nil
         )
           validate_channel!(channel)
           validate_event_type!(event_type)
@@ -48,6 +51,8 @@ module Core
           validate_transfer_distinct!(event_type, source_account_id, destination_account_id)
           validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
           validate_transfer_available!(event_type, source_account_id, amount_minor_units)
+          validate_fee_assessed_available!(event_type, source_account_id, amount_minor_units)
+          validate_fee_waived!(event_type, source_account_id, amount_minor_units, reference_id)
           validate_teller_cash_session!(channel, event_type, teller_session_id)
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
@@ -64,7 +69,8 @@ module Core
             currency: currency,
             source_account_id: source_account_id,
             destination_account_id: destination_account_id,
-            teller_session_id: teller_session_id
+            teller_session_id: teller_session_id,
+            reference_id: reference_id
           )
 
           begin
@@ -72,6 +78,13 @@ module Core
               existing = Models::OperationalEvent.lock.find_by(channel: channel, idempotency_key: idempotency_key)
               if existing
                 return handle_existing(existing, incoming_fp)
+              end
+
+              if event_type.to_s == "fee.waived" && reference_id.present?
+                ref_key = reference_id.to_s
+                if Models::OperationalEvent.exists?(event_type: "fee.waived", reference_id: ref_key)
+                  raise InvalidRequest, "fee waiver already recorded for this assessment"
+                end
               end
 
               event = Models::OperationalEvent.create!(
@@ -85,7 +98,8 @@ module Core
                 source_account_id: source_account_id,
                 destination_account_id: destination_account_id,
                 teller_session_id: teller_session_id,
-                actor_id: actor_id
+                actor_id: actor_id,
+                reference_id: reference_id.presence
               )
               { outcome: :created, event: event }
             end
@@ -96,7 +110,7 @@ module Core
         end
 
         def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
-                                destination_account_id: nil, teller_session_id: nil)
+                                destination_account_id: nil, teller_session_id: nil, reference_id: nil)
           payload = {
             event_type: event_type.to_s,
             channel: channel.to_s,
@@ -110,6 +124,9 @@ module Core
           end
           if teller_cash_session_gate?(channel, event_type)
             payload[:teller_session_id] = teller_session_id&.to_i
+          end
+          if event_type.to_s == "fee.waived" && reference_id.present?
+            payload[:reference_id] = reference_id.to_s
           end
           Digest::SHA256.hexdigest(payload.to_json)
         end
@@ -173,6 +190,36 @@ module Core
           raise InvalidRequest, "insufficient available balance" if available < amount_minor_units.to_i
         end
 
+        def self.validate_fee_assessed_available!(event_type, source_account_id, amount_minor_units)
+          return unless event_type.to_s == "fee.assessed"
+
+          available = Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: source_account_id)
+          raise InvalidRequest, "insufficient available balance" if available < amount_minor_units.to_i
+        end
+        private_class_method :validate_fee_assessed_available!
+
+        def self.validate_fee_waived!(event_type, source_account_id, amount_minor_units, reference_id)
+          return unless event_type.to_s == "fee.waived"
+
+          raise InvalidRequest, "reference_id is required for fee.waived" if reference_id.blank?
+
+          ref_key = reference_id.to_s
+          unless ref_key.match?(/\A\d+\z/)
+            raise InvalidRequest, "reference_id must be the numeric id of a fee.assessed event"
+          end
+
+          orig = Models::OperationalEvent.find_by(id: ref_key.to_i)
+          raise InvalidRequest, "referenced fee assessment not found" if orig.nil?
+          unless orig.event_type == "fee.assessed" && orig.status == Models::OperationalEvent::STATUS_POSTED
+            raise InvalidRequest, "reference_id must identify a posted fee.assessed event"
+          end
+          unless orig.source_account_id.to_i == source_account_id.to_i &&
+              orig.amount_minor_units.to_i == amount_minor_units.to_i
+            raise InvalidRequest, "fee.waived must match original fee account and amount"
+          end
+        end
+        private_class_method :validate_fee_waived!
+
         def self.validate_teller_cash_session!(channel, event_type, teller_session_id)
           return unless teller_cash_session_gate?(channel, event_type)
 
@@ -204,7 +251,8 @@ module Core
             currency: existing.currency,
             source_account_id: existing.source_account_id,
             destination_account_id: existing.destination_account_id,
-            teller_session_id: existing.teller_session_id
+            teller_session_id: existing.teller_session_id,
+            reference_id: existing.reference_id
           )
           raise MismatchedIdempotency.new(incoming_fp) if existing_fp != incoming_fp
           raise PostedReplay if existing.status == Models::OperationalEvent::STATUS_POSTED

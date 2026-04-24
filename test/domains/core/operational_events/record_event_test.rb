@@ -126,7 +126,138 @@ class CoreOperationalEventsRecordEventTest < ActiveSupport::TestCase
     end
   end
 
+  test "fee.assessed rejects when available balance is insufficient" do
+    err = assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordEvent.call(
+        event_type: "fee.assessed",
+        channel: "batch",
+        idempotency_key: "fee-no-funds-#{SecureRandom.hex(4)}",
+        amount_minor_units: 100,
+        currency: "USD",
+        source_account_id: @account.id
+      )
+    end
+    assert_match(/insufficient/i, err.message)
+  end
+
+  test "fee.waived requires reference_id" do
+    fund_batch!(@account.id, 10_000)
+    assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordEvent.call(
+        event_type: "fee.waived",
+        channel: "batch",
+        idempotency_key: "fee-w-no-ref-#{SecureRandom.hex(4)}",
+        amount_minor_units: 100,
+        currency: "USD",
+        source_account_id: @account.id,
+        reference_id: nil
+      )
+    end
+  end
+
+  test "fee.waived rejects when assessment is not yet posted" do
+    fund_batch!(@account.id, 10_000)
+    assessed = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.assessed",
+      channel: "batch",
+      idempotency_key: "fee-pend-#{SecureRandom.hex(4)}",
+      amount_minor_units: 200,
+      currency: "USD",
+      source_account_id: @account.id
+    )[:event]
+    assert_equal "pending", assessed.status
+    err = assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordEvent.call(
+        event_type: "fee.waived",
+        channel: "batch",
+        idempotency_key: "fee-w-early-#{SecureRandom.hex(4)}",
+        amount_minor_units: 200,
+        currency: "USD",
+        source_account_id: @account.id,
+        reference_id: assessed.id.to_s
+      )
+    end
+    assert_match(/posted fee\.assessed/i, err.message)
+  end
+
+  test "fee.waived rejects duplicate waiver for same assessment" do
+    fund_batch!(@account.id, 20_000)
+    assessed = record_post_fee_assessed!(amount: 300)
+    Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.waived",
+      channel: "batch",
+      idempotency_key: "fee-w-1-#{SecureRandom.hex(4)}",
+      amount_minor_units: 300,
+      currency: "USD",
+      source_account_id: @account.id,
+      reference_id: assessed.id.to_s
+    )
+    assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordEvent.call(
+        event_type: "fee.waived",
+        channel: "batch",
+        idempotency_key: "fee-w-2-#{SecureRandom.hex(4)}",
+        amount_minor_units: 300,
+        currency: "USD",
+        source_account_id: @account.id,
+        reference_id: assessed.id.to_s
+      )
+    end
+  end
+
+  test "fee.waived idempotency replay returns same row" do
+    fund_batch!(@account.id, 25_000)
+    assessed = record_post_fee_assessed!(amount: 150)
+    idem = "fee-w-idem-#{SecureRandom.hex(4)}"
+    a = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.waived",
+      channel: "batch",
+      idempotency_key: idem,
+      amount_minor_units: 150,
+      currency: "USD",
+      source_account_id: @account.id,
+      reference_id: assessed.id.to_s
+    )
+    b = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.waived",
+      channel: "batch",
+      idempotency_key: idem,
+      amount_minor_units: 150,
+      currency: "USD",
+      source_account_id: @account.id,
+      reference_id: assessed.id.to_s
+    )
+    assert_equal :created, a[:outcome]
+    assert_equal :replay, b[:outcome]
+    assert_equal a[:event].id, b[:event].id
+  end
+
   private
+
+  def fund_batch!(account_id, amount)
+    ev = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "deposit.accepted",
+      channel: "batch",
+      idempotency_key: "fund-batch-#{SecureRandom.hex(6)}",
+      amount_minor_units: amount,
+      currency: "USD",
+      source_account_id: account_id
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+  end
+
+  def record_post_fee_assessed!(amount:)
+    ev = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.assessed",
+      channel: "batch",
+      idempotency_key: "fee-ass-#{SecureRandom.hex(5)}",
+      amount_minor_units: amount,
+      currency: "USD",
+      source_account_id: @account.id
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+    ev.reload
+  end
 
   def record_deposit!(idempotency_key:, amount:, teller_session_id: @teller_session.id)
     Core::OperationalEvents::Commands::RecordEvent.call(

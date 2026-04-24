@@ -56,7 +56,68 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     end
   end
 
+  test "posts fee.assessed as Dr 2110 Cr 4510" do
+    fund_account!(25_000)
+    fee = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.assessed",
+      channel: "batch",
+      idempotency_key: "fee-a-#{SecureRandom.hex(4)}",
+      amount_minor_units: 500,
+      currency: "USD",
+      source_account_id: @account.id
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: fee.id)
+    lines = fee.reload.posting_batches.sole.journal_entries.sole.journal_lines.order(:sequence_no)
+    dr = lines.find_by(side: "debit")
+    cr = lines.find_by(side: "credit")
+    assert_equal "2110", dr.gl_account.account_number
+    assert_equal @account.id, dr.deposit_account_id
+    assert_equal "4510", cr.gl_account.account_number
+    assert_nil cr.deposit_account_id
+  end
+
+  test "posts fee.waived as Dr 4510 Cr 2110" do
+    fund_account!(30_000)
+    assessed = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.assessed",
+      channel: "batch",
+      idempotency_key: "fee-b-#{SecureRandom.hex(4)}",
+      amount_minor_units: 400,
+      currency: "USD",
+      source_account_id: @account.id
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: assessed.id)
+    waived = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "fee.waived",
+      channel: "batch",
+      idempotency_key: "fee-w-#{SecureRandom.hex(4)}",
+      amount_minor_units: 400,
+      currency: "USD",
+      source_account_id: @account.id,
+      reference_id: assessed.id.to_s
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: waived.id)
+    lines = waived.reload.posting_batches.sole.journal_entries.sole.journal_lines.order(:sequence_no)
+    dr = lines.find_by(side: "debit")
+    cr = lines.find_by(side: "credit")
+    assert_equal "4510", dr.gl_account.account_number
+    assert_equal "2110", cr.gl_account.account_number
+    assert_equal @account.id, cr.deposit_account_id
+  end
+
   private
+
+  def fund_account!(amount)
+    ev = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "deposit.accepted",
+      channel: "batch",
+      idempotency_key: "fund-#{SecureRandom.hex(6)}",
+      amount_minor_units: amount,
+      currency: "USD",
+      source_account_id: @account.id
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+  end
 
   def create_pending_event!(amount:)
     Core::OperationalEvents::Commands::RecordEvent.call(
