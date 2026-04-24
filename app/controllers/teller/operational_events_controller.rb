@@ -41,7 +41,11 @@ module Teller
         :destination_account_id, :teller_session_id, :business_date, :reference_id
       ).to_h.symbolize_keys
       attrs[:amount_minor_units] = attrs[:amount_minor_units].to_i
-      attrs[:source_account_id] = attrs[:source_account_id].to_i
+      if attrs[:source_account_id].present?
+        attrs[:source_account_id] = attrs[:source_account_id].to_i
+      else
+        attrs.delete(:source_account_id)
+      end
       if attrs[:destination_account_id].present?
         attrs[:destination_account_id] = attrs[:destination_account_id].to_i
       else

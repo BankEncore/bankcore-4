@@ -64,7 +64,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 **Gap vs [01-mvp-vs-core.md](concepts/01-mvp-vs-core.md) (institution MVP vs this repo)**
 
 - **In repo today** (single-owner, single–business-date framing): deposits, withdrawals, transfers, reversals with FK columns, teller sessions and variance workflow, holds with available checks for configured paths, trial balance / EOD readiness **GET**s — each cross-linked to ADRs above.
-- **Partial / Phase 2+:** **Full “day closed”** orchestration (multi-branch, checkpoints, reopen) and **multi-branch / multi-entity GL** (Phase 2 below); **full joint / multi-party** servicing (3+ at open, post-open add/remove, additional roles) vs institution MVP in the concept doc — **narrow two-party joint at open** is in [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3; **narrow business date close** in [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md); **automatic GL cash adjustment** for drawer variance (ADR-0014 non-goal until a dedicated financial event); **available / holds** depth beyond MVP authorization ([ADR-0004](adr/0004-account-balance-model.md), Phase 3).
+- **Partial / Phase 2+:** **Full “day closed”** orchestration (multi-branch, checkpoints, reopen) and **multi-branch / multi-entity GL** (Phase 2 below); **full joint / multi-party** servicing (3+ at open, post-open add/remove, additional roles) vs institution MVP in the concept doc — **narrow two-party joint at open** is in [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3; **narrow business date close** in [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md); **optional GL cash adjustment** for drawer variance ([ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md), env-flagged); **available / holds** depth beyond MVP authorization ([ADR-0004](adr/0004-account-balance-model.md), Phase 3).
 - **Teller vs supervisor** — identity and supervisor gates shipped ([ADR-0015](adr/0015-teller-workspace-authentication.md)); finer roles and supervisor-only **read** APIs remain product choice.
 
 ---
@@ -113,6 +113,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | **Event catalog** | **Narrow slice shipped:** code-first `EventCatalog`, drift checks vs posting registry, **`GET /teller/event_types`**, **`fee.assessed` / `fee.waived`** with posting rules and compensating waive path ([ADR-0019](adr/0019-event-catalog-and-fee-events.md)). **Deferred:** interest (`interest.accrued`, `interest.posted`), NSF / overdraft-style events (separate slices). |
 | **Observability** | **Narrow slice shipped:** `GET /teller/operational_events` — bounded `business_date` / range, product filters, envelope (`current_business_on`, `posting_day_closed`), nested account product fields, posting/journal ids ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) §2.5). Full-text / multi-branch index remains open. |
 | **Business date close** | **Narrow slice shipped:** supervisor **`POST /teller/business_date/close`** after ADR-0016 readiness; singleton advance + append-only close audit; **open-day posting invariant** (ADR-0018). Multi-branch, snapshots, day reopen remain open. |
+| **GL drawer variance (optional)** | **Narrow slice shipped (env flag):** **`teller.drawer.variance.posted`** from **`CloseSession`** / **`ApproveSessionVariance`** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is on; posting **1110** / **5190** ([ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md)). |
 
 ---
 
@@ -152,7 +153,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 ## 12. Open decisions (track in ADRs or short design notes)
 
 - ~~Canonical **`event_type`** strings for each reversal variant~~ — **`posting.reversal`** + `RecordReversal` ([ADR-0012](adr/0012-posting-rule-registry-and-journal-subledger.md)); see [compensating-reversal.md](operational_events/compensating-reversal.md).  
-- ~~**Module ownership** for drawer cash vs approval workflow~~ — **Sessions / variance:** **`Teller`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)); **automatic GL cash adjustment** for drawer variance remains product/TBD.  
+- ~~**Module ownership** for drawer cash vs approval workflow~~ — **Sessions / variance:** **`Teller`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)); **optional GL cash adjustment** for drawer variance ships behind **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** ([ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md)).  
 - **Available balance**: compute-on-read vs materialized projection for volume.  
 - ~~How **trial balance** is exposed~~ — **MVP:** teller JSON **`GET /teller/reports/trial_balance`** and **`GET /teller/reports/eod_readiness`** ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)); operator PDF/HTML reports remain product choice.
 

@@ -10,7 +10,8 @@ module Core
           "transfer.completed" => TransferCompleted,
           "posting.reversal" => PostingReversal,
           "fee.assessed" => FeeAssessed,
-          "fee.waived" => FeeWaived
+          "fee.waived" => FeeWaived,
+          "teller.drawer.variance.posted" => TellerDrawerVariancePosted
         }.freeze
 
         def self.legs_for(event)

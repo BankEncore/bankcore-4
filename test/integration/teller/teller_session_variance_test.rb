@@ -10,10 +10,12 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
     @teller_operator, @supervisor_operator = create_workspace_operators!
     @saved_threshold = Rails.application.config.x.teller.variance_threshold_minor_units
     Rails.application.config.x.teller.variance_threshold_minor_units = 500
+    @saved_gl_variance = Rails.application.config.x.teller.post_drawer_variance_to_gl
   end
 
   teardown do
     Rails.application.config.x.teller.variance_threshold_minor_units = @saved_threshold
+    Rails.application.config.x.teller.post_drawer_variance_to_gl = @saved_gl_variance
   end
 
   test "close within variance threshold goes directly to closed" do
@@ -138,6 +140,66 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
       params: { teller_session_approve_variance: { teller_session_id: 0 } }.to_json,
       headers: teller_json_headers(@supervisor_operator)
     assert_response :not_found
+  end
+
+  test "when GL variance flag off close does not create drawer variance operational event" do
+    Rails.application.config.x.teller.post_drawer_variance_to_gl = false
+    sid = open_session!
+    post "/teller/teller_sessions/close",
+      params: {
+        teller_session_close: {
+          teller_session_id: sid,
+          expected_cash_minor_units: 10_000,
+          actual_cash_minor_units: 10_400
+        }
+      }.to_json,
+      headers: teller_json_headers(@teller_operator)
+    assert_response :success
+    assert_nil Core::OperationalEvents::Models::OperationalEvent.find_by(
+      event_type: "teller.drawer.variance.posted",
+      teller_session_id: sid
+    )
+  end
+
+  test "when GL variance flag on close within threshold posts drawer variance to GL" do
+    Rails.application.config.x.teller.post_drawer_variance_to_gl = true
+    sid = open_session!
+    post "/teller/teller_sessions/close",
+      params: {
+        teller_session_close: {
+          teller_session_id: sid,
+          expected_cash_minor_units: 10_000,
+          actual_cash_minor_units: 10_350
+        }
+      }.to_json,
+      headers: teller_json_headers(@teller_operator)
+    assert_response :success
+    ev = Core::OperationalEvents::Models::OperationalEvent.find_by!(
+      event_type: "teller.drawer.variance.posted",
+      teller_session_id: sid
+    )
+    assert_equal "posted", ev.status
+    assert_equal 350, ev.amount_minor_units
+    lines = ev.posting_batches.sole.journal_entries.sole.journal_lines.order(:sequence_no)
+    assert_equal "1110", lines.find_by(side: "debit").gl_account.account_number
+    assert_equal "5190", lines.find_by(side: "credit").gl_account.account_number
+  end
+
+  test "when GL variance flag on double approve_variance does not double post" do
+    Rails.application.config.x.teller.post_drawer_variance_to_gl = true
+    sid = open_session!
+    close_with_large_variance!(sid)
+    2.times do
+      post "/teller/teller_sessions/approve_variance",
+        params: { teller_session_approve_variance: { teller_session_id: sid } }.to_json,
+        headers: teller_json_headers(@supervisor_operator)
+      assert_response :success
+    end
+    n = Core::OperationalEvents::Models::OperationalEvent.where(
+      event_type: "teller.drawer.variance.posted",
+      teller_session_id: sid
+    ).count
+    assert_equal 1, n
   end
 
   private

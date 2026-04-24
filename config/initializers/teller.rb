@@ -8,3 +8,7 @@ Rails.application.config.x.teller.variance_threshold_minor_units =
 # When true, teller-channel deposit.accepted / withdrawal.posted require an open teller_session_id (ADR-0014).
 Rails.application.config.x.teller.require_open_session_for_cash =
   !%w[false 0 no].include?(ENV.fetch("TELLER_REQUIRE_OPEN_SESSION_FOR_CASH", "true").to_s.downcase)
+
+# When true, non-zero drawer variance posts teller.drawer.variance.posted (1110 / 5190) on session close (ADR-0020).
+Rails.application.config.x.teller.post_drawer_variance_to_gl =
+  !%w[false 0 no].include?(ENV.fetch("TELLER_POST_DRAWER_VARIANCE_TO_GL", "false").to_s.downcase)

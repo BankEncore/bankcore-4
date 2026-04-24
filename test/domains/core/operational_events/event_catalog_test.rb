@@ -16,4 +16,9 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
     assert_includes types, "fee.assessed"
     assert_includes types, "fee.waived"
   end
+
+  test "teller.drawer.variance.posted appears in API array" do
+    types = Core::OperationalEvents::EventCatalog.as_api_array.map { |h| h[:event_type] }
+    assert_includes types, "teller.drawer.variance.posted"
+  end
 end

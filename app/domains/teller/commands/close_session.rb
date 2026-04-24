@@ -36,6 +36,12 @@ module Teller
               closed_at: Time.current
             )
           end
+
+          if session.status == Teller::Models::TellerSession::STATUS_CLOSED &&
+              session.variance_minor_units.to_i != 0
+            Teller::Services::PostDrawerVarianceToGl.call(session: session, actor_id: nil)
+          end
+
           session
         end
       end

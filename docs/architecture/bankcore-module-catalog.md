@@ -273,6 +273,7 @@ Examples:
 
 * `Core::OperationalEvents::EventCatalog` — metadata for known `event_type` strings (not a second DB truth); CI drift checks align catalog **financial** rows with `PostingRules::Registry::HANDLERS`.
 * Teller **`GET /teller/event_types`** — discovery JSON for clients (same operator header as other teller reads).
+* **`teller.drawer.variance.posted`** (optional product flag — [ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)) — `RecordEvent` on **`system`** channel only; no DDA `source_account_id`.
 
 **Rules:**
 
@@ -533,6 +534,8 @@ Examples:
 **Purpose:** workstation-facing transactional flows.
 
 **MVP implementation:** drawer lifecycle, expected vs actual cash, variance, and supervisor approval live on **`teller_sessions`** with HTTP under `app/controllers/teller/*` ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md), [ADR-0015](../adr/0015-teller-workspace-authentication.md)). Financial effect still flows through **`Core::OperationalEvents`** + **`Core::Posting`**; read-only **trial balance / EOD readiness** composition lives in `Teller::Queries::EodReadiness` ([ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md)).
+
+**Optional GL variance (ADR-0020):** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is enabled, **`Teller::Services::PostDrawerVarianceToGl`** records and posts **`teller.drawer.variance.posted`** (`system` channel) on session close with non-zero variance—no separate teller HTTP route for that event type.
 
 **Owns:**
 

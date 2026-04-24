@@ -23,9 +23,11 @@ module Core
           end
         end
 
-        FINANCIAL_EVENT_TYPES = %w[
-          deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived
-        ].freeze
+        DRAWER_VARIANCE_POSTED = "teller.drawer.variance.posted"
+
+        FINANCIAL_EVENT_TYPES = (
+          %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived] + [ DRAWER_VARIANCE_POSTED ]
+        ).freeze
         CHANNELS = %w[teller api batch system].freeze
         TELLER_CASH_EVENT_TYPES = %w[deposit.accepted withdrawal.posted].freeze
 
@@ -36,7 +38,7 @@ module Core
           idempotency_key:,
           amount_minor_units:,
           currency:,
-          source_account_id:,
+          source_account_id: nil,
           destination_account_id: nil,
           business_date: nil,
           teller_session_id: nil,
@@ -46,7 +48,7 @@ module Core
           validate_channel!(channel)
           validate_event_type!(event_type)
           validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
-          validate_source_account!(source_account_id)
+          validate_source_account!(event_type, source_account_id)
           validate_destination_account!(event_type, destination_account_id)
           validate_transfer_distinct!(event_type, source_account_id, destination_account_id)
           validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
@@ -54,6 +56,7 @@ module Core
           validate_fee_assessed_available!(event_type, source_account_id, amount_minor_units)
           validate_fee_waived!(event_type, source_account_id, amount_minor_units, reference_id)
           validate_teller_cash_session!(channel, event_type, teller_session_id)
+          validate_drawer_variance!(event_type, channel, amount_minor_units, teller_session_id)
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
           begin
@@ -87,6 +90,12 @@ module Core
                 end
               end
 
+              if event_type.to_s == DRAWER_VARIANCE_POSTED && teller_session_id.present?
+                if Models::OperationalEvent.exists?(event_type: DRAWER_VARIANCE_POSTED, teller_session_id: teller_session_id.to_i)
+                  raise InvalidRequest, "drawer variance already recorded for this teller session"
+                end
+              end
+
               event = Models::OperationalEvent.create!(
                 event_type: event_type,
                 status: Models::OperationalEvent::STATUS_PENDING,
@@ -111,6 +120,18 @@ module Core
 
         def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
                                 destination_account_id: nil, teller_session_id: nil, reference_id: nil)
+          if event_type.to_s == DRAWER_VARIANCE_POSTED
+            payload = {
+              event_type: event_type.to_s,
+              channel: channel.to_s,
+              idempotency_key: idempotency_key.to_s,
+              amount_minor_units: amount_minor_units.to_i,
+              currency: currency.to_s,
+              teller_session_id: teller_session_id.to_i
+            }
+            return Digest::SHA256.hexdigest(payload.to_json)
+          end
+
           payload = {
             event_type: event_type.to_s,
             channel: channel.to_s,
@@ -144,6 +165,15 @@ module Core
         end
 
         def self.validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
+          if event_type.to_s == DRAWER_VARIANCE_POSTED
+            if amount_minor_units.nil? || amount_minor_units.to_i == 0
+              raise InvalidRequest, "amount_minor_units must be non-zero for teller.drawer.variance.posted"
+            end
+            raise InvalidRequest, "currency is required" if currency.blank?
+            raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
+            return
+          end
+
           if amount_minor_units.nil? || amount_minor_units.to_i <= 0
             raise InvalidRequest, "amount_minor_units must be a positive integer"
           end
@@ -155,7 +185,9 @@ module Core
           end
         end
 
-        def self.validate_source_account!(source_account_id)
+        def self.validate_source_account!(event_type, source_account_id)
+          return if event_type.to_s == DRAWER_VARIANCE_POSTED && source_account_id.blank?
+
           acc = Accounts::Models::DepositAccount.find_by(id: source_account_id)
           raise InvalidRequest, "source_account_id not found" if acc.nil?
           raise InvalidRequest, "source account must be open" unless acc.status == Accounts::Models::DepositAccount::STATUS_OPEN
@@ -175,6 +207,25 @@ module Core
 
           raise InvalidRequest, "transfer requires distinct source and destination accounts"
         end
+
+        def self.validate_drawer_variance!(event_type, channel, amount_minor_units, teller_session_id)
+          return unless event_type.to_s == DRAWER_VARIANCE_POSTED
+
+          unless channel.to_s == "system"
+            raise InvalidRequest, "teller.drawer.variance.posted may only use channel system"
+          end
+          raise InvalidRequest, "teller_session_id is required for teller.drawer.variance.posted" if teller_session_id.blank?
+
+          sess = Teller::Models::TellerSession.find_by(id: teller_session_id.to_i)
+          raise InvalidRequest, "teller_session not found" if sess.nil?
+          unless sess.status == Teller::Models::TellerSession::STATUS_CLOSED
+            raise InvalidRequest, "teller session must be closed before posting drawer variance"
+          end
+          if sess.variance_minor_units.nil? || sess.variance_minor_units.to_i != amount_minor_units.to_i
+            raise InvalidRequest, "amount_minor_units must match teller_sessions.variance_minor_units for this session"
+          end
+        end
+        private_class_method :validate_drawer_variance!
 
         def self.validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
           return unless event_type.to_s == "withdrawal.posted"
