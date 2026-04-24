@@ -131,6 +131,7 @@ All **six** Phase 2 tracks above have a **shipped narrow slice** in this repo; e
 ---
 
 ## 8. Phase 3 — Product and financial depth
+(Preliminary Plan)[/Users/syckot/.cursor/plans/phase_3_financial_depth_e3ea12de.plan.md]
 
 - Interest engine (accrual, periodic post, day-count conventions).  
 - Fee engine (rules, waivers, conditions).  
@@ -167,7 +168,7 @@ All **six** Phase 2 tracks above have a **shipped narrow slice** in this repo; e
 
 - ~~Canonical **`event_type`** strings for each reversal variant~~ — **`posting.reversal`** + `RecordReversal` ([ADR-0012](adr/0012-posting-rule-registry-and-journal-subledger.md)); see [compensating-reversal.md](operational_events/compensating-reversal.md).  
 - ~~**Module ownership** for drawer cash vs approval workflow~~ — **Sessions / variance:** **`Teller`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)); **optional GL cash adjustment** for drawer variance ships behind **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** ([ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md)).  
-- **Available balance**: compute-on-read vs materialized projection for volume.  
+- ~~**Available balance**: compute-on-read vs materialized projection for volume.~~ — **Resolved:** default **compute-on-read**; materialized projection allowed only with invalidation + rebuild ADR ([ADR-0004](adr/0004-account-balance-model.md) §13.3).  
 - ~~How **trial balance** is exposed~~ — **MVP:** teller JSON **`GET /teller/reports/trial_balance`** and **`GET /teller/reports/eod_readiness`** ([ADR-0016](adr/0016-trial-balance-and-eod-readiness.md)); operator PDF/HTML reports remain product choice.
 
 ---

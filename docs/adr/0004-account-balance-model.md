@@ -1,6 +1,7 @@
 # ADR-0004: Account & Balance Model
 
-**Status:** Accepted **Date:** 2026-04-19 **Decision Type:** Core Accounting and Funds-Availability Architecture **Classification:** DROP-IN SAFE
+**Status:** Accepted **Date:** 2026-04-19 **Decision Type:** Core Accounting and Funds-Availability Architecture **Classification:** DROP-IN SAFE  
+**Addendum:** §13.3 (2026-04-27) — canonical **available** read strategy for Phase 3 prerequisite ([roadmap §12](../roadmap.md)).
 
 ---
 
@@ -312,13 +313,26 @@ Later phases may add:
 * richer pending/memo transaction support  
 * balance-basis policies per product behavior
 
+### 13.3 Canonical available balance read strategy (addendum, 2026-04-27)
+
+This addendum closes [roadmap §12 “Available balance”](../roadmap.md): **compute-on-read vs materialized projection**.
+
+1. **Default (canonical for authorization and servicing in this repo)** — **Compute-on-read:** `Accounts::Services::AvailableBalanceMinorUnits` (or a successor service under **`Accounts`**) implements available balance as **ledger(2110 subledger for `deposit_account_id`) minus active holds**, per §5.1 and [ADR-0013](0013-holds-available-and-servicing-events.md). No separate **materialized available** table or column is required for correctness.
+
+2. **Materialized projection (allowed, not default)** — §4.2–4.3 still apply: a stored **available** (or ledger) projection **may** be introduced for performance if it remains **derivable from posted journals + holds**, **rebuildable**, and **read-side only**—never authoritative for GL truth.
+
+3. **When to introduce projection** — Require a **dedicated ADR** (or major addendum) that specifies storage, **every invalidation path** (e.g. `PostEvent`, hold place/release, and any command that changes effective holds or policy), reconciliation/rebuild jobs, and **explicit product triggers** (e.g. p95/p99 authorization latency SLOs breached, or hot-account / high-QPS channel requirements). Do not add projection speculatively before metrics justify it.
+
+4. **Performance before projection** — Prefer query and index tuning (e.g. composite index on `journal_lines` matching the ledger filter for **2110** + `deposit_account_id`) and bounded read patterns; treat snapshot / running-balance patterns as **separate** ADRs when compute-on-read is no longer sufficient.
+
 ---
 
 ## 14\. Related ADRs
 
 * ADR-0001: Modular Monolith Architecture with Domain Boundaries  
 * ADR-0002: Operational Event Model  
-* ADR-0003: Posting & Journal Architecture
+* ADR-0003: Posting & Journal Architecture  
+* ADR-0013: Holds, available balance, and servicing operational events
 
 ---
 
@@ -329,6 +343,7 @@ BankCORE adopts a **multi-balance account model** in which:
 * **ledger balance** is the authoritative booked financial balance  
 * **available balance** is a derived funds-availability balance  
 * **holds** are separate, auditable constraints on available funds  
-* **overdraft and NSF behavior** is governed by explicit authorization logic
+* **overdraft and NSF behavior** is governed by explicit authorization logic  
+* **available balance for authorization** defaults to **compute-on-read** from journals and holds (§13.3); materialized projections are optional optimizations, gated by ADR and product SLOs
 
 This decision prevents ambiguity between accounting truth and operational availability, and provides the foundation required for reliable teller operations, deposit servicing, and future channel expansion.
