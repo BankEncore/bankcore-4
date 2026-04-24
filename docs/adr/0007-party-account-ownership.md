@@ -115,6 +115,10 @@ Same columns, with `loan_account_id` (FK → `loan_accounts`) replacing `deposit
 * **Accounts** owns migrations, models, and **commands** that insert, update, or end participation rows on `deposit_account_parties` and `loan_account_parties`.
 * **Party** may **read** participation through queries or explicit application APIs exposed for CIF screens, but **must not** mutate these tables directly (no writes from `Party::*` commands into Accounts-owned tables). Cross-domain workflows orchestrate via public contracts or application services, consistent with [bankcore-module-catalog.md](../architecture/bankcore-module-catalog.md) §9 dependency rules.
 
+### 2.10 Implementation status (deposit vertical slice)
+
+For **`deposit_account_parties`** only, the first teller-backed path ships **primary `owner`** plus optional **`joint_owner`** at account open per [ADR-0011 §2.3](0011-accounts-deposit-vertical-slice-mvp.md) (`Accounts::Commands::OpenAccount`, partial unique index **`20260422130005`**). This ADR’s overall **Status** remains **Proposed** until loan participation and broader role workflows are implemented; the deposit slice behavior above is **accepted** as the current contract for MVP sequencing.
+
 ---
 
 ## 3. Consequences

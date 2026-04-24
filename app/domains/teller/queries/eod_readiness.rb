@@ -6,6 +6,7 @@ module Teller
     # events for a single business date (institution-wide MVP; see ADR-0016).
     class EodReadiness
       def self.call(business_date:)
+        current = Core::BusinessDate::Services::CurrentBusinessDate.call
         balance = Core::Ledger::Queries::JournalBalanceCheckForBusinessDate.call(business_date: business_date)
         rows = Core::Ledger::Queries::TrialBalanceForBusinessDate.call(business_date: business_date)
 
@@ -25,6 +26,8 @@ module Teller
 
         {
           business_date: business_date.iso8601,
+          current_business_on: current.iso8601,
+          posting_day_closed: business_date < current,
           journal_totals_balanced: balance.balanced,
           total_debit_minor_units: balance.total_debit_minor_units,
           total_credit_minor_units: balance.total_credit_minor_units,

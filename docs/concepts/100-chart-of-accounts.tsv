@@ -73,6 +73,7 @@ Account Code	Name	Type	Control Account	Description	Subledger Applies	Subledger S
 5120	Interest Expense – NOW Accounts	Expense	Yes	Interest paid on NOW accounts	No		
 5130	Interest Expense – Savings/MMDA	Expense	Yes	Interest paid on savings/MMDA	No		
 5140	Interest Expense – Time Deposits	Expense	Yes	Interest paid on CDs	No		
+5190	Teller Cash Over and Short	Expense	Yes	Net teller drawer count differences versus book cash (shortage as debit, overage as credit to this account)	No		
 5200	Interest Expense – Borrowings	Expense	Yes	Interest on notes and advances	No		
 5500	Salaries & Employee Benefits	Expense	Yes	Compensation and benefits expense	No		
 5520	Occupancy & Equipment	Expense	Yes	Premises, equipment, depreciation expense	No		

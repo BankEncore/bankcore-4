@@ -111,6 +111,39 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: core_business_date_close_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.core_business_date_close_events (
+    id bigint NOT NULL,
+    closed_on date NOT NULL,
+    closed_at timestamp(6) without time zone NOT NULL,
+    closed_by_operator_id bigint,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: core_business_date_close_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.core_business_date_close_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: core_business_date_close_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.core_business_date_close_events_id_seq OWNED BY public.core_business_date_close_events.id;
+
+
+--
 -- Name: core_business_date_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -188,7 +221,8 @@ CREATE TABLE public.deposit_accounts (
     status character varying NOT NULL,
     product_code character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    deposit_product_id bigint NOT NULL
 );
 
 
@@ -209,6 +243,40 @@ CREATE SEQUENCE public.deposit_accounts_id_seq
 --
 
 ALTER SEQUENCE public.deposit_accounts_id_seq OWNED BY public.deposit_accounts.id;
+
+
+--
+-- Name: deposit_products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_products (
+    id bigint NOT NULL,
+    product_code character varying NOT NULL,
+    name character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: deposit_products_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_products_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_products_id_seq OWNED BY public.deposit_products.id;
 
 
 --
@@ -595,6 +663,13 @@ ALTER SEQUENCE public.teller_sessions_id_seq OWNED BY public.teller_sessions.id;
 
 
 --
+-- Name: core_business_date_close_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_close_events ALTER COLUMN id SET DEFAULT nextval('public.core_business_date_close_events_id_seq'::regclass);
+
+
+--
 -- Name: core_business_date_settings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -613,6 +688,13 @@ ALTER TABLE ONLY public.deposit_account_parties ALTER COLUMN id SET DEFAULT next
 --
 
 ALTER TABLE ONLY public.deposit_accounts ALTER COLUMN id SET DEFAULT nextval('public.deposit_accounts_id_seq'::regclass);
+
+
+--
+-- Name: deposit_products id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_products ALTER COLUMN id SET DEFAULT nextval('public.deposit_products_id_seq'::regclass);
 
 
 --
@@ -694,6 +776,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 
 --
+-- Name: core_business_date_close_events core_business_date_close_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_close_events
+    ADD CONSTRAINT core_business_date_close_events_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: core_business_date_settings core_business_date_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -715,6 +805,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 ALTER TABLE ONLY public.deposit_accounts
     ADD CONSTRAINT deposit_accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deposit_products deposit_products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_products
+    ADD CONSTRAINT deposit_products_pkey PRIMARY KEY (id);
 
 
 --
@@ -806,6 +904,20 @@ ALTER TABLE ONLY public.teller_sessions
 
 
 --
+-- Name: index_core_business_date_close_events_on_closed_by_operator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_core_business_date_close_events_on_closed_by_operator_id ON public.core_business_date_close_events USING btree (closed_by_operator_id);
+
+
+--
+-- Name: index_core_business_date_close_events_on_closed_on; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_core_business_date_close_events_on_closed_on ON public.core_business_date_close_events USING btree (closed_on);
+
+
+--
 -- Name: index_dap_unique_open_active_per_account_party_role; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -831,6 +943,20 @@ CREATE INDEX index_deposit_account_parties_on_party_record_id ON public.deposit_
 --
 
 CREATE UNIQUE INDEX index_deposit_accounts_on_account_number ON public.deposit_accounts USING btree (account_number);
+
+
+--
+-- Name: index_deposit_accounts_on_deposit_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_accounts_on_deposit_product_id ON public.deposit_accounts USING btree (deposit_product_id);
+
+
+--
+-- Name: index_deposit_products_on_product_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_deposit_products_on_product_code ON public.deposit_products USING btree (product_code);
 
 
 --
@@ -1010,6 +1136,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 
 --
+-- Name: core_business_date_close_events fk_rails_0ba4d8ef2f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.core_business_date_close_events
+    ADD CONSTRAINT fk_rails_0ba4d8ef2f FOREIGN KEY (closed_by_operator_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: operational_events fk_rails_0f986cd613; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1071,6 +1205,14 @@ ALTER TABLE ONLY public.holds
 
 ALTER TABLE ONLY public.holds
     ADD CONSTRAINT fk_rails_4c0c5bf773 FOREIGN KEY (placed_by_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: deposit_accounts fk_rails_71f0b9310a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_accounts
+    ADD CONSTRAINT fk_rails_71f0b9310a FOREIGN KEY (deposit_product_id) REFERENCES public.deposit_products(id);
 
 
 --
@@ -1176,6 +1318,9 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120005'),
+('20260424120004'),
+('20260424120003'),
 ('20260424120002'),
 ('20260424120001'),
 ('20260424120000'),

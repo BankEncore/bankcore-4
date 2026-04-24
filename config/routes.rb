@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   scope path: "teller", defaults: { format: :json }, module: :teller do
     post "parties", to: "parties#create"
     post "deposit_accounts", to: "deposit_accounts#create"
+    get "event_types", to: "event_types#index"
+    get "operational_events", to: "operational_events#index"
     post "operational_events", to: "operational_events#create"
     post "operational_events/:id/post", to: "operational_event_posts#create"
     post "reversals", to: "reversals#create"
@@ -15,6 +17,7 @@ Rails.application.routes.draw do
     post "overrides", to: "overrides#create"
     get "reports/trial_balance", to: "reports#trial_balance"
     get "reports/eod_readiness", to: "reports#eod_readiness"
+    post "business_date/close", to: "business_date_closes#create"
   end
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

@@ -6,6 +6,7 @@ module Accounts
       self.table_name = "deposit_account_parties"
 
       ROLE_OWNER = "owner"
+      ROLE_JOINT_OWNER = "joint_owner"
       STATUS_ACTIVE = "active"
       STATUS_PENDING = "pending"
       STATUS_INACTIVE = "inactive"

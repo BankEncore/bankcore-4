@@ -16,7 +16,7 @@ Records that a teller drawer session **closed**: cash counts captured, **expecte
 
 - **Authoritative state** for MVP lives on **`teller_sessions`**, not only on this optional OE: **`CloseSession`** / **`ApproveSessionVariance`** ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)) set **`open`**, **`pending_supervisor`** (material variance over configured threshold), or **`closed`** with **`closed_at`**, expected/actual cash, **`variance_minor_units`**, and when applicable **`supervisor_approved_at`** / **`supervisor_operator_id`**.
 - **Material variance** uses **`config.x.teller.variance_threshold_minor_units`** (env **`TELLER_VARIANCE_THRESHOLD_MINOR_UNITS`**); above threshold the session stays **not closed** until **`POST /teller/teller_sessions/approve_variance`** with a **supervisor** ([ADR-0015](../adr/0015-teller-workspace-authentication.md)). Separate **`override.approved`** OEs remain optional workflow glue.
-- **Cash shortage/over** as an economic correction may later be a **separate financial** `event_type` if posted to GL; session close stays **control state** unless an ADR merges adjustment posting here.
+- **Cash shortage/over** as an economic correction can be posted to GL via **`teller.drawer.variance.posted`** when ADR-0020 is enabled; otherwise session close stays **control state** only.
 
 ## Persistence
 
@@ -37,7 +37,7 @@ Records that a teller drawer session **closed**: cash counts captured, **expecte
 ## Posting
 
 - **No** for the close event itself in MVP.
-- **Future:** separate `cash.adjustment` (or similar) **financial** event if variance hits GL.
+- **Optional (product flag):** **`teller.drawer.variance.posted`** is created from **`CloseSession`** / **`ApproveSessionVariance`** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is enabled ([ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)); see [teller-drawer-variance-posted.md](teller-drawer-variance-posted.md).
 
 ## Idempotency
 

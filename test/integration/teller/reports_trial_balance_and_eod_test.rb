@@ -28,6 +28,14 @@ class ReportsTrialBalanceAndEodTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "eod readiness marks past business_date as posting_day_closed" do
+    get "/teller/reports/eod_readiness", params: { business_date: (@bd - 1.day).iso8601 }, headers: @auth
+    assert_response :ok
+    body = response.parsed_body
+    assert_equal @bd.iso8601, body["current_business_on"]
+    assert body["posting_day_closed"]
+  end
+
   test "trial balance empty then populated after post" do
     get "/teller/reports/trial_balance", headers: @auth
     assert_response :ok
@@ -71,6 +79,8 @@ class ReportsTrialBalanceAndEodTest < ActionDispatch::IntegrationTest
     assert_response :ok
     body = response.parsed_body
     assert_equal @bd.iso8601, body["business_date"]
+    assert_equal @bd.iso8601, body["current_business_on"]
+    assert_equal false, body["posting_day_closed"]
     assert_not body["all_sessions_closed"]
     assert_equal 1, body["open_teller_sessions_count"]
     assert_not body["eod_ready"]

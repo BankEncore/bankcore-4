@@ -8,7 +8,10 @@ module Core
           "deposit.accepted" => DepositAccepted,
           "withdrawal.posted" => WithdrawalPosted,
           "transfer.completed" => TransferCompleted,
-          "posting.reversal" => PostingReversal
+          "posting.reversal" => PostingReversal,
+          "fee.assessed" => FeeAssessed,
+          "fee.waived" => FeeWaived,
+          "teller.drawer.variance.posted" => TellerDrawerVariancePosted
         }.freeze
 
         def self.legs_for(event)

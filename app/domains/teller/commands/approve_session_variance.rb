@@ -31,6 +31,11 @@ module Teller
             supervisor_approved_at: Time.current,
             supervisor_operator_id: supervisor_operator_id
           )
+
+          if session.variance_minor_units.to_i != 0
+            Teller::Services::PostDrawerVarianceToGl.call(session: session, actor_id: supervisor_operator_id)
+          end
+
           session
         end
       end

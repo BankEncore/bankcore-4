@@ -15,6 +15,11 @@ module Accounts
         end
 
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
+        begin
+          Core::BusinessDate::Services::AssertOpenPostingDate.call!(date: on_date)
+        rescue Core::BusinessDate::Errors::InvalidPostingBusinessDate => e
+          raise InvalidRequest, e.message
+        end
 
         Core::OperationalEvents::Models::OperationalEvent.transaction do
           existing = Core::OperationalEvents::Models::OperationalEvent.lock.find_by(channel: channel, idempotency_key: idempotency_key)

@@ -265,6 +265,16 @@ Examples:
 * `EventCatalog`
 * `EventClassifier`
 
+**Shipped (narrow observability read — [ADR-0017](../adr/0017-deposit-products-fk-narrow-scope.md) §2.5):**
+
+* `Core::OperationalEvents::Queries::ListOperationalEvents` — bounded listing by `business_date` with product-aware account context and posting/journal id traceability (read-only).
+
+**Shipped (code-first event catalog — [ADR-0019](../adr/0019-event-catalog-and-fee-events.md)):**
+
+* `Core::OperationalEvents::EventCatalog` — metadata for known `event_type` strings (not a second DB truth); CI drift checks align catalog **financial** rows with `PostingRules::Registry::HANDLERS`.
+* Teller **`GET /teller/event_types`** — discovery JSON for clients (same operator header as other teller reads).
+* **`teller.drawer.variance.posted`** (optional product flag — [ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)) — `RecordEvent` on **`system`** channel only; no DDA `source_account_id`.
+
 **Rules:**
 
 * all material banking actions should become durable operational events
@@ -343,15 +353,16 @@ Examples:
 * close validations
 * EOD orchestration
 
-**Typical contents:**
+**Shipped (narrow Phase 2 slice — [ADR-0018](../adr/0018-business-date-close-and-posting-invariant.md)):**
 
-* `BusinessDay`
-* `BusinessDayCheckpoint`
-* `CurrentBusinessDate`
-* `OpenDay`
-* `CloseDay`
-* `AdvanceDay`
-* `EndOfDayOrchestrator`
+* `Core::BusinessDate::Models::BusinessDateSetting` / `BusinessDateCloseEvent`
+* `Core::BusinessDate::Services::CurrentBusinessDate`, `AssertOpenPostingDate`
+* `Core::BusinessDate::Commands::SetBusinessDate`, `CloseBusinessDate` (EOD-gated advance + audit); `AdvanceBusinessDate` **test-only**
+* `Teller::Queries::EodReadiness` (readiness composition; [ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md))
+
+**Still aspirational / later ADRs:**
+
+* `BusinessDayCheckpoint`, multi-entity dates, `EndOfDayOrchestrator`, day **reopen**
 
 ---
 
@@ -523,6 +534,8 @@ Examples:
 **Purpose:** workstation-facing transactional flows.
 
 **MVP implementation:** drawer lifecycle, expected vs actual cash, variance, and supervisor approval live on **`teller_sessions`** with HTTP under `app/controllers/teller/*` ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md), [ADR-0015](../adr/0015-teller-workspace-authentication.md)). Financial effect still flows through **`Core::OperationalEvents`** + **`Core::Posting`**; read-only **trial balance / EOD readiness** composition lives in `Teller::Queries::EodReadiness` ([ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md)).
+
+**Optional GL variance (ADR-0020):** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is enabled, **`Teller::Services::PostDrawerVarianceToGl`** records and posts **`teller.drawer.variance.posted`** (`system` channel) on session close with non-zero variance—no separate teller HTTP route for that event type.
 
 **Owns:**
 
@@ -833,7 +846,7 @@ Each table family should have **one owning domain** even if all tables live in o
 | Table family                                                 | Owning module             |
 | ------------------------------------------------------------ | ------------------------- |
 | `party_*`                                                    | `Party`                   |
-| `product_*`, `fee_*`, `interest_*`                           | `Products`                |
+| `deposit_products`, `product_*`, `fee_*`, `interest_*`      | `Products`                |
 | `deposit_accounts`, `loan_accounts`, `deposit_account_parties`, `loan_account_parties`, `account_relationships` | `Accounts`                |
 | `operational_events`, `reversal_links`                       | `Core::OperationalEvents` |
 | `posting_batches`, `posting_legs`                            | `Core::Posting`           |
