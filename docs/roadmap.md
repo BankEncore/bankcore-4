@@ -111,7 +111,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | **Ownership** | **Narrow two-party joint at open shipped:** `OpenAccount` + Teller `joint_party_record_id` ([ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3, [ADR-0007](adr/0007-party-account-ownership.md)). Full ADR-0007 surface (additional roles at open, effective-dating edge cases, post-open add/remove) remains open. |
 | **Products** | **Narrow slice shipped:** `deposit_products` + `deposit_accounts.deposit_product_id` + cached `product_code` ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md)). Full ADR-0005 resolvers / per-product GL remain open. |
 | **Event catalog** | Fees (`fee.assessed`, `fee.waived`), interest (`interest.accrued`, `interest.posted`), NSF / overdraft-style events as needed—each with posting templates. |
-| **Observability** | Searchable event index; filters by date, account, teller; traceability **event ↔ posting batch ↔ journal ↔ session**. |
+| **Observability** | **Narrow slice shipped:** `GET /teller/operational_events` — bounded `business_date` / range, product filters, envelope (`current_business_on`, `posting_day_closed`), nested account product fields, posting/journal ids ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) §2.5). Full-text / multi-branch index remains open. |
 | **Business date close** | **Narrow slice shipped:** supervisor **`POST /teller/business_date/close`** after ADR-0016 readiness; singleton advance + append-only close audit; **open-day posting invariant** (ADR-0018). Multi-branch, snapshots, day reopen remain open. |
 
 ---
@@ -169,5 +169,5 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | [AGENTS.md](../AGENTS.md) | Stack, Docker, Cursor rules index |
 | [ADR-0015](adr/0015-teller-workspace-authentication.md) | Teller workspace `operators`, `X-Operator-Id`, supervisor gates |
 | [ADR-0016](adr/0016-trial-balance-and-eod-readiness.md) | Trial balance query + EOD readiness reads |
-| [ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) | `deposit_products` + account FK (narrow Phase 2 slice) |
+| [ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) | `deposit_products` + account FK + observability reads §2.5 (narrow Phase 2 slice) |
 | [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md) | Business date close + open-day posting invariant (narrow Phase 2 slice) |

@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   scope path: "teller", defaults: { format: :json }, module: :teller do
     post "parties", to: "parties#create"
     post "deposit_accounts", to: "deposit_accounts#create"
+    get "operational_events", to: "operational_events#index"
     post "operational_events", to: "operational_events#create"
     post "operational_events/:id/post", to: "operational_event_posts#create"
     post "reversals", to: "reversals#create"

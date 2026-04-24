@@ -265,6 +265,10 @@ Examples:
 * `EventCatalog`
 * `EventClassifier`
 
+**Shipped (narrow observability read — [ADR-0017](../adr/0017-deposit-products-fk-narrow-scope.md) §2.5):**
+
+* `Core::OperationalEvents::Queries::ListOperationalEvents` — bounded listing by `business_date` with product-aware account context and posting/journal id traceability (read-only).
+
 **Rules:**
 
 * all material banking actions should become durable operational events
