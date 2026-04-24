@@ -64,7 +64,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 **Gap vs [01-mvp-vs-core.md](concepts/01-mvp-vs-core.md) (institution MVP vs this repo)**
 
 - **In repo today** (single-owner, single–business-date framing): deposits, withdrawals, transfers, reversals with FK columns, teller sessions and variance workflow, holds with available checks for configured paths, trial balance / EOD readiness **GET**s — each cross-linked to ADRs above.
-- **Partial / Phase 2+:** **Formal “day closed”** transition and **multi-branch / multi-entity GL** (Phase 2 below); **joint and multi-party accounts** (deferred in [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) vs full institution MVP in the concept doc); **automatic GL cash adjustment** for drawer variance (ADR-0014 non-goal until a dedicated financial event); **available / holds** depth beyond MVP authorization ([ADR-0004](adr/0004-account-balance-model.md), Phase 3).
+- **Partial / Phase 2+:** **Formal “day closed”** transition and **multi-branch / multi-entity GL** (Phase 2 below); **full joint / multi-party** servicing (3+ at open, post-open add/remove, additional roles) vs institution MVP in the concept doc — **narrow two-party joint at open** is in [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3; **automatic GL cash adjustment** for drawer variance (ADR-0014 non-goal until a dedicated financial event); **available / holds** depth beyond MVP authorization ([ADR-0004](adr/0004-account-balance-model.md), Phase 3).
 - **Teller vs supervisor** — identity and supervisor gates shipped ([ADR-0015](adr/0015-teller-workspace-authentication.md)); finer roles and supervisor-only **read** APIs remain product choice.
 
 ---
@@ -108,7 +108,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 
 | Track | Content |
 | ----- | ------- |
-| **Ownership** | Joint and additional roles per [ADR-0007](adr/0007-party-account-ownership.md); effective dating already in ADR—enforce in commands and indexes. |
+| **Ownership** | **Narrow two-party joint at open shipped:** `OpenAccount` + Teller `joint_party_record_id` ([ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3, [ADR-0007](adr/0007-party-account-ownership.md)). Full ADR-0007 surface (additional roles at open, effective-dating edge cases, post-open add/remove) remains open. |
 | **Products** | **Narrow slice shipped:** `deposit_products` + `deposit_accounts.deposit_product_id` + cached `product_code` ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md)). Full ADR-0005 resolvers / per-product GL remain open. |
 | **Event catalog** | Fees (`fee.assessed`, `fee.waived`), interest (`interest.accrued`, `interest.posted`), NSF / overdraft-style events as needed—each with posting templates. |
 | **Observability** | Searchable event index; filters by date, account, teller; traceability **event ↔ posting batch ↔ journal ↔ session**. |

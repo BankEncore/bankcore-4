@@ -4,14 +4,16 @@ module Teller
   class DepositAccountsController < ApplicationController
     def create
       attrs = params.require(:deposit_account).permit(
-        :party_record_id, :deposit_product_id, :product_code
+        :party_record_id, :joint_party_record_id, :deposit_product_id, :product_code
       ).to_h.symbolize_keys
       party_record_id = attrs[:party_record_id].to_i
+      joint_party_record_id = attrs[:joint_party_record_id].presence&.to_i
       deposit_product_id = attrs[:deposit_product_id].presence&.to_i
       product_code = attrs[:product_code].presence
 
       account = Accounts::Commands::OpenAccount.call(
         party_record_id: party_record_id,
+        joint_party_record_id: joint_party_record_id,
         deposit_product_id: deposit_product_id,
         product_code: product_code
       )
@@ -25,6 +27,11 @@ module Teller
       }, status: :created
     rescue Accounts::Commands::OpenAccount::PartyNotFound
       render json: { error: "party_not_found" }, status: :not_found
+    rescue Accounts::Commands::OpenAccount::JointPartyNotFound
+      render json: { error: "joint_party_not_found" }, status: :not_found
+    rescue Accounts::Commands::OpenAccount::InvalidJointParty
+      render json: { error: "invalid_joint_party", message: "joint_party_record_id must differ from party_record_id" },
+        status: :unprocessable_entity
     rescue Accounts::Commands::OpenAccount::ProductNotFound
       render json: { error: "product_not_found" }, status: :not_found
     rescue Accounts::Commands::OpenAccount::ProductConflict

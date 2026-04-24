@@ -37,7 +37,7 @@ After `bin/rails db:seed` in **development**, sample **`operators`** rows exist 
 
 **Open session for teller cash:** `TELLER_REQUIRE_OPEN_SESSION_FOR_CASH` (default **true**). When enabled, **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** require **`teller_session_id`** referencing an **open** session (`transfer.completed` exempt). Set to **`false`**, **`0`**, or **`no`** to disable.
 
-**Deposit products:** `POST /teller/deposit_accounts` accepts optional **`deposit_product_id`** and **`product_code`** on `deposit_account` (defaults to seeded slice-1 product). Response includes **`deposit_product_id`**, **`product_code`**, and **`product_name`**. See [docs/adr/0017-deposit-products-fk-narrow-scope.md](docs/adr/0017-deposit-products-fk-narrow-scope.md).
+**Deposit products:** `POST /teller/deposit_accounts` accepts optional **`deposit_product_id`** and **`product_code`** on `deposit_account` (defaults to seeded slice-1 product). Optional **`joint_party_record_id`** opens a two-party joint account (second `deposit_account_parties` row, `joint_owner`). Response includes **`deposit_product_id`**, **`product_code`**, and **`product_name`**. See [docs/adr/0017-deposit-products-fk-narrow-scope.md](docs/adr/0017-deposit-products-fk-narrow-scope.md) and [docs/adr/0011-accounts-deposit-vertical-slice-mvp.md](docs/adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3.
 
 ## Documentation pointers
 

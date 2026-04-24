@@ -42,18 +42,19 @@ The **Accounts** module owns a new **`deposit_accounts`** table with at least:
 
 ### 2.3 `deposit_account_parties` (first open)
 
-Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates **exactly one** participation row for slice 1:
+Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** always creates a **primary** participation row:
 
 * **`role`:** `owner`
 * **`status`:** `active` (do **not** use `pending` for CIP gating in slice 1 unless a later ADR requires it)
 * **`effective_on`:** Defaults to **`Core::BusinessDate::Services::CurrentBusinessDate`** (singleton `core_business_date_settings`, migration `20260422130001`; seeds create a row when none exist). **`OpenAccount`** may pass an explicit `effective_on:` for tests or controlled overrides; production paths **must** align with institution bank-date semantics (not silent `Date.current` without review).
 * **`ended_on`:** `NULL`
 
-**Joint / second party:** out of scope; **`OpenAccount`** accepts a **single** `party_record_id` only.
+**Two-party joint at open (narrow Phase 2 slice, ADR-0007 vocabulary):** optional **`joint_party_record_id`** creates a **second** row on the same account with **`role: joint_owner`**, **`status: active`**, the **same** **`effective_on`** and **`ended_on: NULL`** as the owner row (no separate override in this slice). **`joint_party_record_id`** MUST reference a distinct existing **`party_records.id`**; if it equals **`party_record_id`**, the command raises **`InvalidJointParty`**; if the joint party is missing, **`JointPartyNotFound`**. **Out of scope:** three or more parties at open, **`authorized_signer` / `beneficiary`** at open, **`pending`** CIP gating for joint, post-open **add/remove joint** (future **`Accounts::Commands::*`**).
 
 ### 2.4 `OpenAccount` invariants
 
-* **`party_record_id`** MUST reference an existing **`party_records.id`** (Party domain is system-of-record; Accounts validates via read/query port, not direct mutation of Party tables).
+* **`party_record_id`** MUST reference an existing **`party_records.id`** (Party domain is system-of-record; Accounts validates via read/query port, not direct mutation of Party tables). Missing primary → **`PartyNotFound`**.
+* When **`joint_party_record_id`** is present: second party must exist (**`JointPartyNotFound`** if not); must differ from primary (**`InvalidJointParty`**).
 * Enforce ADR-0007 **§2.7** (“at most one open active row per `(deposit_account_id, party_record_id, role)`”) in **application commands** for slice 1.
 * **Database:** A **partial unique index** on `deposit_account_parties` (`index_dap_unique_open_active_per_account_party_role`, `WHERE status = 'active' AND ended_on IS NULL`) ships in migration **`20260422130005_create_deposit_account_parties`**, alongside non-unique indexes on `deposit_account_id` and `party_record_id`.
 
@@ -69,14 +70,14 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 **Pre:** `party_records` row `id = 42` exists (from `CreateParty`). Current business date = `2026-04-22`.
 
-**Command:** `Accounts::Commands::OpenAccount` with `party_record_id: 42`, optional overrides only as documented (e.g. tests).
+**Command:** `Accounts::Commands::OpenAccount` with `party_record_id: 42`, optional **`joint_party_record_id`** (distinct party id) and overrides only as documented (e.g. tests).
 
 **Result:**
 
 1. One **`deposit_accounts`** row: `account_number` unique, `currency: "USD"`, `status: "open"`, **`deposit_product_id`** → seeded **`deposit_products`** row, `product_code: "slice1_demand_deposit"` (cache).
-2. One **`deposit_account_parties`** row: `deposit_account_id` → new account, `party_record_id: 42`, `role: "owner"`, `status: "active"`, `effective_on: 2026-04-22`, `ended_on: NULL`.
+2. One or two **`deposit_account_parties`** rows: primary `party_record_id: 42`, `role: "owner"`, `status: "active"`, `effective_on: 2026-04-22`, `ended_on: NULL`; when joint is supplied, a second row with `role: "joint_owner"` and the same `effective_on` / `ended_on`.
 
-3. **`RecordEvent`** for `deposit.accepted` (with `source_account_id` set to the new **`deposit_accounts.id`**, channel, idempotency key, amount, currency) creates an **`operational_events`** row in **`pending`** status; **`PostEvent`** then moves it to **`posted`** with a balanced journal (1110 / 2110).
+3. **`RecordEvent`** for `deposit.accepted` (with `source_account_id` set to the new **`deposit_accounts.id`**, channel, idempotency key, amount, currency) creates an **`operational_events`** row in **`pending`** status; **`PostEvent`** then moves it to **`posted`** with a balanced journal (1110 / 2110). Posting remains **account-scoped**; it does not branch on joint participation.
 
 ---
 
@@ -86,7 +87,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 * **`Deposits`** servicing (interest, fees, OD)—catalog §6.8
 * **Available balance / holds**—[ADR-0004](0004-account-balance-model.md)
 * **Full Products** configuration—ADR-0005; **`product_code`** stub only
-* **Joint owners**, **`AddPartyToAccount`**, **`account_relationships`**
+* **Post-open joint changes** (`AddPartyToAccount`, remove joint), **`authorized_signer` / `beneficiary`** at open, **3+** parties at open — beyond the narrow two-party **`OpenAccount`** contract in **§2.3**; **`account_relationships`**
 
 ---
 
@@ -112,4 +113,4 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** creates
 
 ## 7. Summary
 
-Vertical slice 1 **ships `deposit_accounts` + `deposit_account_parties`**, with **`OpenAccount`** creating one **`owner` / `active`** participation row, **`product_code`** string stub, **`USD`** default currency, ADR-0007 **§2.7** enforced in application commands **and** partial unique index in **`20260422130005`**, **`loan_*`** tables deferred, and **`operational_events.source_account_id`** plus **`RecordEvent`** / **`PostEvent`** / Teller JSON routes for **`deposit.accepted`** (`pending` → `posted`, GL **1110** / **2110**).
+Vertical slice 1 **ships `deposit_accounts` + `deposit_account_parties`**, with **`OpenAccount`** creating at least one **`owner` / `active`** participation row and optionally a second **`joint_owner` / `active`** row (**§2.3**), **`product_code`** string stub, **`USD`** default currency, ADR-0007 **§2.7** enforced in application commands **and** partial unique index in **`20260422130005`**, **`loan_*`** tables deferred, and **`operational_events.source_account_id`** plus **`RecordEvent`** / **`PostEvent`** / Teller JSON routes for **`deposit.accepted`** (`pending` → `posted`, GL **1110** / **2110**).
