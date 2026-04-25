@@ -363,12 +363,13 @@ First ADR should cover auth versus clearing, hold expiration, settlement matchin
 
 To complete:
 
-- Add non-teller workspace controllers with explicit auth assumptions.
+- **Shipped narrow slice:** Branch-hosted internal CSR servicing exists under the `branch` HTML workspace ([ADR-0026](adr/0026-branch-csr-servicing.md)). It provides customer search, customer 360, account profile, activity, holds, statement metadata, and guarded hold / fee-waiver / reversal actions using channel `branch` and staff `actor_id`.
+- Add external customer, partner, and fintech API controllers with explicit auth assumptions.
 - Define customer-safe response contracts and redaction.
 - Add rate limits, idempotency expectations, and audit attribution.
 - Keep controllers as orchestrators over domain commands/queries.
 
-First slices should expose existing domain reads before introducing new money movement.
+Next external slices should expose existing domain reads before introducing new money movement; do not reuse Branch browser-session auth for those clients.
 
 ---
 
@@ -413,12 +414,12 @@ First slices should add measurable performance targets and drift detection befor
 
 ## 8. Suggested Sequencing
 
-Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, and Phase 3.5 internal workspace foundations shipped):
+Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and Phase 4.1 Branch CSR servicing shipped):
 
 1. Reconcile this deferred guide and roadmap references whenever shipped narrow slices change, so Phase 4 planning starts from the same checkpoint as `roadmap.md`.
 2. Complete a Phase 4 readiness ADR for the first selected channel before implementation, especially when ingestion touches posting.
 3. Define channel identity, audit attribution, idempotency, support search keys, settlement GL, returns/reversals, cutoffs, and EOD impact for the selected channel.
-4. Prefer a CSR/servicing read API slice first if the goal is low-risk external contract work; it can expose existing account, product, event, statement, and ledger-derived reads before new money movement.
+4. For external customer/partner/fintech APIs, start with read contracts over existing account, product, event, statement, and ledger-derived state before new money movement.
 5. If the first money-moving slice is ACH, start with one narrow receipt-ingestion path and prove file/item idempotency, event recording, posting, settlement GL, and reconciliation in one integration test.
 6. Pull forward deeper product resolver, branch/business-date, reporting snapshot, or cash-location work only when the selected channel needs it.
 

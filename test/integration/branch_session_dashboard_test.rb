@@ -37,7 +37,8 @@ class BranchSessionDashboardTest < ActionDispatch::IntegrationTest
     get "/branch"
 
     assert_response :success
-    assert_select "h1", "Branch session dashboard"
+    assert_select "h1", "Branch workspace"
+    assert_includes response.body, "Customer servicing"
     assert_includes response.body, "##{open_session.id}"
     assert_includes response.body, "##{pending_session.id}"
     assert_includes response.body, "##{closed_session.id}"

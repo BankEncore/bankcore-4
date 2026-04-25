@@ -1,0 +1,17 @@
+<% content_for :title, "Fee Waiver Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Fee waiver result</h1>
+  <p class="mt-2 text-slate-600">Review the compensating fee waiver event.</p>
+</section>
+
+<%= render "branch/shared/transaction_result",
+  title: "Fee waiver recorded",
+  event: @event,
+  outcome: @outcome,
+  post_result: @post_result %>
+
+<div class="mt-4 flex flex-wrap gap-3">
+  <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <%= link_to "Original fee event", branch_operational_event_path(@fee_event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</div>

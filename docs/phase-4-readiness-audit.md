@@ -4,7 +4,7 @@
 **Last reviewed:** 2026-04-25  
 **Companion docs:** [roadmap](roadmap.md), [deferred completion guide](roadmap-deferred-completion.md)
 
-This audit checks whether BankCORE is ready to start Phase 4 channel work without bypassing the accounting kernel or carrying stale Phase 0-3 assumptions into external integrations.
+This audit checks whether BankCORE is ready to continue Phase 4 channel work without bypassing the accounting kernel or carrying stale Phase 0-3 assumptions into external integrations.
 
 Phase 4 should not begin by building every channel at once. It should begin with one vertical slice backed by an ADR, an integration test, and explicit mappings to `Core::OperationalEvents`, `Core::Posting`, `Core::Ledger`, and `Core::BusinessDate`.
 
@@ -16,7 +16,7 @@ The financial kernel is ready enough to design Phase 4: operational events are d
 
 Do not implement ACH, wires, card settlement, partner writes, or fintech money movement until the first Phase 4 ADR is accepted. The ADR must define event taxonomy, channel identity, idempotency, settlement GL, cutoffs/business-date behavior, returns or reversals, reconciliation, and support visibility.
 
-The safest first Phase 4 slice is **CSR / servicing read APIs over existing state**, because it can reuse current event, account, product, statement, and ledger reads without adding a new external money movement pathway. The safest first money-moving Phase 4 slice is **ACH receipt ingestion for a narrow credit/debit file path**, but only after the ACH ADR defines file/item idempotency, settlement accounts, returns, and EOD behavior.
+The first Phase 4 slice is now **Branch CSR servicing** ([ADR-0026](adr/0026-branch-csr-servicing.md)): internal staff customer/account servicing under the existing Branch HTML workspace. It reuses current party, account, product, statement, operational-event, and ledger-derived reads, and exposes guarded existing servicing actions without introducing a new external money movement pathway. The safest first money-moving Phase 4 slice remains **ACH receipt ingestion for a narrow credit/debit file path**, but only after the ACH ADR defines file/item idempotency, settlement accounts, returns, and EOD behavior.
 
 ## 2. Shipped State Inventory
 
@@ -50,6 +50,13 @@ Phase 3.5 internal workspace foundations are present:
 - `admin` exposes product and rule inspection plus guarded effective-dated rule changes.
 - This is internal staff UI only; it must not be reused for customer, partner, or fintech authentication.
 
+Phase 4.1 Branch CSR servicing is present:
+
+- `branch` exposes customer search, customer 360, deposit-account profile, activity, holds, and statement metadata pages.
+- Branch CSR reads are backed by domain queries under `Party`, `Accounts`, `Deposits`, and `Core::OperationalEvents`.
+- Non-cash Branch servicing writes use operational-event channel `branch` and authenticated operator `actor_id`.
+- Guarded actions include account hold placement/release, fee waiver, and posting reversal flows through existing commands and `Core::Posting`.
+
 ## 3. Documentation Drift
 
 `docs/roadmap-deferred-completion.md` is the largest readiness risk because it still describes a Slice-1-only state in several sections:
@@ -77,7 +84,7 @@ ADR-level drift is lower severity:
 
 The core money path is suitable as a Phase 4 foundation:
 
-- `Core::OperationalEvents::Commands::RecordEvent` accepts only configured channels (`teller`, `api`, `batch`, `system`) and supported financial event types.
+- `Core::OperationalEvents::Commands::RecordEvent` accepts only configured channels (`teller`, `branch`, `api`, `batch`, `system`) and supported financial event types.
 - Idempotency is scoped to `(channel, idempotency_key)`, with request fingerprint checks to reject mismatched replays.
 - `RecordEvent` asserts the event business date is the current open posting day.
 - `Core::Posting::Commands::PostEvent` is the only GL write path for GL-backed operational events.
@@ -87,7 +94,7 @@ The core money path is suitable as a Phase 4 foundation:
 
 Phase 4 must preserve these invariants:
 
-- External channels may record durable intent, but they must not write journal entries or journal lines directly.
+- Internal Branch CSR and external channels may record durable intent, but they must not write journal entries or journal lines directly.
 - New GL-backed `event_type` values require an `EventCatalog` entry, a posting rule handler, docs under `docs/operational_events/`, and an integration test proving record to post to balanced journal.
 - No-GL servicing/control events must still define lifecycle, idempotency, visibility, and whether they can trigger compensating financial events.
 - Returns, cancellations, corrections, and disputes must be modeled as new events or compensating events, not edits to posted rows.
@@ -113,6 +120,7 @@ Identity and authorization:
 
 - JSON teller APIs use `X-Operator-Id` and database-backed operator roles.
 - Internal HTML workspaces use session-backed staff operators.
+- Branch CSR servicing uses the same internal staff browser session trust boundary as `branch`, with role gates on supervisor actions. It must not be reused as partner, fintech, or customer authentication.
 - Phase 4 must introduce separate identity assumptions for external systems, partners, fintech apps, and customer channels. Do not reuse internal staff browser sessions or teller headers for those clients.
 - Partner/customer APIs need response redaction rules, audit attribution, rate limits, idempotency expectations, and replay behavior before implementation.
 
@@ -125,8 +133,8 @@ Observability and support:
 
 Statements and customer-safe reads:
 
-- Statement snapshots exist, but ADR-0024 explicitly excludes teller/customer HTTP routes, PDF rendering, delivery preferences, and document storage.
-- CSR/customer API work can start with read-only account history and statement metadata if it defines redaction and authorization boundaries.
+- Statement snapshots exist, and Branch CSR servicing now exposes internal staff statement metadata and account activity. ADR-0024 still excludes customer-facing PDF rendering, delivery preferences, and document storage.
+- Customer API work can start with read-only account history and statement metadata only after it defines redaction and authorization boundaries separate from Branch staff UI.
 - Customer-facing statement delivery should remain a later slice unless Phase 4 explicitly chooses it as the first channel.
 
 ## 6. Readiness Backlog
@@ -136,7 +144,7 @@ Blockers before the first money-moving Phase 4 slice:
 - Write and accept the first Phase 4 money movement ADR.
 - Reconcile `docs/roadmap-deferred-completion.md` with current shipped Phase 2/3 narrow slices.
 - Update `docs/roadmap.md` stale event-catalog and near-term checkpoint language.
-- Define channel identity and idempotency rules beyond staff/teller operators.
+- Define channel identity and idempotency rules beyond internal staff (`teller` / `branch`) operators.
 - Define settlement GL and reversal/return policy for the selected channel.
 - Add operational event specs for any new Phase 4 `event_type` values.
 
@@ -196,7 +204,7 @@ First external API ADR:
 
 Choose one of these as the next milestone:
 
-- **Preferred readiness slice:** CSR / servicing read API over existing operational events, account summary, product summary, and generated statement metadata. This validates external contract shape, redaction, auth assumptions, and observability without introducing a new posting pathway.
+- **Completed readiness slice:** Branch CSR servicing over existing operational events, account summary, product summary, generated statement metadata, and guarded existing servicing actions. This validated internal staff contract shape, Branch auth assumptions, and audit attribution without introducing a new posting pathway.
 - **Preferred money movement slice:** ACH receipt ingestion for one narrow deposit-credit path. The slice should parse a minimal inbound file representation, assign stable file/item ids, record a new operational event, post through the registry, expose support search by item id, and prove balanced journals in one integration test.
 
 Do not start with wires or card settlement unless the product goal specifically requires dual control, authorization holds, dispute handling, or settlement matching as the first Phase 4 story.

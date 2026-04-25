@@ -8,7 +8,7 @@ module Accounts
       class HoldNotFound < Error; end
 
       # Releases an active hold; creates a posted `hold.released` operational event (no GL).
-      def self.call(hold_id:, channel:, idempotency_key:, business_date: nil)
+      def self.call(hold_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
         ch = channel.to_s
         unless Core::OperationalEvents::Commands::RecordEvent::CHANNELS.include?(ch)
           raise InvalidRequest, "channel must be one of: #{Core::OperationalEvents::Commands::RecordEvent::CHANNELS.join(", ")}"
@@ -44,7 +44,8 @@ module Accounts
             amount_minor_units: hold.amount_minor_units,
             currency: hold.currency,
             source_account_id: hold.deposit_account_id,
-            reference_id: hold.id.to_s
+            reference_id: hold.id.to_s,
+            actor_id: actor_id
           )
 
           hold.update!(

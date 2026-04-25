@@ -1,0 +1,28 @@
+<% content_for :title, "Release Hold - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Release account hold</h1>
+  <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-semibold">Hold #<%= @hold_record.id %></h2>
+  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @hold_record.status %></dd></div>
+    <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@hold_record.amount_minor_units) %> <%= @hold_record.currency %></dd></div>
+    <div><dt class="font-medium text-slate-500">Placed event</dt><dd><%= @hold_record.placed_by_operational_event_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Linked deposit event</dt><dd><%= @hold_record.placed_for_operational_event_id || "None" %></dd></div>
+  </dl>
+
+  <%= form_with url: branch_release_account_hold_path(@account, @hold_record), scope: :hold_release, class: "mt-6 grid gap-4 md:grid-cols-2" do |form| %>
+    <div>
+      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :idempotency_key, value: @hold_release["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="self-end">
+      <%= form.submit "Release hold", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>

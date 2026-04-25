@@ -1,0 +1,59 @@
+<% content_for :title, "Account Activity - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Account activity</h1>
+    <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
+  </div>
+  <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <%= form_with url: branch_account_activity_path(@account), method: :get, class: "grid gap-4 md:grid-cols-3" do |form| %>
+    <div>
+      <%= form.label :period_start_on, "Start date", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :period_start_on, value: @period_start_on, placeholder: "YYYY-MM-DD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :period_end_on, "End date", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :period_end_on, value: @period_end_on, placeholder: "YYYY-MM-DD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="self-end">
+      <%= form.submit "Refresh", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>
+
+<% if @activity %>
+  <section class="mt-6 grid gap-4 md:grid-cols-4">
+    <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Opening</p>
+      <p class="mt-2 text-2xl font-semibold"><%= branch_money(@activity.opening_ledger_balance_minor_units) %></p>
+    </div>
+    <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Closing</p>
+      <p class="mt-2 text-2xl font-semibold"><%= branch_money(@activity.closing_ledger_balance_minor_units) %></p>
+    </div>
+    <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Debits</p>
+      <p class="mt-2 text-2xl font-semibold"><%= branch_money(@activity.total_debits_minor_units) %></p>
+    </div>
+    <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Credits</p>
+      <p class="mt-2 text-2xl font-semibold"><%= branch_money(@activity.total_credits_minor_units) %></p>
+    </div>
+  </section>
+
+  <section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+    <%= render "branch/shared/activity_table", line_items: @activity.line_items %>
+  </section>
+
+  <section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Operational events</h2>
+    </div>
+    <%= render "branch/shared/event_table", events: @events[:rows], can_waive_fees: can_waive_fee?, can_reverse_events: can_reverse_event? %>
+  </section>
+<% end %>

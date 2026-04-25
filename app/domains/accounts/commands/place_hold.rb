@@ -8,7 +8,7 @@ module Accounts
 
       # Creates an active hold and a posted `hold.placed` operational event (no GL posting).
       def self.call(deposit_account_id:, amount_minor_units:, currency:, channel:, idempotency_key:, business_date: nil,
-                    placed_for_operational_event_id: nil)
+                    placed_for_operational_event_id: nil, actor_id: nil)
         ch = channel.to_s
         unless Core::OperationalEvents::Commands::RecordEvent::CHANNELS.include?(ch)
           raise InvalidRequest, "channel must be one of: #{Core::OperationalEvents::Commands::RecordEvent::CHANNELS.join(", ")}"
@@ -46,7 +46,8 @@ module Accounts
               idempotency_key: idempotency_key,
               amount_minor_units: amount_minor_units,
               currency: currency,
-              source_account_id: deposit_account_id
+              source_account_id: deposit_account_id,
+              actor_id: actor_id
             )
 
             hold = Accounts::Models::Hold.create!(

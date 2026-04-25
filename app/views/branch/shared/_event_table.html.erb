@@ -1,0 +1,37 @@
+<% if events.any? %>
+  <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <th class="px-5 py-3">Event</th>
+        <th class="px-5 py-3">Status</th>
+        <th class="px-5 py-3">Channel</th>
+        <th class="px-5 py-3 text-right">Amount</th>
+        <th class="px-5 py-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% events.each do |event| %>
+        <tr>
+          <td class="px-5 py-4">
+            <%= link_to "##{event.id}", branch_operational_event_path(event), class: "font-medium text-slate-950" %>
+            <div class="text-xs text-slate-500"><%= event.event_type %></div>
+          </td>
+          <td class="px-5 py-4"><%= event.status %></td>
+          <td class="px-5 py-4"><%= event.channel %></td>
+          <td class="px-5 py-4 text-right"><%= branch_money(event.amount_minor_units) %> <%= event.currency %></td>
+          <td class="px-5 py-4">
+            <% if local_assigns.fetch(:can_waive_fees, false) && event.event_type == "fee.assessed" && event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
+              <%= link_to "Waive fee", branch_new_fee_waiver_path(event.source_account_id, fee_assessment_event_id: event.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+            <% elsif local_assigns.fetch(:can_reverse_events, false) && event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
+              <%= link_to "Reverse", new_branch_reversal_path(original_operational_event_id: event.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+            <% else %>
+              <span class="text-slate-500">View only</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="p-6 text-sm text-slate-600">No operational events found.</div>
+<% end %>

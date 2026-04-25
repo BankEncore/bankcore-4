@@ -1,0 +1,19 @@
+<% content_for :title, "Account Statements - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Account statements</h1>
+    <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
+  </div>
+  <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <%= render "branch/shared/statement_table", statements: @statements.rows %>
+</section>
+
+<% if @statements.has_more %>
+  <div class="mt-4">
+    <%= link_to "Next page", branch_account_statements_path(@account, after_id: @statements.next_after_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  </div>
+<% end %>

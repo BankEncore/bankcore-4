@@ -62,6 +62,8 @@ Every new **shipped** `event_type` must update these surfaces together before te
 
 **Request identity:** every teller workspace request (**including report `GET`s**) must include header **`X-Operator-Id`** with the id of an active row in **`operators`** (see [ADR-0015](../adr/0015-teller-workspace-authentication.md)). **`POST /teller/reversals`**, **`override.approved`** on `POST /teller/overrides`, and **`POST /teller/teller_sessions/approve_variance`** require a **supervisor** operator; role is enforced from the database, not from client-supplied role headers.
 
+**Branch CSR servicing:** Phase 4.1 adds internal Branch HTML servicing screens that create non-cash servicing events with channel **`branch`** and authenticated operator **`actor_id`** (see [ADR-0026](../adr/0026-branch-csr-servicing.md)). Branch CSR forms may place/release holds, record/post `fee.waived`, and record/post `posting.reversal`; teller cash events remain channel **`teller`** and keep teller-session rules.
+
 **Teller cash and drawer:** when **`TELLER_REQUIRE_OPEN_SESSION_FOR_CASH`** is enabled (default **true**), **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** on **`POST /teller/operational_events`** must include **`teller_session_id`** for an **open** session ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)). **`transfer.completed`** is exempt.
 
 **Drawer variance to GL (optional):** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is enabled, **`CloseSession`** / **`ApproveSessionVariance`** create and post **`teller.drawer.variance.posted`** (`system` channel) for non-zero variance ([ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md)). This type is **not** accepted via **`POST /teller/operational_events`** from operators.

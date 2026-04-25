@@ -12,7 +12,7 @@ module Branch
       @reversal = reversal_params
       result = Core::OperationalEvents::Commands::RecordReversal.call(
         original_operational_event_id: @reversal[:original_operational_event_id].to_i,
-        channel: "teller",
+        channel: branch_channel,
         idempotency_key: @reversal[:idempotency_key],
         actor_id: current_operator.id
       )

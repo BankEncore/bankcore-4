@@ -1,0 +1,36 @@
+<% if line_items.any? %>
+  <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <th class="px-5 py-3">Date</th>
+        <th class="px-5 py-3">Type</th>
+        <th class="px-5 py-3">Reference</th>
+        <th class="px-5 py-3 text-right">Amount</th>
+        <th class="px-5 py-3 text-right">Running</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% line_items.each do |line| %>
+        <tr>
+          <td class="px-5 py-4"><%= line.fetch(:business_date) %></td>
+          <td class="px-5 py-4">
+            <div class="font-medium text-slate-950"><%= line.fetch(:event_type) %></div>
+            <div class="text-xs text-slate-500"><%= line.fetch(:line_type) %></div>
+          </td>
+          <td class="px-5 py-4 text-xs text-slate-600">
+            <div>Event: <%= line.fetch(:operational_event_id) %></div>
+            <% if line[:journal_entry_id] %>
+              <div>Journal: <%= line[:journal_entry_id] %></div>
+            <% end %>
+          </td>
+          <td class="px-5 py-4 text-right"><%= branch_money(line.fetch(:amount_minor_units), signed: true) %></td>
+          <td class="px-5 py-4 text-right">
+            <%= line[:running_ledger_balance_minor_units].nil? ? "N/A" : branch_money(line[:running_ledger_balance_minor_units]) %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="p-6 text-sm text-slate-600">No activity in this period.</div>
+<% end %>
