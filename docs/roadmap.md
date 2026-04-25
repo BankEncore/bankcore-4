@@ -69,7 +69,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 
 **Remaining gaps (vs full catalog and institution MVP)**
 
-- **Event types** — [EventCatalog](../app/domains/core/operational_events/event_catalog.rb) and the registry are **bounded**; interest, NSF-style, and rich composite models are not shipped ([ADR-0019](adr/0019-event-catalog-and-fee-events.md); §7 **Event catalog** deferred row).
+- **Event types** — [EventCatalog](../app/domains/core/operational_events/event_catalog.rb) and the registry are **bounded**. Narrow Phase 3 events for **`interest.accrued`**, **`interest.posted`**, and **`overdraft.nsf_denied`** are shipped ([ADR-0021](adr/0021-interest-accrual-and-payout-slice.md), [ADR-0023](adr/0023-overdraft-nsf-deny-and-fee.md)); richer composite models, product engines, lifecycle variants, and channel-specific taxonomies remain open.
 - **Business date** — beyond the **narrow** close above: multi-branch dates, materialized checkpoints, and reopen policy are not implemented ([ADR-0018](adr/0018-business-date-close-and-posting-invariant.md) vs §7 **Business date close** tail).
 
 **Gap vs [01-mvp-vs-core.md](concepts/01-mvp-vs-core.md) (institution MVP vs this repo)**
@@ -121,7 +121,7 @@ Verified by [`test/integration/slice1_vertical_slice_proof_test.rb`](../test/int
 | ----- | ------- |
 | **Ownership** | **Narrow two-party joint at open shipped:** `OpenAccount` + Teller `joint_party_record_id` ([ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) §2.3, [ADR-0007](adr/0007-party-account-ownership.md)). Full ADR-0007 surface (additional roles at open, effective-dating edge cases, post-open add/remove) remains open. |
 | **Products** | **Narrow slice shipped:** `deposit_products` + `deposit_accounts.deposit_product_id` + cached `product_code` ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md)). Full ADR-0005 resolvers / per-product GL remain open. |
-| **Event catalog** | **Narrow slice shipped:** code-first `EventCatalog`, drift checks vs posting registry, **`GET /teller/event_types`**, **`fee.assessed` / `fee.waived`** with posting rules and compensating waive path ([ADR-0019](adr/0019-event-catalog-and-fee-events.md)). **Deferred:** interest (`interest.accrued`, `interest.posted`), NSF / overdraft-style events (separate slices). |
+| **Event catalog** | **Narrow slice shipped:** code-first `EventCatalog`, drift checks vs posting registry, **`GET /teller/event_types`**, **`fee.assessed` / `fee.waived`** with posting rules and compensating waive path ([ADR-0019](adr/0019-event-catalog-and-fee-events.md)). Later Phase 3 slices add shipped catalog entries for **`interest.accrued`**, **`interest.posted`**, and **`overdraft.nsf_denied`** (§8). **Deferred:** richer payload schemas, lifecycle metadata, documentation drift checks, and channel-specific taxonomies. |
 | **Observability** | **Narrow slice shipped:** `GET /teller/operational_events` — bounded `business_date` / range, product filters, envelope (`current_business_on`, `posting_day_closed`), nested account product fields, posting/journal ids ([ADR-0017](adr/0017-deposit-products-fk-narrow-scope.md) §2.5). Full-text / multi-branch index remains open. |
 | **Business date close** | **Narrow slice shipped:** supervisor **`POST /teller/business_date/close`** after ADR-0016 readiness; singleton advance + append-only close audit; **open-day posting invariant** (ADR-0018). Multi-branch, snapshots, day reopen remain open. |
 | **GL drawer variance (optional)** | **Narrow slice shipped (env flag):** **`teller.drawer.variance.posted`** from **`CloseSession`** / **`ApproveSessionVariance`** when **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** is on; posting **1110** / **5190** ([ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md)). |
@@ -133,7 +133,8 @@ All **six** Phase 2 tracks above have a **shipped narrow slice** in this repo; e
 ---
 
 ## 8. Phase 3 — Product and financial depth
-(Preliminary Plan)[/Users/syckot/.cursor/plans/phase_3_financial_depth_e3ea12de.plan.md]
+
+Phase 3 status is tracked in the table below and the accepted ADRs linked from each row.
 
 | Track | Current position |
 | --- | --- |
@@ -178,7 +179,7 @@ Phase 3.5 is an internal Rails HTML workspace phase over the Phase 0-3 domain su
 
 **Historical (1A-era sequencing):** shipping posting rules together with withdrawal, session skeleton, and one reversal type in tight increments—each with a **green integration test**—was the fastest path to credible teller balancing and audit posture.
 
-**Current:** use **§4** and **§7** as the live checkpoint (Phase 1 breadth + Phase 2 narrow tracks); when adding `event_type` values or crossing module boundaries, extend an integration proof per [.cursor/rules/bankcore-planning.mdc](../.cursor/rules/bankcore-planning.mdc).
+**Current:** use **§4**, **§7**, and **§8** as the live checkpoint (Phase 1 breadth plus Phase 2 and Phase 3 narrow tracks); when adding `event_type` values or crossing module boundaries, extend an integration proof per [.cursor/rules/bankcore-planning.mdc](../.cursor/rules/bankcore-planning.mdc).
 
 ---
 
