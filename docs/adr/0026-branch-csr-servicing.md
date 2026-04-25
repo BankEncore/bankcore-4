@@ -143,3 +143,17 @@ Failures must render validation errors without partially created records. Posted
 - Branch becomes the staff surface for both teller workflows and customer/account servicing, with channel attribution distinguishing cash teller activity from non-cash servicing.
 - The first implementation must update event channel validation and audit coverage before enabling mutating CSR forms.
 - If a future contact-center model needs distinct navigation, staffing, or reporting, a separate `customer_service` workspace can be introduced later without changing domain ownership.
+
+---
+
+## 9. Implementation status
+
+Phase 4.1 is implemented under the existing Branch HTML workspace:
+
+- **Routes:** `GET /branch/customers`, `GET /branch/customers/:id`, `GET /branch/deposit_accounts/:id`, account-scoped activity, holds, statement metadata, and fee-waiver routes.
+- **Read queries:** `Party::Queries::PartySearch`, `Accounts::Queries::DepositAccountsForParty`, `Accounts::Queries::DepositAccountProfile`, `Accounts::Queries::ListHoldsForAccount`, and `Deposits::Queries::ListDepositStatements`.
+- **Guarded actions:** Branch CSR forms place/release holds, waive posted `fee.assessed` events with `fee.waived`, and record/post eligible `posting.reversal` events through existing commands.
+- **Audit:** non-cash servicing events use channel `branch` and persist authenticated operator `actor_id`.
+- **Tests:** `test/integration/branch_customer_servicing_test.rb` covers customer servicing access, channel/actor attribution, hold idempotency, fee-waiver posting, and reversal posting.
+
+This implementation did not add a `customer_service` operator role. Branch tellers retain read/routine hold placement access; supervisors retain fee waiver, hold release, and reversal authority.

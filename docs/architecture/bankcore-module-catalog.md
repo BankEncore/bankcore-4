@@ -93,6 +93,7 @@ bankcore/
 │  ├─ controllers/
 │  │  ├─ admin/
 │  │  ├─ api/
+│  │  ├─ branch/
 │  │  ├─ customer_service/
 │  │  ├─ ops/
 │  │  └─ teller/
@@ -710,8 +711,9 @@ Controllers should be organized by **workspace**, not by deep internal domain ow
 
 ### 7.1 Workspaces
 
-* `Teller`
-* `CustomerService`
+* `Teller` — existing JSON teller API workspace.
+* `Branch` — internal Rails HTML workspace for teller-adjacent branch operations and shipped Branch CSR servicing (ADR-0025, ADR-0026).
+* `CustomerService` — optional future workspace if a distinct contact-center/back-office operating model emerges.
 * `Ops`
 * `Admin`
 * `Api`
@@ -720,8 +722,8 @@ Controllers should be organized by **workspace**, not by deep internal domain ow
 
 * `Teller::TransactionsController`
 * `Teller::SessionsController`
-* `CustomerService::PartiesController`
-* `CustomerService::DepositAccountsController`
+* `Branch::CustomersController`
+* `Branch::ServicingDepositAccountsController`
 * `Ops::OperationalEventsController`
 * `Ops::BusinessDatesController`
 * `Admin::DepositProductsController`
@@ -872,7 +874,8 @@ Routes should be split by workspace.
 ```ruby
 Rails.application.routes.draw do
   draw :teller
-  draw :customer_service
+  draw :branch
+  # draw :customer_service # future optional contact-center workspace
   draw :ops
   draw :admin
   draw :api
@@ -890,16 +893,21 @@ namespace :teller do
 end
 ```
 
-### `config/routes/customer_service.rb`
+### `config/routes/branch.rb`
 
 ```ruby
-namespace :customer_service do
-  resources :parties
-  resources :deposit_accounts
-  resources :loan_accounts
-  resources :documents, only: %i[index show create]
+namespace :branch do
+  resources :customers, only: %i[index show]
+  resources :deposit_accounts, only: %i[new create]
+  get "deposit_accounts/:id", to: "servicing_deposit_accounts#show", as: :servicing_deposit_account
+  get "deposit_accounts/:deposit_account_id/activity", to: "account_activities#show", as: :account_activity
+  get "deposit_accounts/:deposit_account_id/holds", to: "account_holds#index", as: :account_holds
+  get "deposit_accounts/:deposit_account_id/statements", to: "account_statements#index", as: :account_statements
+  # guarded Branch CSR writes: account holds, fee waivers, reversals
 end
 ```
+
+`CustomerService` remains a future route namespace, not the shipped Phase 4.1 home for CSR servicing.
 
 ### `config/routes/ops.rb`
 
