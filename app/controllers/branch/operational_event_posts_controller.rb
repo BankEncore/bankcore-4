@@ -4,11 +4,12 @@ module Branch
   class OperationalEventPostsController < ApplicationController
     def create
       result = Core::Posting::Commands::PostEvent.call(operational_event_id: params[:id].to_i)
-      redirect_back fallback_location: branch_path, notice: "Posted operational event ##{result[:event].id} (#{result[:outcome]})."
+      redirect_to branch_operational_event_path(result[:event]),
+        notice: "Posted operational event ##{result[:event].id} (#{result[:outcome]})."
     rescue Core::Posting::Commands::PostEvent::NotFound
-      redirect_back fallback_location: branch_path, alert: "Operational event not found."
+      redirect_to branch_path, alert: "Operational event not found."
     rescue Core::Posting::Commands::PostEvent::InvalidState => e
-      redirect_back fallback_location: branch_path, alert: e.message
+      redirect_to branch_operational_event_path(params[:id]), alert: e.message
     end
   end
 end
