@@ -47,9 +47,12 @@
                 </td>
               <% else %>
                 <td class="px-5 py-4">
-                  <%= form_with url: close_branch_teller_session_path(session), scope: :teller_session_close, method: :post, class: "grid gap-2 md:grid-cols-3" do |form| %>
-                    <%= form.text_field :expected_cash_minor_units, placeholder: "Expected", class: "rounded border border-slate-300 px-2 py-1" %>
-                    <%= form.text_field :actual_cash_minor_units, placeholder: "Actual", class: "rounded border border-slate-300 px-2 py-1" %>
+                  <% expected_cash_minor_units = branch_expected_cash_for(session) %>
+                  <div class="mb-2 text-xs text-slate-600">
+                    Expected cash: <span class="font-medium text-slate-950"><%= branch_money(expected_cash_minor_units) %></span>
+                  </div>
+                  <%= form_with url: close_branch_teller_session_path(session), scope: :teller_session_close, method: :post, class: "grid gap-2 md:grid-cols-2" do |form| %>
+                    <%= form.text_field :actual_cash_minor_units, placeholder: "Actual cash", class: "rounded border border-slate-300 px-2 py-1" %>
                     <%= form.submit "Close", class: "rounded bg-slate-900 px-3 py-1 font-medium text-white" %>
                   <% end %>
                 </td>
