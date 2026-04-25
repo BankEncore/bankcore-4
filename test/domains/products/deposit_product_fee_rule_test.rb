@@ -49,6 +49,21 @@ class ProductsDepositProductFeeRuleTest < ActiveSupport::TestCase
     assert_includes rule.errors[:currency], "must match deposit product currency"
   end
 
+  test "rejects overlapping active monthly maintenance rule" do
+    build_rule(effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30)).save!
+    rule = build_rule(effective_on: Date.new(2026, 4, 15))
+
+    assert_not rule.valid?
+    assert_includes rule.errors[:effective_on], "overlaps an active monthly maintenance rule for this product"
+  end
+
+  test "allows adjacent active monthly maintenance rule" do
+    build_rule(effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30)).save!
+    rule = build_rule(effective_on: Date.new(2026, 5, 1))
+
+    assert_predicate rule, :valid?
+  end
+
   private
 
   def build_rule(attrs = {})

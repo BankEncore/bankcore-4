@@ -114,7 +114,9 @@ module Products
           effective_on: parse_date!(attributes[:effective_on], "effective_on"),
           ended_on: parse_optional_date!(attributes[:ended_on], "ended_on"),
           description: attributes[:description].presence
-        )
+        ).tap do |rule|
+          rule.skip_effective_date_overlap_validation = true if rule.respond_to?(:skip_effective_date_overlap_validation=)
+        end
       end
 
       def validate_rule!(rule)

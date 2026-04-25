@@ -41,6 +41,21 @@ class ProductsDepositProductStatementProfileTest < ActiveSupport::TestCase
     assert_includes profile.errors[:currency], "must match deposit product currency"
   end
 
+  test "rejects overlapping active monthly statement profile" do
+    build_profile(effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30)).save!
+    profile = build_profile(effective_on: Date.new(2026, 4, 15))
+
+    assert_not profile.valid?
+    assert_includes profile.errors[:effective_on], "overlaps an active monthly statement profile for this product"
+  end
+
+  test "allows adjacent active monthly statement profile" do
+    build_profile(effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30)).save!
+    profile = build_profile(effective_on: Date.new(2026, 5, 1))
+
+    assert_predicate profile, :valid?
+  end
+
   private
 
   def build_profile(attrs = {})

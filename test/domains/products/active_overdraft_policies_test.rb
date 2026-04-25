@@ -9,10 +9,10 @@ class ProductsActiveOverdraftPoliciesTest < ActiveSupport::TestCase
   end
 
   test "returns active deny NSF policies effective on date" do
-    active = create_policy!(@product, effective_on: Date.new(2026, 4, 1))
+    active = create_policy!(@product, effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30))
     create_policy!(@product, status: Products::Models::DepositProductOverdraftPolicy::STATUS_INACTIVE)
     create_policy!(@product, effective_on: Date.new(2026, 5, 1))
-    create_policy!(@product, effective_on: Date.new(2026, 3, 1), ended_on: Date.new(2026, 4, 20))
+    create_policy!(@product, effective_on: Date.new(2026, 3, 1), ended_on: Date.new(2026, 3, 31))
 
     policies = Products::Queries::ActiveOverdraftPolicies.deny_nsf(
       business_date: Date.new(2026, 4, 22),
@@ -20,6 +20,18 @@ class ProductsActiveOverdraftPoliciesTest < ActiveSupport::TestCase
     )
 
     assert_equal [ active.id ], policies.map(&:id)
+  end
+
+  test "resolves one deny NSF policy for product" do
+    create_policy!(@product, effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30))
+    future = create_policy!(@product, effective_on: Date.new(2026, 5, 1))
+
+    policy = Products::Queries::ActiveOverdraftPolicies.deny_nsf_for_product(
+      business_date: Date.new(2026, 5, 15),
+      deposit_product_id: @product.id
+    )
+
+    assert_equal future, policy
   end
 
   test "filters by deposit product" do

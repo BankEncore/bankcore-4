@@ -28,19 +28,19 @@ These capabilities will make multiple deferred tracks easier to complete.
 
 ### 2.1 Product Resolver Depth
 
-Current state: the narrow Products slice is shipped: `deposit_products`, `deposit_accounts.deposit_product_id`, cached `product_code`, product-aware operational-event reads, product-owned fee rules, overdraft policies, and statement profiles. Full ADR-0005 resolver depth and per-product GL mapping remain deferred.
+Current state: the narrow Products slice is shipped: `deposit_products`, `deposit_accounts.deposit_product_id`, cached `product_code`, product-aware operational-event reads, product-owned fee rules, overdraft policies, statement profiles, and the Phase 4.3 resolver baseline (`Products::Services::DepositProductResolver` plus shared effective-dated resolution helpers). Full ADR-0005 profile depth and per-product GL mapping remain deferred.
 
 To complete:
 
-- Define stable resolver contracts for product behavior: interest, fees, overdraft, statement cycles, limits, and GL mapping.
+- Extend stable resolver contracts for product behavior beyond the Phase 4.3 baseline: interest, limits, richer fees, and GL mapping.
 - Decide whether profiles are directly product-owned tables, reusable profile tables, or a hybrid.
-- Add effective-dated conflict rules so only one active behavior applies for a product/date where exclusivity is required.
+- Add database-backed effective-dated conflict rules if model-level overlap validation is not sufficient at scale.
 - Move remaining hardcoded behavior to resolver-backed decisions only when the resolver has tests and clear fallback semantics.
 
 Likely slices:
 
-- Product resolver contract ADR.
-- Shared effective-dated resolver helpers under `Products`.
+- Broader product resolver ADR if the next slice changes product versioning or GL mapping semantics.
+- Reusable profile-table design for behavior families that outgrow direct product-owned tables.
 - Per-product GL mapping profile for existing event types.
 - Migration path from current narrow rule tables to reusable profiles, if needed.
 
@@ -103,18 +103,18 @@ Likely slices:
 
 ### 3.2 Full Product Configuration
 
-Shipped narrow slice: `deposit_products` and `deposit_accounts.deposit_product_id` are in place, with cached `product_code` and narrow product-owned rule tables for fees, overdraft policy, and statement profiles. The current product model is intentionally narrower than ADR-0005's full resolver framework.
+Shipped narrow slice: `deposit_products` and `deposit_accounts.deposit_product_id` are in place, with cached `product_code`, narrow product-owned rule tables for fees, overdraft policy, and statement profiles, and a Phase 4.3 Products-owned resolver baseline over those tables. The current product model is intentionally narrower than ADR-0005's full resolver framework.
 
 To complete:
 
-- Implement ADR-0005 resolver contracts across product behavior.
+- Extend ADR-0005 resolver contracts beyond the shipped deposit behavior baseline.
 - Add reusable profiles or rule tables for interest, fees, limits, overdraft, statements, and GL mapping.
 - Define product versioning: when a product change affects new accounts only versus existing accounts.
 - Add admin/ops workflows for activating, retiring, and validating products.
 
 Likely slices:
 
-- Product resolver ADR and shared resolver conventions.
+- Product resolver ADR only when resolver semantics expand into versioning, GL mapping, or new behavior families.
 - Product version/effective-dating constraints.
 - Product validation command that verifies all required active profiles.
 - Per-product GL mapping for existing deposit event types.

@@ -4,6 +4,7 @@ module Products
   module Models
     class DepositProductStatementProfile < ApplicationRecord
       self.table_name = "deposit_product_statement_profiles"
+      attr_accessor :skip_effective_date_overlap_validation
 
       FREQUENCY_MONTHLY = "monthly"
       FREQUENCIES = [ FREQUENCY_MONTHLY ].freeze
@@ -24,6 +25,7 @@ module Products
       validates :effective_on, presence: true
       validate :ended_on_not_before_effective_on
       validate :currency_matches_deposit_product
+      validate :no_overlapping_active_monthly_profile
 
       private
 
@@ -39,6 +41,15 @@ module Products
         return if currency == deposit_product.currency
 
         errors.add(:currency, "must match deposit product currency")
+      end
+
+      def no_overlapping_active_monthly_profile
+        return if skip_effective_date_overlap_validation
+        return unless frequency == FREQUENCY_MONTHLY
+
+        return unless Services::EffectiveDatedResolver.overlap?(self, constraints: %i[deposit_product_id frequency])
+
+        errors.add(:effective_on, "overlaps an active monthly statement profile for this product")
       end
     end
   end

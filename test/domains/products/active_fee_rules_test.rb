@@ -9,10 +9,10 @@ class ProductsActiveFeeRulesTest < ActiveSupport::TestCase
   end
 
   test "returns active monthly maintenance rules effective on date" do
-    active = create_rule!(@product, effective_on: Date.new(2026, 4, 1))
+    active = create_rule!(@product, effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30))
     create_rule!(@product, status: Products::Models::DepositProductFeeRule::STATUS_INACTIVE)
     create_rule!(@product, effective_on: Date.new(2026, 5, 1))
-    create_rule!(@product, effective_on: Date.new(2026, 3, 1), ended_on: Date.new(2026, 4, 20))
+    create_rule!(@product, effective_on: Date.new(2026, 3, 1), ended_on: Date.new(2026, 3, 31))
 
     rules = Products::Queries::ActiveFeeRules.monthly_maintenance(
       business_date: Date.new(2026, 4, 22),
@@ -20,6 +20,18 @@ class ProductsActiveFeeRulesTest < ActiveSupport::TestCase
     )
 
     assert_equal [ active.id ], rules.map(&:id)
+  end
+
+  test "resolves one monthly maintenance rule for product" do
+    create_rule!(@product, effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30))
+    future = create_rule!(@product, effective_on: Date.new(2026, 5, 1))
+
+    rule = Products::Queries::ActiveFeeRules.monthly_maintenance_for_product(
+      business_date: Date.new(2026, 5, 15),
+      deposit_product_id: @product.id
+    )
+
+    assert_equal future, rule
   end
 
   test "filters by deposit product" do

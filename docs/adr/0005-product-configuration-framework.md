@@ -193,6 +193,15 @@ Product configurations MUST be versioned or otherwise auditable.
 * product-specific balance-basis rules  
 * promotional and time-bound configurations
 
+### 10.3 Phase 4.3 resolver baseline
+
+Phase 4.3 implements a narrow resolver baseline without completing the full profile framework:
+
+* `Products::Services::DepositProductResolver` exposes a stable per-product behavior contract for existing deposit behavior: monthly maintenance fee rule, deny-NSF overdraft policy, and monthly statement profile.
+* `Products::Services::EffectiveDatedResolver` centralizes active-on-date resolution: `status = active`, `effective_on <= as_of`, and `ended_on IS NULL OR ended_on >= as_of`.
+* Singular behavior families such as monthly maintenance rules, deny-NSF policies, and monthly statement profiles reject overlapping active windows at the model-validation layer.
+* Per-product GL mapping, reusable profile catalogs, product version migration, admin workflows, interest profile depth, and limit profile depth remain deferred until a selected channel or product requirement needs them.
+
 ---
 
 ## 11\. Related ADRs

@@ -4,6 +4,7 @@ module Products
   module Models
     class DepositProductFeeRule < ApplicationRecord
       self.table_name = "deposit_product_fee_rules"
+      attr_accessor :skip_effective_date_overlap_validation
 
       FEE_CODE_MONTHLY_MAINTENANCE = "monthly_maintenance"
       FEE_CODES = [ FEE_CODE_MONTHLY_MAINTENANCE ].freeze
@@ -21,6 +22,7 @@ module Products
       validates :effective_on, presence: true
       validate :ended_on_not_before_effective_on
       validate :currency_matches_deposit_product
+      validate :no_overlapping_active_monthly_maintenance_rule
 
       private
 
@@ -36,6 +38,15 @@ module Products
         return if currency == deposit_product.currency
 
         errors.add(:currency, "must match deposit product currency")
+      end
+
+      def no_overlapping_active_monthly_maintenance_rule
+        return if skip_effective_date_overlap_validation
+        return unless fee_code == FEE_CODE_MONTHLY_MAINTENANCE
+
+        return unless Services::EffectiveDatedResolver.overlap?(self, constraints: %i[deposit_product_id fee_code])
+
+        errors.add(:effective_on, "overlaps an active monthly maintenance rule for this product")
       end
     end
   end

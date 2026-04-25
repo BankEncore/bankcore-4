@@ -41,6 +41,21 @@ class ProductsDepositProductOverdraftPolicyTest < ActiveSupport::TestCase
     assert_includes policy.errors[:currency], "must match deposit product currency"
   end
 
+  test "rejects overlapping active deny NSF policy" do
+    build_policy(effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30)).save!
+    policy = build_policy(effective_on: Date.new(2026, 4, 15))
+
+    assert_not policy.valid?
+    assert_includes policy.errors[:effective_on], "overlaps an active deny NSF policy for this product"
+  end
+
+  test "allows adjacent active deny NSF policy" do
+    build_policy(effective_on: Date.new(2026, 4, 1), ended_on: Date.new(2026, 4, 30)).save!
+    policy = build_policy(effective_on: Date.new(2026, 5, 1))
+
+    assert_predicate policy, :valid?
+  end
+
   private
 
   def build_policy(attrs = {})
