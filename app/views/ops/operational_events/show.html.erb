@@ -1,0 +1,100 @@
+<% content_for :title, "Operational Event ##{@event.id} - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Operational event #<%= @event.id %></h1>
+    <p class="mt-2 text-slate-600"><%= @event.event_type %> on <%= @event.business_date.iso8601 %></p>
+  </div>
+  <%= link_to "Back to event search", ops_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Status</p>
+    <div class="mt-3"><%= ops_status_badge(@event.status) %></div>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Amount</p>
+    <p class="mt-2 text-2xl font-semibold"><%= ops_event_amount(@event) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Channel</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @event.channel %></p>
+  </div>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Event metadata</h2>
+  </div>
+  <dl class="grid gap-4 p-5 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Source account</dt><dd><%= ops_account_label(@event.source_account) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Destination account</dt><dd><%= ops_account_label(@event.destination_account) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name.presence || @event.actor_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reversal of</dt><dd><%= @event.reversal_of_event_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reversed by</dt><dd><%= @event.reversed_by_event_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Created</dt><dd><%= ops_time(@event.created_at) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Updated</dt><dd><%= ops_time(@event.updated_at) %></dd></div>
+  </dl>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Posting and journal detail</h2>
+  </div>
+
+  <% if @event.posting_batches.any? %>
+    <% @event.posting_batches.each do |batch| %>
+      <div class="border-b border-slate-100 px-5 py-4 last:border-b-0">
+        <h3 class="font-semibold">Posting batch #<%= batch.id %></h3>
+        <% if batch.journal_entries.any? %>
+          <% batch.journal_entries.each do |entry| %>
+            <div class="mt-4 rounded border border-slate-200">
+              <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+                Journal entry #<%= entry.id %> · <%= entry.business_date.iso8601 %>
+              </div>
+              <% if entry.journal_lines.any? %>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead class="bg-white text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th class="px-4 py-3">Seq</th>
+                        <th class="px-4 py-3">GL account</th>
+                        <th class="px-4 py-3">Side</th>
+                        <th class="px-4 py-3 text-right">Amount</th>
+                        <th class="px-4 py-3">Deposit account</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <% entry.journal_lines.order(:sequence_no).each do |line| %>
+                        <tr>
+                          <td class="px-4 py-3"><%= line.sequence_no %></td>
+                          <td class="px-4 py-3">
+                            <div class="font-medium"><%= line.gl_account.account_number %></div>
+                            <div class="text-xs text-slate-500"><%= line.gl_account.account_name %></div>
+                          </td>
+                          <td class="px-4 py-3"><%= line.side %></td>
+                          <td class="px-4 py-3 text-right"><%= ops_money(line.amount_minor_units) %></td>
+                          <td class="px-4 py-3"><%= ops_account_label(line.deposit_account) %></td>
+                        </tr>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              <% else %>
+                <div class="px-4 py-6 text-sm text-slate-600">No journal lines recorded.</div>
+              <% end %>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="mt-2 text-sm text-slate-600">No journal entries recorded for this batch.</p>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No posting batches recorded for this event.</div>
+  <% end %>
+</section>

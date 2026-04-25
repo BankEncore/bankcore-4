@@ -6,6 +6,10 @@ Rails.application.routes.draw do
   get "internal", to: "internal/dashboard#index", as: :internal
   get "branch", to: "branch/dashboard#index", as: :branch
   get "ops", to: "ops/dashboard#index", as: :ops
+  scope path: "ops", module: :ops, as: :ops do
+    get "eod", to: "eod#index", as: :eod
+    resources :operational_events, only: [ :index, :show ]
+  end
   get "admin", to: "admin/dashboard#index", as: :admin
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
