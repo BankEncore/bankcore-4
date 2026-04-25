@@ -6,6 +6,7 @@
 
 require_relative "../lib/bank_core/seeds/gl_coa"
 require_relative "../lib/bank_core/seeds/deposit_products"
+require_relative "../lib/bank_core/seeds/operators"
 
 BankCore::Seeds::GlCoa.seed!
 BankCore::Seeds::DepositProducts.seed!
@@ -14,13 +15,6 @@ if Core::BusinessDate::Models::BusinessDateSetting.none?
   Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.current)
 end
 
-if Rails.env.development?
-  Workspace::Models::Operator.find_or_create_by!(role: "teller") do |op|
-    op.display_name = "Development Teller"
-    op.active = true
-  end
-  Workspace::Models::Operator.find_or_create_by!(role: "supervisor") do |op|
-    op.display_name = "Development Supervisor"
-    op.active = true
-  end
+if Rails.env.development? || Rails.env.test?
+  BankCore::Seeds::Operators.seed!
 end

@@ -1,4 +1,13 @@
 Rails.application.routes.draw do
+  get "login", to: "internal/sessions#new", as: :login
+  post "login", to: "internal/sessions#create"
+  delete "logout", to: "internal/sessions#destroy", as: :logout
+
+  get "internal", to: "internal/dashboard#index", as: :internal
+  get "branch", to: "branch/dashboard#index", as: :branch
+  get "ops", to: "ops/dashboard#index", as: :ops
+  get "admin", to: "admin/dashboard#index", as: :admin
+
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   scope path: "teller", defaults: { format: :json }, module: :teller do
