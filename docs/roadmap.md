@@ -149,14 +149,24 @@ All **five** Phase 3 tracks above have a **shipped narrow slice** in this repo. 
 
 ---
 
-## 9. Phase 4 — Channels and ecosystem
+## 9. Phase 3.5 — Internal workspace UI enablement
+
+Phase 3.5 is an internal Rails HTML workspace phase over the Phase 0-3 domain surface. It adds **branch**, **ops**, and **admin/product** workspaces while preserving the existing JSON `/teller` APIs and `X-Operator-Id` behavior. See [ADR-0025](adr/0025-internal-workspace-ui.md).
+
+- **Branch workspace:** branch-local UI that initially wraps teller session and transaction workflows.
+- **Ops workspace:** EOD readiness, trial balance, operational event search/detail, close packages, and exception review.
+- **Admin/Product workspace:** product configuration inspection first, then guarded config edits in later slices.
+
+---
+
+## 10. Phase 4 — Channels and ecosystem
 
 - ACH, wires, card settlement—**ADR required** when ingestion touches posting ([bankcore-docs-and-adrs.mdc](../.cursor/rules/bankcore-docs-and-adrs.mdc)).  
 - CSR / servicing workspace; partner and fintech APIs.
 
 ---
 
-## 10. Phase 5 — Compliance and scale
+## 11. Phase 5 — Compliance and scale
 
 - AML monitoring, CTR, sanctions workflows as applicable.  
 - Fraud signals and risk scoring.  
@@ -164,7 +174,7 @@ All **five** Phase 3 tracks above have a **shipped narrow slice** in this repo. 
 
 ---
 
-## 11. Near-term recommendation
+## 12. Near-term recommendation
 
 **Historical (1A-era sequencing):** shipping posting rules together with withdrawal, session skeleton, and one reversal type in tight increments—each with a **green integration test**—was the fastest path to credible teller balancing and audit posture.
 
@@ -172,7 +182,7 @@ All **five** Phase 3 tracks above have a **shipped narrow slice** in this repo. 
 
 ---
 
-## 12. Open decisions (track in ADRs or short design notes)
+## 13. Open decisions (track in ADRs or short design notes)
 
 - ~~Canonical **`event_type`** strings for each reversal variant~~ — **`posting.reversal`** + `RecordReversal` ([ADR-0012](adr/0012-posting-rule-registry-and-journal-subledger.md)); see [compensating-reversal.md](operational_events/compensating-reversal.md).  
 - ~~**Module ownership** for drawer cash vs approval workflow~~ — **Sessions / variance:** **`Teller`** ([ADR-0014](adr/0014-teller-sessions-and-control-events.md)); **optional GL cash adjustment** for drawer variance ships behind **`TELLER_POST_DRAWER_VARIANCE_TO_GL`** ([ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md)).  
@@ -181,7 +191,7 @@ All **five** Phase 3 tracks above have a **shipped narrow slice** in this repo. 
 
 ---
 
-## 13. References
+## 14. References
 
 | Document | Role |
 | -------- | ---- |
@@ -196,3 +206,4 @@ All **five** Phase 3 tracks above have a **shipped narrow slice** in this repo. 
 | [ADR-0018](adr/0018-business-date-close-and-posting-invariant.md) | Business date close + open-day posting invariant (narrow Phase 2 slice) |
 | [ADR-0019](adr/0019-event-catalog-and-fee-events.md) | Event catalog metadata, `GET /teller/event_types`, `fee.assessed` / `fee.waived` (narrow Phase 2 slice) |
 | [ADR-0020](adr/0020-teller-drawer-variance-gl-posting.md) | Optional GL posting for teller drawer variance (`teller.drawer.variance.posted`) |
+| [ADR-0025](adr/0025-internal-workspace-ui.md) | Phase 3.5 internal Rails HTML workspaces (`branch`, `ops`, `admin`) and JSON `/teller` preservation |

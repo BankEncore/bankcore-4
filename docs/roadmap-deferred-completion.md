@@ -298,11 +298,34 @@ Likely slices:
 
 ---
 
-## 5. Phase 4 Completion Themes
+## 5. Phase 3.5 Internal UI Completion
+
+Phase 3.5 is internal UI enablement over shipped Phase 0-3 domain capabilities. It is separate from Phase 4 customer/partner channels because it uses staff operators, internal role gates, and Rails-rendered branch/ops/admin workspaces. See [ADR-0025](adr/0025-internal-workspace-ui.md).
+
+To complete:
+
+- Add a shared internal Rails HTML shell with session-backed operator authentication.
+- Add a `branch` workspace for branch-local teller session and transaction workflows.
+- Add an `ops` workspace for EOD readiness, trial balance, operational event search/detail, close packages, and exception review.
+- Add an `admin` workspace for product configuration inspection and later guarded configuration edits.
+- Keep existing JSON `/teller` APIs stable for curl/tests/future clients.
+
+Likely slices:
+
+- WO2 shared shell/auth.
+- WO3 branch session UI.
+- WO4 ops EOD and event search UI.
+- WO5 admin product read-only UI.
+- WO6 branch transaction forms.
+- WO7 guarded admin/ops control surfaces.
+
+---
+
+## 6. Phase 4 Completion Themes
 
 Phase 4 is not merely a continuation of Phase 3. External channels introduce ingestion, settlement, returns, cutoffs, and reconciliation.
 
-### 5.1 ACH
+### 6.1 ACH
 
 To complete:
 
@@ -313,7 +336,7 @@ To complete:
 
 First ADR should cover ACH event taxonomy, settlement accounts, file idempotency, and return handling.
 
-### 5.2 Wires
+### 6.2 Wires
 
 To complete:
 
@@ -324,7 +347,7 @@ To complete:
 
 First ADR should cover wire lifecycle, authorization gates, settlement posting, and cancellation/reversal policy.
 
-### 5.3 Cards and ATM
+### 6.3 Cards and ATM
 
 To complete:
 
@@ -335,7 +358,7 @@ To complete:
 
 First ADR should cover auth versus clearing, hold expiration, settlement matching, and dispute event types.
 
-### 5.4 CSR, Partner, and Fintech APIs
+### 6.4 CSR, Partner, and Fintech APIs
 
 To complete:
 
@@ -348,11 +371,11 @@ First slices should expose existing domain reads before introducing new money mo
 
 ---
 
-## 6. Phase 5 Completion Themes
+## 7. Phase 5 Completion Themes
 
 Phase 5 moves the system toward regulatory and scale readiness.
 
-### 6.1 Compliance and Risk
+### 7.1 Compliance and Risk
 
 To complete:
 
@@ -363,7 +386,7 @@ To complete:
 
 First slices should be read/audit projections over existing immutable events before blocking transaction flows.
 
-### 6.2 Regulatory and Finance Reporting
+### 7.2 Regulatory and Finance Reporting
 
 To complete:
 
@@ -374,7 +397,7 @@ To complete:
 
 First slices should reconcile generated reports back to ledger and operational-event sources.
 
-### 6.3 Scale and Operations
+### 7.3 Scale and Operations
 
 To complete:
 
@@ -387,7 +410,7 @@ First slices should add measurable performance targets and drift detection befor
 
 ---
 
-## 7. Suggested Sequencing
+## 8. Suggested Sequencing
 
 Recommended order from current state:
 
