@@ -103,7 +103,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Post event"
 
     post "/branch/operational_events/#{event.id}/post"
-    assert_redirected_to "/branch"
+    assert_redirected_to "/branch/operational_events/#{event.id}"
     assert_equal "posted", event.reload.status
   end
 
