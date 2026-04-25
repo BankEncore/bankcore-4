@@ -30,7 +30,7 @@ module Core
           %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived] +
             INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED ]
         ).freeze
-        CHANNELS = %w[teller api batch system].freeze
+        CHANNELS = %w[teller branch api batch system].freeze
         TELLER_CASH_EVENT_TYPES = %w[deposit.accepted withdrawal.posted].freeze
 
         # @return [Hash] `{ outcome: :created|:replay, event: OperationalEvent }`

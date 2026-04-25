@@ -2,13 +2,14 @@
 
 <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
   <div>
-    <h1 class="text-3xl font-semibold">Branch session dashboard</h1>
+    <h1 class="text-3xl font-semibold">Branch workspace</h1>
     <p class="mt-2 text-slate-600">
-      Read-only view of active drawer sessions, supervisor exceptions, and recent closes.
+      Teller operations and customer servicing for branch staff.
     </p>
   </div>
 
   <nav class="flex flex-wrap gap-2 text-sm">
+    <%= link_to "Find customer", branch_customers_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white shadow-sm" %>
     <%= link_to "Create party", new_branch_party_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Open account", new_branch_deposit_account_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Open session", new_branch_teller_session_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
@@ -18,6 +19,29 @@
     <%= link_to "Place hold", new_branch_hold_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
   </nav>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-2">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Customer servicing</p>
+    <h2 class="mt-2 text-xl font-semibold">Find and service customers</h2>
+    <p class="mt-2 text-sm text-slate-600">Search customers, review account profiles, inspect holds, statements, and recent activity.</p>
+    <div class="mt-4 flex flex-wrap gap-2 text-sm">
+      <%= link_to "Find customer", branch_customers_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
+      <%= link_to "Open account", new_branch_deposit_account_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
+    </div>
+  </div>
+
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Teller operations</p>
+    <h2 class="mt-2 text-xl font-semibold">Cash and transaction workflows</h2>
+    <p class="mt-2 text-sm text-slate-600">Open sessions, record deposits and withdrawals, transfer funds, place holds, and review events.</p>
+    <div class="mt-4 flex flex-wrap gap-2 text-sm">
+      <%= link_to "Open session", new_branch_teller_session_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
+      <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
+      <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
+    </div>
+  </div>
 </section>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">

@@ -7,6 +7,10 @@
       <div><dt class="font-medium text-slate-500">Event type</dt><dd><%= event.event_type %></dd></div>
       <div><dt class="font-medium text-slate-500">Status</dt><dd><%= event.status %></dd></div>
       <div><dt class="font-medium text-slate-500">Record outcome</dt><dd><%= outcome %></dd></div>
+      <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= event.channel %></dd></div>
+      <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= event.actor&.display_name || event.actor_id || "None" %></dd></div>
+      <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(event.business_date) %></dd></div>
+      <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= event.idempotency_key %></dd></div>
       <div><dt class="font-medium text-slate-500">Account</dt><dd>#<%= event.source_account_id %></dd></div>
       <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(event.amount_minor_units) %> <%= event.currency %></dd></div>
       <% if post_result.present? %>

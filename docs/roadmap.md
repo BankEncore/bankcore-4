@@ -165,7 +165,8 @@ Phase 3.5 is an internal Rails HTML workspace phase over the Phase 0-3 domain su
 ## 10. Phase 4 — Channels and ecosystem
 
 - ACH, wires, card settlement—**ADR required** when ingestion touches posting ([bankcore-docs-and-adrs.mdc](../.cursor/rules/bankcore-docs-and-adrs.mdc)).  
-- CSR / servicing workspace; partner and fintech APIs.
+- **Phase 4.1 Branch CSR servicing:** Branch-hosted customer/account servicing over existing domain queries and guarded operational actions. Slices: **4.1A** customer 360 reads, **4.1B** guarded holds / fee waivers / reversals through existing commands and posting, **4.1C** role refinement and controls. See [ADR-0026](adr/0026-branch-csr-servicing.md).
+- Partner and fintech APIs remain separate Phase 4 channel work; do not reuse internal Branch browser auth for external clients.
 
 ---
 

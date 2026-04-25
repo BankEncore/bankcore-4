@@ -1,0 +1,29 @@
+<% if statements.any? %>
+  <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <th class="px-5 py-3">Period</th>
+        <th class="px-5 py-3">Generated</th>
+        <th class="px-5 py-3 text-right">Opening</th>
+        <th class="px-5 py-3 text-right">Closing</th>
+        <th class="px-5 py-3">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% statements.each do |statement| %>
+        <tr>
+          <td class="px-5 py-4">
+            <div class="font-medium text-slate-950">#<%= statement.id %></div>
+            <div class="text-xs text-slate-500"><%= branch_date(statement.period_start_on) %> to <%= branch_date(statement.period_end_on) %></div>
+          </td>
+          <td class="px-5 py-4"><%= branch_date(statement.generated_on) %></td>
+          <td class="px-5 py-4 text-right"><%= branch_money(statement.opening_ledger_balance_minor_units) %></td>
+          <td class="px-5 py-4 text-right"><%= branch_money(statement.closing_ledger_balance_minor_units) %></td>
+          <td class="px-5 py-4"><%= statement.status %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="p-6 text-sm text-slate-600">No generated statements.</div>
+<% end %>

@@ -6,8 +6,19 @@ Rails.application.routes.draw do
   get "internal", to: "internal/dashboard#index", as: :internal
   get "branch", to: "branch/dashboard#index", as: :branch
   scope path: "branch", module: :branch, as: :branch do
+    resources :customers, only: [ :index, :show ]
     resources :parties, only: [ :new, :create ]
     resources :deposit_accounts, only: [ :new, :create ]
+    get "deposit_accounts/:id", to: "servicing_deposit_accounts#show", as: :servicing_deposit_account
+    get "deposit_accounts/:deposit_account_id/activity", to: "account_activities#show", as: :account_activity
+    get "deposit_accounts/:deposit_account_id/holds", to: "account_holds#index", as: :account_holds
+    get "deposit_accounts/:deposit_account_id/holds/new", to: "account_holds#new", as: :new_account_hold
+    post "deposit_accounts/:deposit_account_id/holds", to: "account_holds#create", as: :account_hold_placements
+    get "deposit_accounts/:deposit_account_id/holds/:hold_id/release", to: "account_holds#release", as: :release_account_hold
+    post "deposit_accounts/:deposit_account_id/holds/:hold_id/release", to: "account_holds#create_release"
+    get "deposit_accounts/:deposit_account_id/statements", to: "account_statements#index", as: :account_statements
+    get "deposit_accounts/:deposit_account_id/fee_waivers/new", to: "fee_waivers#new", as: :new_fee_waiver
+    post "deposit_accounts/:deposit_account_id/fee_waivers", to: "fee_waivers#create", as: :fee_waivers
     resources :teller_sessions, only: [ :new, :create ] do
       post :close, on: :member
     end

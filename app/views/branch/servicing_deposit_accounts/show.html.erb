@@ -1,0 +1,109 @@
+<% content_for :title, "Account #{@account.account_number} - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Account <%= @account.account_number %></h1>
+    <p class="mt-2 text-slate-600"><%= @profile.product.product_code %> · <%= @profile.product.name %></p>
+  </div>
+  <nav class="flex flex-wrap gap-2 text-sm">
+    <%= link_to "Find customer", branch_customers_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% if @can_place_holds %>
+      <%= link_to "Place hold", branch_new_account_hold_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <% end %>
+  </nav>
+</section>
+
+<section class="mt-6 grid gap-4 md:grid-cols-4">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Ledger balance</p>
+    <p class="mt-2 text-2xl font-semibold"><%= branch_money(@profile.ledger_balance_minor_units) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Available balance</p>
+    <p class="mt-2 text-2xl font-semibold"><%= branch_money(@profile.available_balance_minor_units) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Active holds</p>
+    <p class="mt-2 text-2xl font-semibold"><%= branch_money(@profile.active_hold_total_minor_units) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Status</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @account.status %></p>
+  </div>
+</section>
+
+<section class="mt-6 grid gap-4 lg:grid-cols-2">
+  <div class="rounded border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">Ownership</h2>
+    <div class="mt-4 overflow-hidden rounded border border-slate-200">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-4 py-3">Party</th>
+            <th class="px-4 py-3">Role</th>
+            <th class="px-4 py-3">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @profile.owners.each do |owner| %>
+            <tr>
+              <td class="px-4 py-3">
+                <%= link_to owner.party_record.name, branch_customer_path(owner.party_record), class: "font-medium text-slate-950" %>
+                <div class="text-xs text-slate-500">Party #<%= owner.party_record_id %></div>
+              </td>
+              <td class="px-4 py-3"><%= owner.role %></td>
+              <td class="px-4 py-3"><%= owner.status %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="rounded border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">Product</h2>
+    <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+      <div><dt class="font-medium text-slate-500">Code</dt><dd><%= @profile.product.product_code %></dd></div>
+      <div><dt class="font-medium text-slate-500">Name</dt><dd><%= @profile.product.name %></dd></div>
+      <div><dt class="font-medium text-slate-500">Currency</dt><dd><%= @profile.product.currency %></dd></div>
+      <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(@profile.current_business_date) %></dd></div>
+    </dl>
+    <% if admin_access? %>
+      <%= link_to "Admin product detail", admin_deposit_product_path(@profile.product), class: "mt-4 inline-block rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700" %>
+    <% end %>
+  </div>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Holds</h2>
+    <%= link_to "All holds", branch_account_holds_path(@account), class: "text-sm font-medium text-slate-700" %>
+  </div>
+  <%= render "branch/shared/hold_table", holds: @holds.holds, can_release: @can_release_holds %>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Recent activity</h2>
+    <%= link_to "Full activity", branch_account_activity_path(@account), class: "text-sm font-medium text-slate-700" %>
+  </div>
+  <%= render "branch/shared/activity_table", line_items: @activity.line_items.take(10) %>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Statements</h2>
+    <%= link_to "All statements", branch_account_statements_path(@account), class: "text-sm font-medium text-slate-700" %>
+  </div>
+  <%= render "branch/shared/statement_table", statements: @statements.rows %>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Operational events</h2>
+  </div>
+  <%= render "branch/shared/event_table",
+    events: @events[:rows],
+    can_waive_fees: @can_waive_fees,
+    can_reverse_events: @can_reverse_events %>
+</section>

@@ -1,0 +1,33 @@
+<% content_for :title, "Place Hold - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Place account hold</h1>
+  <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <%= form_with url: branch_account_hold_placements_path(@account), scope: :hold, class: "grid gap-4 md:grid-cols-2" do |form| %>
+    <div>
+      <%= form.label :amount_minor_units, "Amount (minor units)", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.number_field :amount_minor_units, value: @hold["amount_minor_units"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :currency, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :currency, value: @hold["currency"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :placed_for_operational_event_id, "Linked deposit event id", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :placed_for_operational_event_id, value: @hold["placed_for_operational_event_id"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :idempotency_key, value: @hold["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-2 flex gap-3">
+      <%= form.submit "Place hold", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= link_to "Cancel", branch_servicing_deposit_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    </div>
+  <% end %>
+</section>

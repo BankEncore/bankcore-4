@@ -11,5 +11,9 @@ module Branch
 
       "#{amount.negative? ? '-' : '+'}#{formatted}"
     end
+
+    def branch_date(value)
+      value&.to_date&.iso8601 || "Not recorded"
+    end
   end
 end

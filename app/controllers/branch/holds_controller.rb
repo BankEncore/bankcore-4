@@ -12,9 +12,10 @@ module Branch
         deposit_account_id: @hold[:deposit_account_id].to_i,
         amount_minor_units: @hold[:amount_minor_units].to_i,
         currency: @hold[:currency],
-        channel: "teller",
+        channel: branch_channel,
         idempotency_key: @hold[:idempotency_key],
-        placed_for_operational_event_id: parse_optional_integer(@hold[:placed_for_operational_event_id])
+        placed_for_operational_event_id: parse_optional_integer(@hold[:placed_for_operational_event_id]),
+        actor_id: current_operator.id
       )
       @event = result[:event]
       @hold_record = result[:hold]
@@ -33,8 +34,9 @@ module Branch
       @hold_release = release_params
       result = Accounts::Commands::ReleaseHold.call(
         hold_id: @hold_release[:hold_id].to_i,
-        channel: "teller",
-        idempotency_key: @hold_release[:idempotency_key]
+        channel: branch_channel,
+        idempotency_key: @hold_release[:idempotency_key],
+        actor_id: current_operator.id
       )
       @event = result[:event]
       @hold_record = result[:hold]

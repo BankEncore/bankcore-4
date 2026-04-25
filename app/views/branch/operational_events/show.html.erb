@@ -26,6 +26,12 @@
     <% if @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
       <%= button_to "Post event", branch_operational_event_post_path(@event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
     <% end %>
+    <% if @event.source_account_id.present? %>
+      <%= link_to "Account profile", branch_servicing_deposit_account_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% end %>
+    <% if current_operator.supervisor? && @event.event_type == "fee.assessed" && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
+      <%= link_to "Waive fee", branch_new_fee_waiver_path(@event.source_account_id, fee_assessment_event_id: @event.id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% end %>
     <% if current_operator.supervisor? && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
       <%= link_to "Reverse event", new_branch_reversal_path(original_operational_event_id: @event.id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% end %>

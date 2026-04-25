@@ -3,11 +3,16 @@
 module Branch
   class ApplicationController < Internal::ApplicationController
     before_action :require_branch_operator!
+    helper_method :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?, :can_reverse_event?
 
     private
 
     def default_idempotency_key(prefix)
       "#{prefix}-#{SecureRandom.hex(8)}"
+    end
+
+    def branch_channel
+      "branch"
     end
 
     def post_event_if_requested(event, record_and_post)
@@ -24,6 +29,22 @@ module Branch
       return if current_operator&.supervisor?
 
       redirect_to branch_path, alert: "Supervisor role required"
+    end
+
+    def can_place_servicing_hold?
+      current_operator&.teller? || current_operator&.supervisor?
+    end
+
+    def can_release_servicing_hold?
+      current_operator&.supervisor?
+    end
+
+    def can_waive_fee?
+      current_operator&.supervisor?
+    end
+
+    def can_reverse_event?
+      current_operator&.supervisor?
     end
   end
 end

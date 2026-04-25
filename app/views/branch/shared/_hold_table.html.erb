@@ -1,0 +1,39 @@
+<% if holds.any? %>
+  <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <th class="px-5 py-3">Hold</th>
+        <th class="px-5 py-3">Status</th>
+        <th class="px-5 py-3 text-right">Amount</th>
+        <th class="px-5 py-3">Events</th>
+        <th class="px-5 py-3">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% holds.each do |hold| %>
+        <tr>
+          <td class="px-5 py-4">
+            <div class="font-medium text-slate-950">#<%= hold.id %></div>
+            <div class="text-xs text-slate-500">Created <%= branch_date(hold.created_at) %></div>
+          </td>
+          <td class="px-5 py-4"><%= hold.status %></td>
+          <td class="px-5 py-4 text-right"><%= branch_money(hold.amount_minor_units) %> <%= hold.currency %></td>
+          <td class="px-5 py-4 text-xs text-slate-600">
+            <div>Placed: <%= hold.placed_by_operational_event_id || "None" %></div>
+            <div>Released: <%= hold.released_by_operational_event_id || "None" %></div>
+            <div>For deposit: <%= hold.placed_for_operational_event_id || "None" %></div>
+          </td>
+          <td class="px-5 py-4">
+            <% if local_assigns.fetch(:can_release, false) && hold.status == Accounts::Models::Hold::STATUS_ACTIVE %>
+              <%= link_to "Release", branch_release_account_hold_path(hold.deposit_account_id, hold.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+            <% else %>
+              <span class="text-slate-500">No action</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="p-6 text-sm text-slate-600">No holds found.</div>
+<% end %>

@@ -1,0 +1,25 @@
+<% content_for :title, "Account Holds - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Account holds</h1>
+    <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
+  </div>
+  <nav class="flex flex-wrap gap-2 text-sm">
+    <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% if can_place_servicing_hold? %>
+      <%= link_to "Place hold", branch_new_account_hold_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <% end %>
+  </nav>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <p class="text-sm font-medium text-slate-500">Active hold total</p>
+  <p class="mt-2 text-2xl font-semibold"><%= branch_money(@holds.active_total_minor_units) %></p>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <%= render "branch/shared/hold_table", holds: @holds.holds, can_release: can_release_servicing_hold? %>
+</section>
