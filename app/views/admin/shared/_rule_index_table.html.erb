@@ -12,6 +12,9 @@
             <th class="px-5 py-3">Effective</th>
             <th class="px-5 py-3">Ended</th>
             <th class="px-5 py-3">Description</th>
+            <% if local_assigns[:rule_kind].present? %>
+              <th class="px-5 py-3">Controls</th>
+            <% end %>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -27,6 +30,17 @@
               <td class="px-5 py-4"><%= admin_date(row.effective_on) %></td>
               <td class="px-5 py-4"><%= admin_date(row.ended_on) %></td>
               <td class="px-5 py-4"><%= row.description.presence || "None" %></td>
+              <% if local_assigns[:rule_kind].present? %>
+                <td class="px-5 py-4">
+                  <%= form_with url: admin_preview_end_date_rule_change_path(rule_kind, row.id), method: :post, scope: :rule_change, class: "flex items-end gap-2" do |form| %>
+                    <div>
+                      <%= form.label :ended_on, "End date", class: "sr-only" %>
+                      <%= form.text_field :ended_on, placeholder: "YYYY-MM-DD", class: "w-32 rounded border border-slate-300 px-2 py-1" %>
+                    </div>
+                    <%= form.submit "Preview", class: "rounded border border-slate-300 px-3 py-1 font-medium text-slate-700" %>
+                  <% end %>
+                </td>
+              <% end %>
             </tr>
           <% end %>
         </tbody>

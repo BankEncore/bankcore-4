@@ -1,0 +1,18 @@
+<% content_for :title, "New #{admin_rule_kind_label(@rule_kind)} - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">New <%= admin_rule_kind_label(@rule_kind).downcase %></h1>
+  <p class="mt-2 text-slate-600">Preview validation and superseded rows before creating this effective-dated configuration.</p>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <%= @error_message %>
+  </section>
+<% end %>
+
+<%= render "form",
+  rule_kind: @rule_kind,
+  rule_attrs: @rule_attrs,
+  deposit_products: @deposit_products,
+  submit_label: "Preview #{admin_rule_kind_label(@rule_kind)}" %>

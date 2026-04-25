@@ -1,0 +1,44 @@
+<% content_for :title, "Business Date Close - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Business date close</h1>
+    <p class="mt-2 text-slate-600">Preview EOD readiness before advancing the open business date.</p>
+  </div>
+
+  <%= form_with url: ops_business_date_close_path, method: :get, class: "flex items-end gap-3" do |form| %>
+    <div>
+      <%= form.label :business_date, "Business date", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :business_date, value: @business_date&.iso8601 || params[:business_date], placeholder: "YYYY-MM-DD", class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <%= form.submit "Preview", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <% end %>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <%= @error_message %>
+  </section>
+<% elsif @readiness.present? %>
+  <section class="mt-8 grid gap-4 md:grid-cols-3">
+    <%= render "ops/eod/readiness_card", label: "EOD ready", value: @readiness[:eod_ready] ? "Yes" : "No", state: @readiness[:eod_ready] %>
+    <%= render "ops/eod/readiness_card", label: "Journal totals balanced", value: @readiness[:journal_totals_balanced] ? "Yes" : "No", state: @readiness[:journal_totals_balanced] %>
+    <%= render "ops/eod/readiness_card", label: "Open/pending sessions", value: @readiness[:open_teller_sessions_count], state: @readiness[:all_sessions_closed] %>
+    <%= render "ops/eod/readiness_card", label: "Pending events", value: @readiness[:pending_operational_events_count], state: @readiness[:pending_operational_events_count].to_i.zero? %>
+    <%= render "ops/eod/readiness_card", label: "Trial balance rows", value: @readiness[:trial_balance_row_count], state: true %>
+    <%= render "ops/eod/readiness_card", label: "Posting day closed", value: @readiness[:posting_day_closed] ? "Yes" : "No", state: !@readiness[:posting_day_closed] %>
+  </section>
+
+  <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-xl font-semibold">Confirmation</h2>
+    <% if @readiness[:eod_ready] %>
+      <p class="mt-2 text-sm text-slate-600">This will close <%= @business_date.iso8601 %> and advance the singleton business date.</p>
+      <%= form_with url: ops_business_date_close_path, method: :post, class: "mt-4" do |form| %>
+        <%= form.hidden_field :business_date, value: @business_date.iso8601 %>
+        <%= form.submit "Close business date", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <% end %>
+    <% else %>
+      <p class="mt-2 text-sm text-slate-600">Resolve readiness failures before close can execute.</p>
+    <% end %>
+  </section>
+<% end %>

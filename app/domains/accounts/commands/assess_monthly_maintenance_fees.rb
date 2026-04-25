@@ -16,7 +16,7 @@ module Accounts
         end
       end
 
-      def self.call(business_date: nil, deposit_product_id: nil, account_ids: nil, channel: "system")
+      def self.call(business_date: nil, deposit_product_id: nil, account_ids: nil, channel: "system", preview: false)
         raise InvalidRequest, "monthly maintenance fee engine may only use channel system" unless channel.to_s == "system"
 
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
@@ -28,7 +28,11 @@ module Accounts
         outcomes = []
         rules.find_each do |rule|
           eligible_accounts(rule, account_ids).find_each do |account|
-            outcomes << assess_account(rule, account, on_date, channel)
+            outcomes << if preview
+              preview_account(rule, account, on_date, channel)
+            else
+              assess_account(rule, account, on_date, channel)
+            end
           end
         end
 
@@ -81,6 +85,29 @@ module Accounts
         end
       end
       private_class_method :assess_account
+
+      def self.preview_account(rule, account, business_date, channel)
+        idem = idempotency_key(rule: rule, account: account, business_date: business_date)
+        existing = Core::OperationalEvents::Models::OperationalEvent.find_by(channel: channel, idempotency_key: idem)
+        if existing
+          outcome = existing.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED ? OUTCOME_ALREADY_POSTED : OUTCOME_POSTED
+          return outcome_row(rule: rule, account: account, event: existing, outcome: outcome)
+        end
+
+        available = Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: account.id)
+        if available < rule.amount_minor_units.to_i
+          return outcome_row(
+            rule: rule,
+            account: account,
+            event: nil,
+            outcome: OUTCOME_SKIPPED_INSUFFICIENT_AVAILABLE_BALANCE,
+            message: "insufficient available balance"
+          )
+        end
+
+        outcome_row(rule: rule, account: account, event: nil, outcome: OUTCOME_POSTED)
+      end
+      private_class_method :preview_account
 
       def self.idempotency_key(rule:, account:, business_date:)
         "monthly-maintenance:#{business_date.iso8601}:#{rule.id}:#{account.id}"

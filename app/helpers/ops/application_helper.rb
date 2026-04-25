@@ -43,5 +43,20 @@ module Ops
 
       "#{amount} #{event.currency}"
     end
+
+    def ops_engine_label(engine)
+      case engine.to_s
+      when "monthly_maintenance_fees"
+        "Monthly maintenance fees"
+      when "deposit_statements"
+        "Deposit statements"
+      else
+        engine.to_s.humanize
+      end
+    end
+
+    def ops_result_counts(result)
+      result.counts.sort_by { |outcome, _count| outcome.to_s }
+    end
   end
 end

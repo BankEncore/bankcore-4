@@ -1,0 +1,17 @@
+<% content_for :title, "End-Date #{admin_rule_kind_label(@rule_kind)} - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">End-date <%= admin_rule_kind_label(@rule_kind).downcase %></h1>
+  <p class="mt-2 text-slate-600">Confirm the end date before updating this effective-dated row.</p>
+</section>
+
+<%= render "summary", result: @result %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="text-xl font-semibold">Confirmation</h2>
+  <p class="mt-2 text-sm text-slate-600">This updates only the row's `ended_on` date; it does not delete configuration.</p>
+  <%= form_with url: admin_end_date_rule_change_path(@rule_kind, @result.rule.id), method: :patch, scope: :rule_change, class: "mt-4" do |form| %>
+    <%= form.hidden_field :ended_on, value: @ended_on %>
+    <%= form.submit "End-date #{admin_rule_kind_label(@rule_kind)}", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <% end %>
+</section>

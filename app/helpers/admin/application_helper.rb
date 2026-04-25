@@ -49,5 +49,31 @@ module Admin
     def admin_filter_params
       params.permit(:deposit_product_id, :as_of).to_h.compact_blank
     end
+
+    def admin_rule_kind_label(kind)
+      case kind.to_s
+      when "fee_rule"
+        "Fee rule"
+      when "overdraft_policy"
+        "Overdraft policy"
+      when "statement_profile"
+        "Statement profile"
+      else
+        kind.to_s.humanize
+      end
+    end
+
+    def admin_rule_kind_value_label(kind)
+      case kind.to_s
+      when "fee_rule"
+        "Amount"
+      when "overdraft_policy"
+        "NSF fee"
+      when "statement_profile"
+        "Cycle day"
+      else
+        "Value"
+      end
+    end
   end
 end

@@ -15,6 +15,14 @@ Rails.application.routes.draw do
   get "ops", to: "ops/dashboard#index", as: :ops
   scope path: "ops", module: :ops, as: :ops do
     get "eod", to: "eod#index", as: :eod
+    get "business_date_close", to: "business_date_closes#new", as: :business_date_close
+    post "business_date_close", to: "business_date_closes#create"
+    get "engine_runs", to: "engine_runs#index", as: :engine_runs
+    get "engine_runs/:engine/new", to: "engine_runs#new", as: :new_engine_run
+    post "engine_runs/:engine", to: "engine_runs#create", as: :engine_run
+    resources :teller_variances, only: [ :index ] do
+      post :approve, on: :member, action: :create
+    end
     resources :operational_events, only: [ :index, :show ]
   end
   get "admin", to: "admin/dashboard#index", as: :admin
@@ -23,6 +31,11 @@ Rails.application.routes.draw do
     resources :deposit_product_fee_rules, only: [ :index ]
     resources :deposit_product_overdraft_policies, only: [ :index ]
     resources :deposit_product_statement_profiles, only: [ :index ]
+    get "rule_changes/:rule_kind/new", to: "rule_changes#new", as: :new_rule_change
+    post "rule_changes/:rule_kind/preview", to: "rule_changes#preview", as: :preview_rule_change
+    post "rule_changes/:rule_kind", to: "rule_changes#create", as: :rule_changes
+    post "rule_changes/:rule_kind/:id/end_date_preview", to: "rule_changes#preview_end_date", as: :preview_end_date_rule_change
+    patch "rule_changes/:rule_kind/:id/end_date", to: "rule_changes#end_date", as: :end_date_rule_change
   end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
