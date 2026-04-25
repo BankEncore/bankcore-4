@@ -1,0 +1,43 @@
+<% content_for :title, "Record Transfer - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Record transfer</h1>
+  <p class="mt-2 text-slate-600">Create a teller-channel transfer event, with optional immediate posting.</p>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <%= form_with url: branch_transfers_path, scope: :transfer, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
+    <div>
+      <%= form.label :source_account_id, "Source account id", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :source_account_id, value: @transfer["source_account_id"] || @transfer[:source_account_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :destination_account_id, "Destination account id", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :destination_account_id, value: @transfer["destination_account_id"] || @transfer[:destination_account_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :amount_minor_units, "Amount minor units", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :amount_minor_units, value: @transfer["amount_minor_units"] || @transfer[:amount_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :currency, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :currency, value: @transfer["currency"] || @transfer[:currency] || "USD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-2">
+      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :idempotency_key, value: @transfer["idempotency_key"] || @transfer[:idempotency_key], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Keep this value stable when retrying the same request.</p>
+    </div>
+    <div class="md:col-span-2">
+      <label class="flex items-center gap-2 text-sm text-slate-700">
+        <%= form.check_box :record_and_post, { checked: ActiveModel::Type::Boolean.new.cast(@transfer["record_and_post"] || @transfer[:record_and_post]) }, "1", "0" %>
+        Record and post immediately
+      </label>
+    </div>
+    <div class="md:col-span-2">
+      <%= form.submit "Record transfer", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>

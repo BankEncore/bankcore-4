@@ -8,8 +8,21 @@ Rails.application.routes.draw do
   scope path: "branch", module: :branch, as: :branch do
     resources :parties, only: [ :new, :create ]
     resources :deposit_accounts, only: [ :new, :create ]
+    resources :teller_sessions, only: [ :new, :create ] do
+      post :close, on: :member
+    end
     resources :deposits, only: [ :new, :create ]
     resources :withdrawals, only: [ :new, :create ]
+    resources :transfers, only: [ :new, :create ]
+    resources :holds, only: [ :new, :create ] do
+      collection do
+        get :release
+        post :release, action: :create_release
+      end
+    end
+    resources :reversals, only: [ :new, :create ]
+    resources :overrides, only: [ :new, :create ]
+    resources :operational_events, only: [ :index, :show ]
     post "operational_events/:id/post", to: "operational_event_posts#create", as: :operational_event_post
   end
   get "ops", to: "ops/dashboard#index", as: :ops
@@ -17,6 +30,8 @@ Rails.application.routes.draw do
     get "eod", to: "eod#index", as: :eod
     get "business_date_close", to: "business_date_closes#new", as: :business_date_close
     post "business_date_close", to: "business_date_closes#create"
+    get "close_package", to: "close_packages#show", as: :close_package
+    get "exceptions", to: "exceptions#index", as: :exceptions
     get "engine_runs", to: "engine_runs#index", as: :engine_runs
     get "engine_runs/:engine/new", to: "engine_runs#new", as: :new_engine_run
     post "engine_runs/:engine", to: "engine_runs#create", as: :engine_run
@@ -28,6 +43,7 @@ Rails.application.routes.draw do
   get "admin", to: "admin/dashboard#index", as: :admin
   scope path: "admin", module: :admin, as: :admin do
     resources :deposit_products, only: [ :index, :show ]
+    get "deposit_products/:id/readiness", to: "deposit_products#readiness", as: :deposit_product_readiness
     resources :deposit_product_fee_rules, only: [ :index ]
     resources :deposit_product_overdraft_policies, only: [ :index ]
     resources :deposit_product_statement_profiles, only: [ :index ]

@@ -302,19 +302,21 @@ Phase 3.5 is internal UI enablement over shipped Phase 0–3 domain capabilities
 
 Shipped narrow slice: session-backed internal operator authentication, shared internal shell, `branch`, `ops`, and `admin` namespaces, branch transaction forms for core teller flows, ops EOD/event/variance/engine surfaces, and admin product/rule inspection plus guarded rule changes.
 
+Phase 3.5b refinement adds broader internal coverage for shipped operations: branch session open/close, transfers, holds, reversals, overrides, branch event search/detail, ops close packages and exception queues, and admin product readiness/detail views.
+
 To complete:
 
 - Add request/system coverage for critical internal screens before they become required support paths for Phase 4.
-- Add close packages and exception review workflows beyond the current EOD/event/variance views.
-- Expand branch workspace coverage for holds, reversals, transfers, receipts, and richer session workflows as needed.
+- Add close package export/attestation artifacts and exception review workflows beyond the current close package and queue views.
+- Expand branch workspace coverage for receipts and richer session workflows as needed.
 - Refine admin/ops role taxonomy once distinct operations/admin roles are required by mutating screens.
 - Keep existing JSON `/teller` APIs stable for curl/tests/future clients.
 
 Likely slices:
 
 - Internal workspace request/system test pass.
-- Ops close package and exception review UI.
-- Branch workflow completion for holds, transfers, reversals, and receipts.
+- Ops close package export and exception review workflow.
+- Branch receipt and richer workflow completion.
 - Admin/ops role policy refinement.
 - Guarded admin/ops control surfaces where product requires mutation.
 

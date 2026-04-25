@@ -1,0 +1,24 @@
+<% content_for :title, "Transfer Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Transfer result</h1>
+  <p class="mt-2 text-slate-600">Review the transfer event, posting outcome, or NSF denial.</p>
+</section>
+
+<% if @denial_event.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 p-6 text-amber-950 shadow-sm">
+    <h2 class="text-xl font-semibold">Transfer denied for NSF</h2>
+    <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+      <div><dt class="font-medium">Denial event</dt><dd>#<%= @denial_event.id %></dd></div>
+      <div><dt class="font-medium">Fee event</dt><dd>#<%= @fee_event.id %></dd></div>
+      <div><dt class="font-medium">Outcome</dt><dd><%= @outcome %></dd></div>
+      <div><dt class="font-medium">Attempt amount</dt><dd><%= branch_money(@denial_event.amount_minor_units) %> <%= @denial_event.currency %></dd></div>
+    </dl>
+  </section>
+<% else %>
+  <%= render "branch/shared/transaction_result",
+    title: "Transfer recorded",
+    event: @event,
+    outcome: @outcome,
+    post_result: @post_result %>
+<% end %>

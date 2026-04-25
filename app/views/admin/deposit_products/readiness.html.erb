@@ -1,0 +1,32 @@
+<% content_for :title, "#{@deposit_product.product_code} Readiness - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Product readiness</h1>
+    <p class="mt-2 text-slate-600"><%= admin_product_label(@deposit_product) %></p>
+  </div>
+  <%= link_to "Product detail", admin_deposit_product_path(@deposit_product), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <%= form_with url: admin_deposit_product_readiness_path(@deposit_product), method: :get, class: "flex items-end gap-3" do |form| %>
+    <div>
+      <%= form.label :as_of, "As of", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :as_of, value: @as_of&.iso8601 || params[:as_of], placeholder: "YYYY-MM-DD", class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <%= form.submit "Review", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <% end %>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= @error_message %></section>
+<% else %>
+  <section class="mt-8 grid gap-4 md:grid-cols-2">
+    <% @checks.each do |check| %>
+      <div class="rounded border <%= check[:ready] ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50" %> p-5 shadow-sm">
+        <p class="text-sm font-medium <%= check[:ready] ? "text-emerald-800" : "text-amber-900" %>"><%= check[:label] %></p>
+        <p class="mt-2 text-2xl font-semibold"><%= check[:ready] ? "Ready" : "Needs configuration" %></p>
+      </div>
+    <% end %>
+  </section>
+<% end %>

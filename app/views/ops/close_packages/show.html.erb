@@ -1,0 +1,88 @@
+<% content_for :title, "Close Package - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Close package</h1>
+    <p class="mt-2 text-slate-600">Control summary for EOD close, exceptions, trial balance, and close history.</p>
+  </div>
+  <%= form_with url: ops_close_package_path, method: :get, class: "flex items-end gap-3" do |form| %>
+    <div>
+      <%= form.label :business_date, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :business_date, value: @business_date&.iso8601 || params[:business_date], placeholder: "YYYY-MM-DD", class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <%= form.submit "Review", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <% end %>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= @error_message %></section>
+<% elsif @readiness.present? %>
+  <section class="mt-8 grid gap-4 md:grid-cols-4">
+    <%= render "ops/eod/readiness_card", label: "EOD ready", value: @readiness[:eod_ready] ? "Yes" : "No", state: @readiness[:eod_ready] %>
+    <%= render "ops/eod/readiness_card", label: "Balanced", value: @readiness[:journal_totals_balanced] ? "Yes" : "No", state: @readiness[:journal_totals_balanced] %>
+    <%= render "ops/eod/readiness_card", label: "Open/pending sessions", value: @readiness[:open_teller_sessions_count], state: @readiness[:all_sessions_closed] %>
+    <%= render "ops/eod/readiness_card", label: "Pending events", value: @readiness[:pending_operational_events_count], state: @readiness[:pending_operational_events_count].to_i.zero? %>
+  </section>
+
+  <section class="mt-8 grid gap-6 lg:grid-cols-2">
+    <div class="rounded border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h2 class="text-xl font-semibold">Pending operational events</h2>
+      </div>
+      <% if @pending_events.any? %>
+        <ul class="divide-y divide-slate-100">
+          <% @pending_events.each do |event| %>
+            <li class="px-5 py-4 text-sm">
+              <%= link_to "##{event.id}", ops_operational_event_path(event), class: "font-medium text-slate-950" %>
+              <span class="text-slate-600"><%= event.event_type %> · <%= ops_event_amount(event) %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <div class="px-5 py-8 text-sm text-slate-600">No pending events for this date.</div>
+      <% end %>
+    </div>
+
+    <div class="rounded border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h2 class="text-xl font-semibold">Open or pending sessions</h2>
+      </div>
+      <% if @open_or_pending_sessions.any? %>
+        <ul class="divide-y divide-slate-100">
+          <% @open_or_pending_sessions.each do |session| %>
+            <li class="px-5 py-4 text-sm">
+              <span class="font-medium">#<%= session.id %></span>
+              <span class="text-slate-600"><%= session.status.humanize %> · <%= session.drawer_code.presence || "Default drawer" %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <div class="px-5 py-8 text-sm text-slate-600">No open or pending-supervisor sessions.</div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Recent close history</h2>
+    </div>
+    <% if @recent_closes.any? %>
+      <ul class="divide-y divide-slate-100">
+        <% @recent_closes.each do |close| %>
+          <li class="px-5 py-4 text-sm">
+            <span class="font-medium"><%= close.closed_on.iso8601 %></span>
+            <span class="text-slate-600">closed at <%= ops_time(close.closed_at) %> by <%= close.closed_by_operator&.display_name || "Unknown" %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No business dates closed yet.</div>
+    <% end %>
+  </section>
+
+  <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-xl font-semibold">Close action</h2>
+    <p class="mt-2 text-sm text-slate-600">Close is still performed through the guarded business-date close screen.</p>
+    <%= link_to "Preview close", ops_business_date_close_path(business_date: @business_date.iso8601), class: "mt-4 inline-block rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  </section>
+<% end %>

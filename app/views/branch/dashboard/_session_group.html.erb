@@ -18,6 +18,8 @@
               <th class="px-5 py-3 text-right">Actual</th>
               <th class="px-5 py-3 text-right">Variance</th>
               <th class="px-5 py-3">Supervisor</th>
+            <% else %>
+              <th class="px-5 py-3">Close session</th>
             <% end %>
           </tr>
         </thead>
@@ -41,6 +43,14 @@
                     <div class="text-xs text-slate-500"><%= branch_session_time(session.supervisor_approved_at) %></div>
                   <% else %>
                     <span class="text-slate-500">Not approved</span>
+                  <% end %>
+                </td>
+              <% else %>
+                <td class="px-5 py-4">
+                  <%= form_with url: close_branch_teller_session_path(session), scope: :teller_session_close, method: :post, class: "grid gap-2 md:grid-cols-3" do |form| %>
+                    <%= form.text_field :expected_cash_minor_units, placeholder: "Expected", class: "rounded border border-slate-300 px-2 py-1" %>
+                    <%= form.text_field :actual_cash_minor_units, placeholder: "Actual", class: "rounded border border-slate-300 px-2 py-1" %>
+                    <%= form.submit "Close", class: "rounded bg-slate-900 px-3 py-1 font-medium text-white" %>
                   <% end %>
                 </td>
               <% end %>
