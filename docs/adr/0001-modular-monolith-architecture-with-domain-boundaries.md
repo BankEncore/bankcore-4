@@ -24,9 +24,10 @@ Early architectural decisions must avoid two common failure modes:
 
 The system must support:
 
-* teller and branch operations (Phase 1\)  
-* deposit and loan servicing (Phase 2+)  
-* external integrations (payments, APIs)  
+* teller and branch operations (roadmap Phase 1)  
+* operational hardening (roadmap Phase 2)  
+* product and financial depth (roadmap Phase 3)  
+* channels and ecosystem integrations (roadmap Phase 4)  
 * regulatory and audit requirements
 
 A clear architectural foundation is required before further domain expansion.
@@ -201,33 +202,37 @@ Rejected because:
 
 ---
 
-## 6\. Migration path
+## 6\. Roadmap-aligned migration path
 
-Future evolution may include:
+Future evolution follows the roadmap phase labels while preserving the modular-monolith decision in this ADR:
 
-### Phase 1
+### Phase 1 — Branch-safe MVP core
 
-* Modular monolith (this ADR)
+* Establish the modular monolith, domain boundaries, and centralized financial kernel.
+* Prove branch-safe money movement through operational events, posting, ledger, teller sessions, and reversals.
 
-### Phase 2
+### Phase 2 — Operational hardening
 
-* Extract edge domains (API, reporting, ingestion)
+* Harden the same modular monolith with product FKs, event catalog metadata, observability reads, business-date close, and drawer-variance controls.
+* Keep operational hardening inside explicit domain boundaries rather than extracting core financial domains.
 
-### Phase 3
+### Phase 3 — Product and financial depth
 
-* Selective service extraction (payments, channels, analytics)
+* Add deeper product and financial slices behind domain commands, queries, and operational-event/posting contracts.
+* Keep posting, ledger, business date, and operational events centralized.
 
-### Phase 4 (optional)
+### Phase 4 — Channels and ecosystem
 
-* Distributed architecture with stable domain contracts
+* Add customer, partner, and integration channels over stable domain contracts.
+* Edge extraction for APIs, reporting, ingestion, channels, or analytics may be considered only when operationally justified; it is not implied by the roadmap phase number.
 
-The financial kernel remains centralized until strong justification exists.
+The financial kernel remains centralized until strong justification exists. Any future distributed architecture remains optional and must preserve stable domain contracts.
 
 ---
 
 ## 7\. Related documents
 
-* `docs/architecture/module-catalog.md`  
+* `docs/architecture/bankcore-module-catalog.md`  
     
 * Future ADRs:  
     

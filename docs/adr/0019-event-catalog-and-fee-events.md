@@ -9,7 +9,7 @@
 
 ## 1. Context
 
-`event_type` strings are the persisted registry per ADR-0002. Today, allowlists and posting rules are scattered across [`RecordEvent`, `RecordReversal`, and `PostingRules::Registry` (see repository paths under `app/domains/core/`). Phase 2 roadmap calls for an **event catalog** and new financial types (fees, interest, NSF). This ADR locks a **code-first catalog** for discovery and adds the first **fee** pair without a second persistence source of truth for `event_type`.
+`event_type` strings are the persisted registry per ADR-0002. Today, allowlists and posting rules are scattered across [`RecordEvent`, `RecordReversal`, and `PostingRules::Registry` (see repository paths under `app/domains/core/`). Phase 2 roadmap calls for an **event catalog** and the first new financial event pair, **fees**. This ADR locks a **code-first catalog** for discovery and adds the first **fee** pair without a second persistence source of truth for `event_type`. Later accepted narrow slices add interest and NSF/overdraft event types to the same catalog pattern; those later decisions are documented separately.
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### 2.3 Drift check
 
-- Automated test asserts every key in **`PostingRules::PostingRules::Registry::HANDLERS`** has a matching **`EventCatalog`** entry with **`posts_to_gl: true`** (and consistent `event_type`).
+- Automated tests assert every key in **`PostingRules::Registry::HANDLERS`** has a matching **`EventCatalog`** entry with **`posts_to_gl: true`** (and consistent `event_type`), and that the operational-event docs stay aligned with the catalog.
 
 ### 2.4 Automated fee assessment (P3-3)
 
@@ -39,7 +39,8 @@
 
 ## 3. Non-goals (this ADR)
 
-- **`interest.*`**, **NSF / overdraft** automation, DB-backed catalog tables, admin UI, concept-101 parent/component persistence.
+- **Interest and NSF / overdraft automation in this ADR.** Later narrow slices add **`interest.accrued`**, **`interest.posted`**, and **`overdraft.nsf_denied`** to the catalog pattern; see [ADR-0021](0021-interest-accrual-and-payout-slice.md) and [ADR-0023](0023-overdraft-nsf-deny-and-fee.md).
+- DB-backed catalog tables, admin UI, concept-101 parent/component persistence.
 
 ---
 
@@ -47,3 +48,5 @@
 
 - [docs/operational_events/fee-assessed.md](../operational_events/fee-assessed.md), [fee-waived.md](../operational_events/fee-waived.md)
 - [ADR-0017 §2.5](0017-deposit-products-fk-narrow-scope.md) observability reads (optional `event_type` filter includes new types)
+- [ADR-0021](0021-interest-accrual-and-payout-slice.md) interest accrual and payout event slice
+- [ADR-0023](0023-overdraft-nsf-deny-and-fee.md) overdraft NSF denial and fee slice
