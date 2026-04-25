@@ -1,0 +1,12 @@
+<% content_for :title, "Reversal Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Reversal result</h1>
+  <p class="mt-2 text-slate-600">Review the compensating reversal event and posting outcome.</p>
+</section>
+
+<%= render "branch/shared/transaction_result",
+  title: "Reversal recorded",
+  event: @event,
+  outcome: @outcome,
+  post_result: @post_result %>

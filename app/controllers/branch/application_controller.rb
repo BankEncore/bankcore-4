@@ -19,5 +19,11 @@ module Branch
     def parse_optional_integer(value)
       value.presence&.to_i
     end
+
+    def require_branch_supervisor!
+      return if current_operator&.supervisor?
+
+      redirect_to branch_path, alert: "Supervisor role required"
+    end
   end
 end

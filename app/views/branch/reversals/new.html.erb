@@ -1,0 +1,30 @@
+<% content_for :title, "Record Reversal - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Record reversal</h1>
+  <p class="mt-2 text-slate-600">Supervisor-only compensating reversal for a posted financial event.</p>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <%= form_with url: branch_reversals_path, scope: :reversal, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
+    <div>
+      <%= form.label :original_operational_event_id, "Original event id", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :original_operational_event_id, value: @reversal["original_operational_event_id"] || @reversal[:original_operational_event_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :idempotency_key, value: @reversal["idempotency_key"] || @reversal[:idempotency_key], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-2">
+      <label class="flex items-center gap-2 text-sm text-slate-700">
+        <%= form.check_box :record_and_post, { checked: ActiveModel::Type::Boolean.new.cast(@reversal["record_and_post"] || @reversal[:record_and_post]) }, "1", "0" %>
+        Record and post immediately
+      </label>
+    </div>
+    <div class="md:col-span-2">
+      <%= form.submit "Record reversal", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>

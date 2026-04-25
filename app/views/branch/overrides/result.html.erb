@@ -1,0 +1,16 @@
+<% content_for :title, "Override Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Override result</h1>
+  <p class="mt-2 text-slate-600">Review the posted control event.</p>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-semibold"><%= @event.event_type %></h2>
+  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Operational event</dt><dd>#<%= @event.id %></dd></div>
+    <div><dt class="font-medium text-slate-500">Outcome</dt><dd><%= @outcome %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id %></dd></div>
+    <div><dt class="font-medium text-slate-500">Actor</dt><dd>#<%= @event.actor_id %></dd></div>
+  </dl>
+</section>

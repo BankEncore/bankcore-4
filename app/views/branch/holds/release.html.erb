@@ -1,0 +1,25 @@
+<% content_for :title, "Release Hold - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Release hold</h1>
+  <p class="mt-2 text-slate-600">Release an active hold and record a no-GL hold release event.</p>
+</section>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <%= form_with url: release_branch_holds_path, scope: :hold_release, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
+    <div>
+      <%= form.label :hold_id, "Hold id", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :hold_id, value: @hold_release["hold_id"] || @hold_release[:hold_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :idempotency_key, value: @hold_release["idempotency_key"] || @hold_release[:idempotency_key], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-2">
+      <%= form.submit "Release hold", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= link_to "Place hold", new_branch_hold_path, class: "ml-3 text-sm font-medium text-slate-700" %>
+    </div>
+  <% end %>
+</section>

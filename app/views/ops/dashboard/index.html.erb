@@ -23,6 +23,16 @@
     <p class="mt-2 text-sm text-slate-600">Preview EOD readiness and close the current business date.</p>
   <% end %>
 
+  <%= link_to ops_close_package_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Close package</h2>
+    <p class="mt-2 text-sm text-slate-600">Review close evidence, exceptions, trial balance, and close history.</p>
+  <% end %>
+
+  <%= link_to ops_exceptions_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Exception queues</h2>
+    <p class="mt-2 text-sm text-slate-600">Review pending events, variance approvals, and NSF denials.</p>
+  <% end %>
+
   <%= link_to ops_engine_runs_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
     <h2 class="font-semibold">Engine runs</h2>
     <p class="mt-2 text-sm text-slate-600">Preview and run monthly fees or statement generation.</p>

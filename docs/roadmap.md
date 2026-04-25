@@ -158,6 +158,8 @@ Phase 3.5 is an internal Rails HTML workspace phase over the Phase 0-3 domain su
 - **Ops workspace:** EOD readiness, trial balance, operational event search/detail, close packages, and exception review.
 - **Admin/Product workspace:** product configuration inspection first, then guarded config edits in later slices.
 
+**Phase 3.5b refinement:** extend those workspaces toward parity with shipped Phase 0-3 operations: branch session lifecycle, transfer/hold/reversal/override/event screens; ops close package and exception queues; admin product readiness and richer product detail. This remains an internal staff UI pass and does **not** introduce new event types, posting semantics, GL mappings, or external channels.
+
 ---
 
 ## 10. Phase 4 — Channels and ecosystem

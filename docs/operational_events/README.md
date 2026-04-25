@@ -28,6 +28,15 @@ Each spec uses the same headings so scans and diffs stay predictable:
 
 Copy the structure from any existing file in this folder when adding a new `event_type`, or start from [_template.md](_template.md).
 
+## Drift-check convention
+
+Every new **shipped** `event_type` must update these surfaces together before tests pass:
+
+- Add an entry to `Core::OperationalEvents::EventCatalog`.
+- Add a `PostingRules::Registry` handler when the event posts to GL.
+- Add or update the per-type spec in this directory, including the `## Registry` table.
+- Add or update the index row below so its `event_type` and GL posting columns match the catalog.
+
 ## Index
 
 | Spec | `event_type` | GL posting | Record command |

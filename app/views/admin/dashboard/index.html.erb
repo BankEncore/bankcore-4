@@ -13,6 +13,11 @@
     <p class="mt-2 text-sm text-slate-600">Browse products and related fee, overdraft, and statement configuration.</p>
   <% end %>
 
+  <%= link_to admin_deposit_products_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Product readiness</h2>
+    <p class="mt-2 text-sm text-slate-600">Open a product and review active profiles needed by shipped engines.</p>
+  <% end %>
+
   <%= link_to admin_deposit_product_fee_rules_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
     <h2 class="font-semibold">Fee rules</h2>
     <p class="mt-2 text-sm text-slate-600">Review monthly maintenance fee rules and active-as-of results.</p>

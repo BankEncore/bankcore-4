@@ -1,0 +1,33 @@
+<% content_for :title, "Event ##{@event.id} - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Operational event #<%= @event.id %></h1>
+    <p class="mt-2 text-slate-600"><%= @event.event_type %></p>
+  </div>
+  <%= link_to "Back to events", branch_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <dl class="grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @event.status %></dd></div>
+    <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= @event.business_date %></dd></div>
+    <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= @event.channel %></dd></div>
+    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
+    <div><dt class="font-medium text-slate-500">Source account</dt><dd><%= @event.source_account_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Destination account</dt><dd><%= @event.destination_account_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name || @event.actor_id || "None" %></dd></div>
+  </dl>
+
+  <div class="mt-6 flex flex-wrap gap-3">
+    <% if @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
+      <%= button_to "Post event", branch_operational_event_post_path(@event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <% end %>
+    <% if current_operator.supervisor? && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
+      <%= link_to "Reverse event", new_branch_reversal_path(original_operational_event_id: @event.id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% end %>
+  </div>
+</section>

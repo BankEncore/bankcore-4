@@ -6,6 +6,7 @@
     <p class="mt-2 text-slate-600"><%= @deposit_product.name %></p>
   </div>
   <%= link_to "All products", admin_deposit_products_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  <%= link_to "Readiness", admin_deposit_product_readiness_path(@deposit_product), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
 </section>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">
@@ -20,6 +21,21 @@
   <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-medium text-slate-500">Created</p>
     <p class="mt-2 text-2xl font-semibold"><%= admin_date(@deposit_product.created_at.to_date) %></p>
+  </div>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Open accounts</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @account_counts.fetch(Accounts::Models::DepositAccount::STATUS_OPEN, 0) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Closed accounts</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @account_counts.fetch(Accounts::Models::DepositAccount::STATUS_CLOSED, 0) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Configured rule families</p>
+    <p class="mt-2 text-2xl font-semibold"><%= [@deposit_product.deposit_product_fee_rules.any?, @deposit_product.deposit_product_overdraft_policies.any?, @deposit_product.deposit_product_statement_profiles.any?].count(true) %> / 3</p>
   </div>
 </section>
 
@@ -40,3 +56,38 @@
   rows: @deposit_product.deposit_product_statement_profiles.order(:effective_on, :id),
   empty_message: "No statement profiles configured for this product.",
   index_path: admin_deposit_product_statement_profiles_path(deposit_product_id: @deposit_product.id) %>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Recent accounts using this product</h2>
+  </div>
+  <% if @recent_accounts.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Account</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3">Currency</th>
+              <th class="px-5 py-3">Created</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @recent_accounts.each do |account| %>
+            <tr>
+              <td class="px-5 py-4">
+                <div class="font-medium text-slate-950"><%= account.account_number %></div>
+                <div class="text-xs text-slate-500">#<%= account.id %></div>
+              </td>
+              <td class="px-5 py-4"><%= admin_status_badge(account.status) %></td>
+              <td class="px-5 py-4"><%= account.currency %></td>
+              <td class="px-5 py-4"><%= admin_date(account.created_at.to_date) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No accounts currently use this product.</div>
+  <% end %>
+</section>
