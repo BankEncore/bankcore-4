@@ -159,6 +159,7 @@ class AdminProductsTest < ActionDispatch::IntegrationTest
       currency: "USD",
       status: Products::Models::DepositProductOverdraftPolicy::STATUS_ACTIVE,
       effective_on: Date.new(2026, 4, 1),
+      ended_on: Date.new(2026, 12, 31),
       description: "Seeded deny-NSF policy"
     )
     Products::Models::DepositProductStatementProfile.create!(
@@ -168,6 +169,7 @@ class AdminProductsTest < ActionDispatch::IntegrationTest
       currency: "USD",
       status: Products::Models::DepositProductStatementProfile::STATUS_ACTIVE,
       effective_on: Date.new(2026, 4, 1),
+      ended_on: Date.new(2026, 12, 31),
       description: "Seeded monthly statement profile"
     )
   end
