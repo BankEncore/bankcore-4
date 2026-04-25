@@ -139,31 +139,22 @@ Statements and customer-safe reads:
 
 ## 6. Readiness Backlog
 
-Blockers before the first money-moving Phase 4 slice:
+Backlog by revised Phase 4 slice:
 
-- Write and accept the first Phase 4 money movement ADR.
-- Reconcile `docs/roadmap-deferred-completion.md` with current shipped Phase 2/3 narrow slices.
-- Update `docs/roadmap.md` stale event-catalog and near-term checkpoint language.
-- Define channel identity and idempotency rules beyond internal staff (`teller` / `branch`) operators.
-- Define settlement GL and reversal/return policy for the selected channel.
-- Add operational event specs for any new Phase 4 `event_type` values.
+- **4.2 Event Catalog and Channel Metadata:** add lifecycle/channel metadata, statement-visible and customer-visible flags, payload schema references, and drift checks that cover `Core::OperationalEvents::EventCatalog`, `Core::Posting::PostingRules::Registry`, and `docs/operational_events/`. Add operational-event specs for any new Phase 4 `event_type` values before implementation.
+- **4.3 Product Resolver Baseline:** define resolver contracts and effective-dated helper conventions for product behavior that channel code must depend on. Include per-product GL mapping only if the selected money-moving channel needs it.
+- **4.4 Servicing Depth:** add hold expiration and reason/type taxonomy, customer/account-party servicing read models, and post-open party maintenance only after role/authority semantics are clear. Partial hold release/adjustment needs its own ADR.
+- **4.5 Support Observability and Close Readiness:** define support search fields/indexes for event/account/reference/actor/channel identifiers, including future file/batch/item identifiers. Add request/system coverage for internal ops screens required to support the first external channel. Add read-only close evidence before external ingestion volume grows.
+- **4.6 External Read APIs:** write an external API ADR before implementation. Cover client identity, auth, redaction, rate limits, response contracts, idempotency expectations, and audit attribution. Start with reads over existing account, event, product, statement, and ledger-derived state; do not reuse Branch browser sessions or teller headers.
+- **4.7 First Money-Moving Channel:** write and accept the ACH ADR before implementation. Define channel identity, file/item idempotency, event taxonomy, settlement GL, reversal/return policy, cutoffs/EOD blocking, support search, and reconciliation evidence.
 
-Should fix before the first channel ships:
+Items to keep outside Phase 4 unless a selected channel requires them:
 
-- Add drift checks or documentation checks that cover `EventCatalog`, `PostingRules::Registry`, and `docs/operational_events/`.
-- Add request/system coverage for the internal ops screens required to support the first channel.
-- Define support search fields for channel file/batch/item identifiers.
-- Clarify ADR-0019 wording now that interest and NSF slices exist.
-- Fix ADR-0001's stale module-catalog path and explain that its migration phase labels are not roadmap phase labels.
-
-Later Phase 4 follow-ups:
-
-- Full product resolver depth and per-product GL mapping.
-- Full-text and branch-aware event search.
 - Multi-branch or multi-entity business-date and GL dimensions.
-- Materialized reporting snapshots and drift checks for higher volume.
+- Materialized reporting snapshots beyond close evidence or measured read-performance needs.
 - Customer document delivery, statement PDFs, notifications, and delivery preferences.
-- Full allowed-overdraft, representment, card dispute, and returned-item lifecycles.
+- Wires, cards/ATM, allowed overdraft, representment, disputes, and provisional-credit workflows.
+- Full AML/CTR/sanctions/fraud workflows.
 
 ## 7. ADR Backlog
 
@@ -202,10 +193,48 @@ First external API ADR:
 
 ## 8. First Slice Recommendation
 
-Choose one of these as the next milestone:
+The next milestone is **4.2 Event Catalog and Channel Metadata**.
 
-- **Completed readiness slice:** Branch CSR servicing over existing operational events, account summary, product summary, generated statement metadata, and guarded existing servicing actions. This validated internal staff contract shape, Branch auth assumptions, and audit attribution without introducing a new posting pathway.
-- **Preferred money movement slice:** ACH receipt ingestion for one narrow deposit-credit path. The slice should parse a minimal inbound file representation, assign stable file/item ids, record a new operational event, post through the registry, expose support search by item id, and prove balanced journals in one integration test.
+Completed readiness slice: Branch CSR servicing over existing operational events, account summary, product summary, generated statement metadata, and guarded existing servicing actions. This validated internal staff contract shape, Branch auth assumptions, and audit attribution without introducing a new posting pathway.
+
+Preferred first money movement after 4.2-4.6: ACH receipt ingestion for one narrow deposit-credit path. The slice should parse a minimal inbound file representation, assign stable file/item ids, record a new operational event, post through the registry, expose support search by item id, and prove balanced journals in one integration test.
 
 Do not start with wires or card settlement unless the product goal specifically requires dual control, authorization holds, dispute handling, or settlement matching as the first Phase 4 story.
+
+## 9. Phase 4.2 Slice Plan
+
+Goal: make event semantics explicit enough that Branch CSR, statements/history, support search, external read APIs, and the first ACH slice do not each reinvent lifecycle and visibility rules.
+
+Scope:
+
+- Extend `Core::OperationalEvents::EventCatalog::Entry` with metadata for lifecycle, allowed channels, GL behavior, customer visibility, statement visibility, and payload schema/spec reference.
+- Keep the catalog code-first for now; do not introduce database-backed event-type configuration in this slice.
+- Add catalog helpers for channel-facing discovery so later external APIs can filter customer-safe and statement-visible events without hardcoding event-type lists.
+- Strengthen drift tests so every catalog entry is documented, every GL-backed entry has a posting handler, every spec declares matching registry metadata, and every visibility flag has an explicit docs value.
+- Update `docs/operational_events/README.md` and per-type specs to document the new metadata fields using the existing spec format.
+- Add a short 4.2 implementation note or ADR only when the metadata shape is about to be implemented; do not create placeholder ADRs up front.
+
+Initial metadata fields:
+
+- `lifecycle`: for example `posted_immediately`, `control`, or future `pending_to_posted`.
+- `allowed_channels`: for example `teller`, `branch`, `system`, and later external channel ids.
+- `financial_impact`: `gl_posting`, `no_gl`, or `optional_gl`.
+- `customer_visible`: whether this event can appear in customer-safe history after redaction.
+- `statement_visible`: whether this event can appear in generated statement history.
+- `payload_schema`: stable docs/schema reference for required payload shape.
+- `support_search_keys`: references that support and ops should be able to search, such as account id, reference id, actor id, teller session id, or future file/batch/item ids.
+
+Acceptance checks:
+
+- `Core::OperationalEvents::EventCatalog.as_api_array` exposes the new metadata without breaking existing fields.
+- Tests fail when a catalog entry omits visibility/channel/lifecycle metadata.
+- Tests fail when operational-event docs drift from catalog GL posting, record command, visibility, or payload-schema references.
+- Statement/customer visibility values are explicit for all shipped event types, including no-GL servicing/control events.
+- ACH planning can cite catalog metadata requirements instead of creating separate event semantics tables.
+
+Non-goals:
+
+- No new external API endpoints.
+- No ACH ingestion or new money-moving `event_type` values.
+- No full product resolver, reporting snapshot, document delivery, or compliance workflow implementation.
 
