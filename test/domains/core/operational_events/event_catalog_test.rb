@@ -46,6 +46,44 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
     assert_equal event_types.uniq, event_types, "EventCatalog contains duplicate event_type values"
   end
 
+  test "catalog entries declare required channel metadata" do
+    valid_lifecycles = %w[pending_to_posted posted_immediately]
+    valid_financial_impacts = %w[gl_posting optional_gl no_gl]
+    valid_channels = Core::OperationalEvents::Commands::RecordEvent::CHANNELS
+
+    Core::OperationalEvents::EventCatalog.all_entries.each do |entry|
+      assert_includes valid_lifecycles, entry.lifecycle, "invalid lifecycle for #{entry.event_type}"
+      assert entry.allowed_channels.present?, "missing allowed_channels for #{entry.event_type}"
+      assert_empty entry.allowed_channels - valid_channels, "invalid allowed_channels for #{entry.event_type}"
+      assert_includes valid_financial_impacts, entry.financial_impact, "invalid financial_impact for #{entry.event_type}"
+      assert_includes [ true, false ], entry.customer_visible, "customer_visible must be explicit for #{entry.event_type}"
+      assert_includes [ true, false ], entry.statement_visible, "statement_visible must be explicit for #{entry.event_type}"
+      assert entry.payload_schema.present?, "missing payload_schema for #{entry.event_type}"
+      assert entry.support_search_keys.present?, "missing support_search_keys for #{entry.event_type}"
+    end
+  end
+
+  test "catalog financial impact is consistent with GL posting flag" do
+    Core::OperationalEvents::EventCatalog.all_entries.each do |entry|
+      if entry.posts_to_gl
+        assert_includes %w[gl_posting optional_gl], entry.financial_impact,
+          "GL-backed #{entry.event_type} must be gl_posting or optional_gl"
+      else
+        assert_equal "no_gl", entry.financial_impact,
+          "no-GL #{entry.event_type} must declare no_gl financial impact"
+      end
+    end
+  end
+
+  test "catalog visibility and channel helpers return event types" do
+    assert_includes Core::OperationalEvents::EventCatalog.statement_visible_event_types, "hold.placed"
+    assert_not_includes Core::OperationalEvents::EventCatalog.statement_visible_event_types, "interest.accrued"
+    assert_equal %w[hold.placed hold.released overdraft.nsf_denied],
+      Core::OperationalEvents::EventCatalog.statement_visible_no_gl_event_types
+    assert_includes Core::OperationalEvents::EventCatalog.customer_visible_event_types, "fee.assessed"
+    assert_includes Core::OperationalEvents::EventCatalog.event_types_for_channel("branch"), "fee.waived"
+  end
+
   test "every GL-backed catalog entry has posting registry handler" do
     Core::OperationalEvents::EventCatalog.all_entries.each do |entry|
       next unless entry.posts_to_gl
@@ -103,6 +141,48 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
     end
   end
 
+  test "docs index metadata columns match EventCatalog" do
+    rows_by_type = readme_index_rows_by_event_type
+
+    Core::OperationalEvents::EventCatalog.all_entries.each do |entry|
+      row = rows_by_type.fetch(entry.event_type)
+
+      assert row.fetch(:record_command).include?(entry.record_command),
+        "README record command for #{entry.event_type} should include #{entry.record_command}"
+      assert_equal entry.lifecycle, extract_backticked_value(row.fetch(:lifecycle)),
+        "README lifecycle mismatch for #{entry.event_type}"
+      assert_equal entry.allowed_channels, extract_backticked_values(row.fetch(:channels)),
+        "README channels mismatch for #{entry.event_type}"
+      assert_equal yes_no(entry.customer_visible), row.fetch(:customer_visible),
+        "README customer visibility mismatch for #{entry.event_type}"
+      assert_equal yes_no(entry.statement_visible), row.fetch(:statement_visible),
+        "README statement visibility mismatch for #{entry.event_type}"
+    end
+  end
+
+  test "catalog specs declare metadata matching EventCatalog" do
+    rows_by_type = readme_index_rows_by_event_type
+
+    Core::OperationalEvents::EventCatalog.all_entries.each do |entry|
+      values = spec_registry_values(rows_by_type.fetch(entry.event_type).fetch(:path))
+
+      assert_equal entry.lifecycle, extract_backticked_value(values.fetch("Lifecycle")),
+        "spec lifecycle mismatch for #{entry.event_type}"
+      assert_equal entry.allowed_channels, extract_backticked_values(values.fetch("Allowed channels")),
+        "spec allowed channels mismatch for #{entry.event_type}"
+      assert_equal entry.financial_impact, extract_backticked_value(values.fetch("Financial impact")),
+        "spec financial impact mismatch for #{entry.event_type}"
+      assert_equal yes_no(entry.customer_visible), values.fetch("Customer visible"),
+        "spec customer visibility mismatch for #{entry.event_type}"
+      assert_equal yes_no(entry.statement_visible), values.fetch("Statement visible"),
+        "spec statement visibility mismatch for #{entry.event_type}"
+      assert_equal entry.payload_schema, extract_backticked_value(values.fetch("Payload schema")),
+        "spec payload schema mismatch for #{entry.event_type}"
+      assert_equal entry.support_search_keys, extract_backticked_values(values.fetch("Support search keys")),
+        "spec support search keys mismatch for #{entry.event_type}"
+    end
+  end
+
   test "non-catalog operational event docs are explicitly allowed" do
     catalog_spec_files = readme_index_rows_by_event_type.values.map { |row| row.fetch(:path) }
     indexed_spec_files = readme_index_rows.map { |row| row.fetch(:path) }
@@ -135,24 +215,23 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
   end
 
   def parse_readme_index_row(line)
-    match = line.match(/\|\s*\[[^\]]+\]\(([^)]+)\)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|/)
-    return unless match
+    cells = line.split("|").map(&:strip)
+    return unless cells.length >= 9 && cells[1].start_with?("[")
 
     {
-      path: match[1],
-      event_type: extract_backticked_value(match[2]),
-      gl_posting: match[3].strip,
-      record_command: match[4].strip
+      path: cells[1].match(/\[[^\]]+\]\(([^)]+)\)/)&.[](1),
+      event_type: extract_backticked_value(cells[2]),
+      gl_posting: cells[3],
+      record_command: cells[4],
+      lifecycle: cells[5],
+      channels: cells[6],
+      customer_visible: cells[7],
+      statement_visible: cells[8]
     }
   end
 
   def spec_registry_event_type(relative_path)
-    content = File.read(spec_path(relative_path))
-    registry_section = content.split("## Registry", 2).fetch(1, "")
-    row = registry_section.lines.find { |line| line.include?("**`event_type`**") }
-    value_cell = row&.split("|")&.[](2)
-
-    extract_backticked_value(value_cell.to_s)
+    extract_backticked_value(spec_registry_values(relative_path).fetch("event_type", ""))
   end
 
   def spec_path(relative_path)
@@ -161,5 +240,28 @@ class CoreOperationalEventsEventCatalogTest < ActiveSupport::TestCase
 
   def extract_backticked_value(value)
     value.match(/`([^`]+)`/)&.[](1)
+  end
+
+  def extract_backticked_values(value)
+    value.scan(/`([^`]+)`/).flatten
+  end
+
+  def spec_registry_values(relative_path)
+    content = File.read(spec_path(relative_path))
+    registry_section = content.split("## Registry", 2).fetch(1, "").split(/^## /, 2).first
+
+    registry_section.lines.each_with_object({}) do |line, memo|
+      next unless line.start_with?("|")
+
+      cells = line.split("|").map(&:strip)
+      next unless cells.length >= 3
+
+      label = cells[1].gsub("*", "").gsub("`", "").strip
+      memo[label] = cells[2]
+    end
+  end
+
+  def yes_no(value)
+    value ? "Yes" : "No"
   end
 end

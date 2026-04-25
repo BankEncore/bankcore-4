@@ -11,6 +11,13 @@ Records full payout of a posted `interest.accrued` event into the customer DDA. 
 | **`event_type`** | `interest.posted` |
 | **Category** | Financial |
 | **Phase** | P3-2 first vertical slice ([ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `system` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/interest-posted.md` |
+| **Support search keys** | `source_account_id`, `reference_id` |
 
 ## Semantics
 

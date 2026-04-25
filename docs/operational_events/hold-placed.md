@@ -11,6 +11,13 @@ Records that an **active hold** was applied against a deposit account so **avail
 | **`event_type`** | `hold.placed` |
 | **Category** | Servicing (ADR-0002 §5.2) |
 | **Phase** | Phase 1 (spec; `holds` table ownership to confirm in implementation ADR). |
+| **Lifecycle** | `posted_immediately` |
+| **Allowed channels** | `teller`, `branch`, `api`, `batch` |
+| **Financial impact** | `no_gl` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/hold-placed.md` |
+| **Support search keys** | `source_account_id`, `actor_id`, `reference_id` |
 
 ## Semantics
 

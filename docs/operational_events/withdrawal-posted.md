@@ -13,6 +13,13 @@ Records that the institution **disbursed cash** to the customer and **debited** 
 | **`event_type`** | `withdrawal.posted` |
 | **Category** | Financial |
 | **Phase** | Phase 1 (spec ahead of implementation). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `teller`, `api`, `batch` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/withdrawal-posted.md` |
+| **Support search keys** | `source_account_id`, `actor_id`, `teller_session_id` |
 
 ## Semantics
 

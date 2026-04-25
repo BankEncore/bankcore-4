@@ -4,7 +4,6 @@ module Deposits
   module Queries
     class StatementActivity
       GL_DDA = "2110"
-      VISIBLE_NO_GL_EVENT_TYPES = %w[hold.placed hold.released overdraft.nsf_denied].freeze
 
       Result = Data.define(
         :deposit_account,
@@ -109,13 +108,18 @@ module Deposits
       def self.no_gl_line_items(deposit_account_id, start_on, end_on)
         Core::OperationalEvents::Models::OperationalEvent
           .where(status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
-          .where(event_type: VISIBLE_NO_GL_EVENT_TYPES)
+          .where(event_type: statement_visible_no_gl_event_types)
           .where(source_account_id: deposit_account_id)
           .where(business_date: start_on..end_on)
           .order(:business_date, :id)
           .map { |event| no_gl_line_item(event) }
       end
       private_class_method :no_gl_line_items
+
+      def self.statement_visible_no_gl_event_types
+        Core::OperationalEvents::EventCatalog.statement_visible_no_gl_event_types
+      end
+      private_class_method :statement_visible_no_gl_event_types
 
       def self.no_gl_line_item(event)
         {

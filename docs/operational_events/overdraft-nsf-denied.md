@@ -11,6 +11,13 @@ Records that an attempted withdrawal or transfer was denied because available ba
 | **`event_type`** | `overdraft.nsf_denied` |
 | **Category** | Operational |
 | **Phase** | P3-4 first vertical slice ([ADR-0023](../adr/0023-overdraft-nsf-deny-and-fee.md)). |
+| **Lifecycle** | `posted_immediately` |
+| **Allowed channels** | `teller`, `api`, `batch` |
+| **Financial impact** | `no_gl` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/overdraft-nsf-denied.md` |
+| **Support search keys** | `source_account_id`, `destination_account_id`, `reference_id`, `actor_id` |
 
 ## Semantics
 

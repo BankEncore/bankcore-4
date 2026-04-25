@@ -11,38 +11,241 @@ module Core
         :record_command,
         :reversible_via_posting_reversal,
         :compensating_event_type,
-        :description
+        :description,
+        :lifecycle,
+        :allowed_channels,
+        :financial_impact,
+        :customer_visible,
+        :statement_visible,
+        :payload_schema,
+        :support_search_keys
       )
 
       ENTRIES = [
-        Entry.new("deposit.accepted", "financial", true, "RecordEvent", true, "posting.reversal",
-          "Cash or equivalent in to DDA"),
-        Entry.new("withdrawal.posted", "financial", true, "RecordEvent", true, "posting.reversal",
-          "Cash or equivalent out from DDA"),
-        Entry.new("transfer.completed", "financial", true, "RecordEvent", true, "posting.reversal",
-          "Transfer between DDAs"),
-        Entry.new("posting.reversal", "financial", true, "RecordReversal", false, nil,
-          "Compensating reversal journal for a reversible financial event"),
-        Entry.new("fee.assessed", "financial", true, "RecordEvent", false, "fee.waived",
-          "Deposit service charge assessed to DDA"),
-        Entry.new("fee.waived", "financial", true, "RecordEvent", false, nil,
-          "Waives a prior posted fee.assessed (reference_id = original event id)"),
-        Entry.new("interest.accrued", "financial", true, "RecordEvent", true, "posting.reversal",
-          "Accrues deposit interest expense and payable (system channel only; ADR-0021)"),
-        Entry.new("interest.posted", "financial", true, "RecordEvent", true, "posting.reversal",
-          "Pays a posted interest.accrued into DDA (reference_id = accrual event id; ADR-0021)"),
-        Entry.new("teller.drawer.variance.posted", "financial", true, "RecordEvent", false, nil,
-          "GL adjustment for non-zero teller drawer cash variance (system channel only; ADR-0020)"),
-        Entry.new("hold.placed", "servicing", false, "PlaceHold", false, nil,
-          "Posted hold on DDA (no GL posting)"),
-        Entry.new("hold.released", "servicing", false, "ReleaseHold", false, nil,
-          "Posted hold release (no GL posting)"),
-        Entry.new("override.requested", "operational", false, "RecordControlEvent", false, nil,
-          "Supervisor override requested"),
-        Entry.new("override.approved", "operational", false, "RecordControlEvent", false, nil,
-          "Supervisor override approved"),
-        Entry.new("overdraft.nsf_denied", "operational", false, "RecordControlEvent", false, "fee.assessed",
-          "Denied overdraft/NSF debit attempt; may trigger linked NSF fee")
+        Entry.new(
+          event_type: "deposit.accepted",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Cash or equivalent in to DDA",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller api batch],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/deposit-accepted.md",
+          support_search_keys: %w[source_account_id actor_id teller_session_id]
+        ),
+        Entry.new(
+          event_type: "withdrawal.posted",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Cash or equivalent out from DDA",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller api batch],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/withdrawal-posted.md",
+          support_search_keys: %w[source_account_id actor_id teller_session_id]
+        ),
+        Entry.new(
+          event_type: "transfer.completed",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Transfer between DDAs",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller api batch],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/transfer-completed.md",
+          support_search_keys: %w[source_account_id destination_account_id actor_id]
+        ),
+        Entry.new(
+          event_type: "posting.reversal",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordReversal",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "Compensating reversal journal for a reversible financial event",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller branch api batch],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/compensating-reversal.md",
+          support_search_keys: %w[source_account_id destination_account_id reversal_of_event_id actor_id]
+        ),
+        Entry.new(
+          event_type: "fee.assessed",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: "fee.waived",
+          description: "Deposit service charge assessed to DDA",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller api batch system],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/fee-assessed.md",
+          support_search_keys: %w[source_account_id reference_id actor_id]
+        ),
+        Entry.new(
+          event_type: "fee.waived",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "Waives a prior posted fee.assessed (reference_id = original event id)",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller branch api batch],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/fee-waived.md",
+          support_search_keys: %w[source_account_id reference_id actor_id]
+        ),
+        Entry.new(
+          event_type: "interest.accrued",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Accrues deposit interest expense and payable (system channel only; ADR-0021)",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[system],
+          financial_impact: "gl_posting",
+          customer_visible: false,
+          statement_visible: false,
+          payload_schema: "docs/operational_events/interest-accrued.md",
+          support_search_keys: %w[source_account_id reference_id]
+        ),
+        Entry.new(
+          event_type: "interest.posted",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Pays a posted interest.accrued into DDA (reference_id = accrual event id; ADR-0021)",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[system],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/interest-posted.md",
+          support_search_keys: %w[source_account_id reference_id]
+        ),
+        Entry.new(
+          event_type: "teller.drawer.variance.posted",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "RecordEvent",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "GL adjustment for non-zero teller drawer cash variance (system channel only; ADR-0020)",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[system],
+          financial_impact: "optional_gl",
+          customer_visible: false,
+          statement_visible: false,
+          payload_schema: "docs/operational_events/teller-drawer-variance-posted.md",
+          support_search_keys: %w[teller_session_id reference_id]
+        ),
+        Entry.new(
+          event_type: "hold.placed",
+          category: "servicing",
+          posts_to_gl: false,
+          record_command: "PlaceHold",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "Posted hold on DDA (no GL posting)",
+          lifecycle: "posted_immediately",
+          allowed_channels: %w[teller branch api batch],
+          financial_impact: "no_gl",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/hold-placed.md",
+          support_search_keys: %w[source_account_id actor_id reference_id]
+        ),
+        Entry.new(
+          event_type: "hold.released",
+          category: "servicing",
+          posts_to_gl: false,
+          record_command: "ReleaseHold",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "Posted hold release (no GL posting)",
+          lifecycle: "posted_immediately",
+          allowed_channels: %w[teller branch api batch],
+          financial_impact: "no_gl",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/hold-released.md",
+          support_search_keys: %w[source_account_id reference_id actor_id]
+        ),
+        Entry.new(
+          event_type: "override.requested",
+          category: "operational",
+          posts_to_gl: false,
+          record_command: "RecordControlEvent",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "Supervisor override requested",
+          lifecycle: "posted_immediately",
+          allowed_channels: %w[teller branch batch],
+          financial_impact: "no_gl",
+          customer_visible: false,
+          statement_visible: false,
+          payload_schema: "docs/operational_events/override-requested.md",
+          support_search_keys: %w[reference_id actor_id]
+        ),
+        Entry.new(
+          event_type: "override.approved",
+          category: "operational",
+          posts_to_gl: false,
+          record_command: "RecordControlEvent",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: nil,
+          description: "Supervisor override approved",
+          lifecycle: "posted_immediately",
+          allowed_channels: %w[teller branch batch],
+          financial_impact: "no_gl",
+          customer_visible: false,
+          statement_visible: false,
+          payload_schema: "docs/operational_events/override-approved.md",
+          support_search_keys: %w[reference_id actor_id]
+        ),
+        Entry.new(
+          event_type: "overdraft.nsf_denied",
+          category: "operational",
+          posts_to_gl: false,
+          record_command: "RecordControlEvent",
+          reversible_via_posting_reversal: false,
+          compensating_event_type: "fee.assessed",
+          description: "Denied overdraft/NSF debit attempt; may trigger linked NSF fee",
+          lifecycle: "posted_immediately",
+          allowed_channels: %w[teller api batch],
+          financial_impact: "no_gl",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/overdraft-nsf-denied.md",
+          support_search_keys: %w[source_account_id destination_account_id reference_id actor_id]
+        )
       ].freeze
 
       def self.all_entries
@@ -51,6 +254,26 @@ module Core
 
       def self.entry_for(event_type)
         ENTRIES.find { |e| e.event_type == event_type.to_s }
+      end
+
+      def self.statement_visible_event_types
+        ENTRIES.select(&:statement_visible).map(&:event_type)
+      end
+
+      def self.statement_visible_no_gl_event_types
+        ENTRIES.select { |e| e.statement_visible && e.financial_impact == "no_gl" }.map(&:event_type)
+      end
+
+      def self.customer_visible_event_types
+        ENTRIES.select(&:customer_visible).map(&:event_type)
+      end
+
+      def self.entries_for_channel(channel)
+        ENTRIES.select { |e| e.allowed_channels.include?(channel.to_s) }
+      end
+
+      def self.event_types_for_channel(channel)
+        entries_for_channel(channel).map(&:event_type)
       end
 
       def self.as_api_array
@@ -62,7 +285,14 @@ module Core
             record_command: e.record_command,
             reversible_via_posting_reversal: e.reversible_via_posting_reversal,
             compensating_event_type: e.compensating_event_type,
-            description: e.description
+            description: e.description,
+            lifecycle: e.lifecycle,
+            allowed_channels: e.allowed_channels,
+            financial_impact: e.financial_impact,
+            customer_visible: e.customer_visible,
+            statement_visible: e.statement_visible,
+            payload_schema: e.payload_schema,
+            support_search_keys: e.support_search_keys
           }
         end
       end

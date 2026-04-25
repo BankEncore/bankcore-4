@@ -11,6 +11,13 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 | **`event_type`** | `deposit.accepted` |
 | **Category** | Financial (ADR-0002 §5.1) |
 | **Phase** | Implemented; **`actor_id`** on teller JSON per [ADR-0015](../adr/0015-teller-workspace-authentication.md). **`teller_session_id`** required for teller-channel cash when [ADR-0014](../adr/0014-teller-sessions-and-control-events.md) gate is on. |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `teller`, `api`, `batch` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/deposit-accepted.md` |
+| **Support search keys** | `source_account_id`, `actor_id`, `teller_session_id` |
 
 ## Semantics
 

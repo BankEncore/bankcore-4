@@ -11,6 +11,13 @@ Records an **internal transfer** of funds between two deposit accounts (same ins
 | **`event_type`** | `transfer.completed` |
 | **Category** | Financial (ADR-0002 §5.1) |
 | **Phase** | Phase 1 (spec ahead of implementation). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `teller`, `api`, `batch` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/transfer-completed.md` |
+| **Support search keys** | `source_account_id`, `destination_account_id`, `actor_id` |
 
 ## Semantics
 

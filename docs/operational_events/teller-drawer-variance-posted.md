@@ -11,6 +11,13 @@ Records a **GL-only adjustment** for **non-zero teller drawer cash variance** wh
 | **`event_type`** | `teller.drawer.variance.posted` |
 | **Category** | financial |
 | **Phase** | Optional Phase 2 (product flag) |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `system` |
+| **Financial impact** | `optional_gl` |
+| **Customer visible** | No |
+| **Statement visible** | No |
+| **Payload schema** | `docs/operational_events/teller-drawer-variance-posted.md` |
+| **Support search keys** | `teller_session_id`, `reference_id` |
 
 ## Semantics
 

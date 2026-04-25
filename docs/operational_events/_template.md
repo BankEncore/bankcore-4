@@ -13,6 +13,13 @@
 | **`event_type`** | `…` |
 | **Category** | Financial \| Servicing \| Operational |
 | **Phase** | Draft \| Phase 1 \| … |
+| **Lifecycle** | `pending_to_posted` \| `posted_immediately` |
+| **Allowed channels** | `teller`, `branch`, `api`, `batch`, `system` as applicable |
+| **Financial impact** | `gl_posting` \| `optional_gl` \| `no_gl` |
+| **Customer visible** | Yes \| No |
+| **Statement visible** | Yes \| No |
+| **Payload schema** | `docs/operational_events/<this-file>.md` |
+| **Support search keys** | `source_account_id`, `reference_id`, `actor_id`, etc. |
 
 ## Semantics
 

@@ -11,6 +11,13 @@ Records that a **supervisor** (or role with equivalent authority) **approved** a
 | **`event_type`** | `override.approved` |
 | **Category** | Operational (ADR-0002 §5.3) |
 | **Phase** | Optional Phase 1 (supervisor gates for variance / reversal). |
+| **Lifecycle** | `posted_immediately` |
+| **Allowed channels** | `teller`, `branch`, `batch` |
+| **Financial impact** | `no_gl` |
+| **Customer visible** | No |
+| **Statement visible** | No |
+| **Payload schema** | `docs/operational_events/override-approved.md` |
+| **Support search keys** | `reference_id`, `actor_id` |
 
 ## Semantics
 

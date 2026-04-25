@@ -11,6 +11,13 @@ Records that an operator **requested** an exception to normal policy (e.g. large
 | **`event_type`** | `override.requested` |
 | **Category** | Operational (ADR-0002 §5.3) |
 | **Phase** | Optional Phase 1; use when you need a durable request row separate from RBAC logs. |
+| **Lifecycle** | `posted_immediately` |
+| **Allowed channels** | `teller`, `branch`, `batch` |
+| **Financial impact** | `no_gl` |
+| **Customer visible** | No |
+| **Statement visible** | No |
+| **Payload schema** | `docs/operational_events/override-requested.md` |
+| **Support search keys** | `reference_id`, `actor_id` |
 
 ## Semantics
 

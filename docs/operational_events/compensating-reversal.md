@@ -18,6 +18,13 @@ Implementation uses a **generic** `posting.reversal` plus `Core::OperationalEven
 | **`event_type`** | **`posting.reversal`** — generic compensating row; original id in **`reversal_of_event_id`**. |
 | **Category** | Financial (produces GL) |
 | **Phase** | Phase 1 (reversal path + linkage + two journals). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `teller`, `branch`, `api`, `batch` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/compensating-reversal.md` |
+| **Support search keys** | `source_account_id`, `destination_account_id`, `reversal_of_event_id`, `actor_id` |
 
 ## Semantics
 

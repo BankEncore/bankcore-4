@@ -11,6 +11,13 @@ Records that a previously **active** hold against a deposit account was **releas
 | **`event_type`** | `hold.released` |
 | **Category** | Servicing (ADR-0002 §5.2) |
 | **Phase** | Phase 1 (spec). |
+| **Lifecycle** | `posted_immediately` |
+| **Allowed channels** | `teller`, `branch`, `api`, `batch` |
+| **Financial impact** | `no_gl` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/hold-released.md` |
+| **Support search keys** | `source_account_id`, `reference_id`, `actor_id` |
 
 ## Semantics
 
