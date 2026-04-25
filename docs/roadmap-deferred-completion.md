@@ -28,7 +28,7 @@ These capabilities will make multiple deferred tracks easier to complete.
 
 ### 2.1 Product Resolver Depth
 
-Current state: `deposit_products` exists, and Phase 3 added fee, overdraft, and statement configuration tables. Full ADR-0005-style behavior profiles are still partial.
+Current state: Slice 1 uses a **string** `deposit_accounts.product_code` stub (`slice1_demand_deposit`) per [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md). A `Products` domain, `deposit_products` table, and ADR-0005 resolver contracts are **not** shipped yet in this repo snapshot.
 
 To complete:
 
@@ -46,7 +46,7 @@ Likely slices:
 
 ### 2.2 Reporting and Snapshot Strategy
 
-Current state: balances are compute-on-read from journals, with generated statements now snapshotting their rendered line items.
+Current state: Ledger balances are compute-on-read from journals. Customer-visible statements and statement snapshot artifacts are **not** shipped yet.
 
 To complete:
 
@@ -84,7 +84,7 @@ Likely slices:
 
 ### 3.1 Ownership and Account Parties
 
-Shipped narrow slice: two-party joint at account open.
+Shipped narrow slice: **single-party** ownership at account open — `Accounts::Commands::OpenAccount` creates exactly one `deposit_account_parties` row with `role=owner`, `status=active` (see [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) and [ADR-0007](adr/0007-party-account-ownership.md)).
 
 To complete:
 
@@ -103,7 +103,7 @@ Likely slices:
 
 ### 3.2 Full Product Configuration
 
-Shipped narrow slice: `deposit_products` FK and product-aware reads.
+Shipped narrow slice: `deposit_accounts.product_code` is a **literal stub** (`slice1_demand_deposit`) used by `OpenAccount`. There is no `deposit_products` FK yet.
 
 To complete:
 
@@ -121,9 +121,7 @@ Likely slices:
 
 ### 3.3 Event Catalog Depth
 
-Shipped narrow slice: code-first `EventCatalog`, event type discovery, and drift tests.
-
-Phase 3 already added interest and NSF event entries, but deeper catalog completion remains open.
+Shipped narrow slice: a single financial `event_type` (`deposit.accepted`) is recorded and posted end-to-end (see [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) and `test/integration/slice1_vertical_slice_proof_test.rb`). A formal code-first `EventCatalog`, discovery APIs, and drift tests are not shipped yet.
 
 To complete:
 
@@ -141,7 +139,7 @@ Likely slices:
 
 ### 3.4 Operational Event Observability
 
-Shipped narrow slice: bounded teller `GET /teller/operational_events`.
+Shipped narrow slice: Teller has **write** endpoints for parties, accounts, operational events, and posting. A bounded teller `GET /teller/operational_events` endpoint is **not** shipped yet.
 
 To complete:
 
@@ -159,7 +157,7 @@ Likely slices:
 
 ### 3.5 Business Date Close
 
-Shipped narrow slice: singleton close after readiness checks and open-day posting invariant.
+Shipped narrow slice: singleton **current business date** persistence plus set/advance commands (`Core::BusinessDate`). A formal “close day” command with readiness checks and close packages is **not** shipped yet.
 
 To complete:
 
@@ -177,7 +175,7 @@ Likely slices:
 
 ### 3.6 Drawer Variance and Cash Operations
 
-Shipped narrow slice: optional GL posting for teller drawer variance.
+Shipped narrow slice: no teller sessions, drawers, or cash variance model shipped yet (Slice 1 is deposit-only posting to 1110/2110).
 
 To complete:
 
@@ -199,7 +197,7 @@ Likely slices:
 
 ### 4.1 Interest Engine
 
-Shipped narrow slice: explicit `interest.accrued` and `interest.posted` events with minor-unit posting.
+Shipped narrow slice: no interest engine shipped yet; Slice 1 posts only `deposit.accepted`.
 
 To complete:
 
@@ -219,7 +217,7 @@ Likely slices:
 
 ### 4.2 Fee Engine
 
-Shipped narrow slice: monthly maintenance fee engine.
+Shipped narrow slice: no fee engine shipped yet.
 
 To complete:
 
@@ -238,7 +236,7 @@ Likely slices:
 
 ### 4.3 Holds Depth
 
-Shipped narrow slice: deposit-linked holds and reversal guard.
+Shipped narrow slice: no holds model shipped yet.
 
 To complete:
 
@@ -258,7 +256,7 @@ Likely slices:
 
 ### 4.4 Overdraft and NSF
 
-Shipped narrow slice: deny NSF with forced fee.
+Shipped narrow slice: no overdraft/NSF decisioning shipped yet.
 
 To complete:
 
@@ -278,7 +276,7 @@ Likely slices:
 
 ### 4.5 Customer-Visible History and Statements
 
-Shipped narrow slice: generated statement snapshots from GL 2110 and selected no-GL events.
+Shipped narrow slice: no customer-visible history or statement generation shipped yet.
 
 To complete:
 
@@ -300,7 +298,7 @@ Likely slices:
 
 ## 5. Phase 3.5 Internal UI Completion
 
-Phase 3.5 is internal UI enablement over shipped Phase 0-3 domain capabilities. It is separate from Phase 4 customer/partner channels because it uses staff operators, internal role gates, and Rails-rendered branch/ops/admin workspaces. See [ADR-0025](adr/0025-internal-workspace-ui.md).
+Phase 3.5 is internal UI enablement over **the then-shipped** Phase 0–3 domain capabilities. It is separate from Phase 4 customer/partner channels because it uses staff operators, internal role gates, and Rails-rendered branch/ops/admin workspaces. See [ADR-0025](adr/0025-internal-workspace-ui.md).
 
 To complete:
 
@@ -412,13 +410,13 @@ First slices should add measurable performance targets and drift detection befor
 
 ## 8. Suggested Sequencing
 
-Recommended order from current state:
+Recommended order from current state (Slice 1: single deposit, single owner, no Products/Holds/Sessions):
 
-1. Complete product resolver depth, because interest, fees, overdraft, statements, and GL mapping all depend on it.
-2. Add hold expiration and partial release, because it improves available-balance clarity without external integrations.
-3. Add interest engine accumulator and scheduled posting, because microcent precision is already an identified product need.
-4. Add statement/customer history HTTP reads, because generated statements now exist and can be exposed without new posting behavior.
-5. Add branch/cash-location foundations before multi-branch business date and multi-entity GL.
+1. Add posting rule abstraction + additional core money movement events (withdrawal / transfer) so the kernel is not single-event-shaped.
+2. Introduce teller session + cash control foundations (branch/drawer/location) before advanced cash variance behavior.
+3. Add reversals (new events + compensating journals) once there is more than one money movement path.
+4. Introduce Products resolver depth and migrate off `product_code` literals only after the contract is stable and tested.
+5. Add holds/available balance and statement/history reads once products and authorization policies exist.
 6. Add ACH only after event taxonomy, idempotency, settlement GL, and return handling are documented in an ADR.
 
 This order keeps financial invariants close to already-shipped code while delaying broad channel and regulatory scope until the internal product model is stronger.
