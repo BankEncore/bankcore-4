@@ -1,0 +1,45 @@
+<% content_for :title, "#{ops_engine_label(@engine)} Preview - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold"><%= ops_engine_label(@engine) %></h1>
+  <p class="mt-2 text-slate-600">Preview eligible work before executing this system engine.</p>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <%= form_with url: ops_new_engine_run_path(@engine), method: :get, class: "grid gap-4 md:grid-cols-4" do |form| %>
+    <div>
+      <%= form.label :business_date, "Business date", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :business_date, value: @business_date&.iso8601 || params[:business_date], placeholder: "YYYY-MM-DD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :deposit_product_id, "Product id", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :deposit_product_id, value: @deposit_product_id, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :account_ids, "Account ids", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :account_ids, value: params[:account_ids], placeholder: "1, 2, 3", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="flex items-end">
+      <%= form.submit "Preview", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <%= @error_message %>
+  </section>
+<% elsif @result.present? %>
+  <%= render "result_summary", result: @result, preview: true %>
+
+  <section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-xl font-semibold">Confirmation</h2>
+    <p class="mt-2 text-sm text-slate-600">Execute this run for <%= @business_date.iso8601 %>. The engine remains idempotent for previously processed rows.</p>
+    <%= form_with url: ops_engine_run_path(@engine), method: :post, class: "mt-4" do |form| %>
+      <%= form.hidden_field :business_date, value: @business_date.iso8601 %>
+      <%= form.hidden_field :deposit_product_id, value: @deposit_product_id %>
+      <%= form.hidden_field :account_ids, value: params[:account_ids] %>
+      <%= form.submit "Execute #{ops_engine_label(@engine)}", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <% end %>
+  </section>
+<% end %>

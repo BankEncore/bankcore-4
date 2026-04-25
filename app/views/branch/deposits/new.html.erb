@@ -1,0 +1,13 @@
+<% content_for :title, "Record Deposit - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Record deposit</h1>
+  <p class="mt-2 text-slate-600">Create a teller-channel deposit event, with optional immediate posting.</p>
+</section>
+
+<%= render "branch/shared/transaction_form",
+  path: branch_deposits_path,
+  scope: :deposit,
+  form_data: @deposit,
+  error_message: @error_message,
+  submit_label: "Record deposit" %>

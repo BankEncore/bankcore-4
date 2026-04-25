@@ -1,0 +1,18 @@
+<% content_for :title, "Engine Runs - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Engine runs</h1>
+  <p class="mt-2 text-slate-600">Preview and execute system-owned operational jobs.</p>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-2">
+  <%= link_to ops_new_engine_run_path("monthly_maintenance_fees"), class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Monthly maintenance fees</h2>
+    <p class="mt-2 text-sm text-slate-600">Assess product-configured monthly maintenance fees for eligible open accounts.</p>
+  <% end %>
+
+  <%= link_to ops_new_engine_run_path("deposit_statements"), class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Deposit statements</h2>
+    <p class="mt-2 text-sm text-slate-600">Generate due monthly deposit statement snapshots.</p>
+  <% end %>
+</section>

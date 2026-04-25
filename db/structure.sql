@@ -650,6 +650,45 @@ ALTER SEQUENCE public.operational_events_id_seq OWNED BY public.operational_even
 
 
 --
+-- Name: operator_credentials; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.operator_credentials (
+    id bigint NOT NULL,
+    operator_id bigint NOT NULL,
+    username character varying NOT NULL,
+    password_digest character varying NOT NULL,
+    password_changed_at timestamp(6) without time zone,
+    failed_login_attempts integer DEFAULT 0 NOT NULL,
+    locked_at timestamp(6) without time zone,
+    last_sign_in_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT operator_credentials_failed_attempts_nonnegative_check CHECK ((failed_login_attempts >= 0)),
+    CONSTRAINT operator_credentials_username_present_check CHECK ((btrim((username)::text) <> ''::text))
+);
+
+
+--
+-- Name: operator_credentials_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.operator_credentials_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: operator_credentials_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.operator_credentials_id_seq OWNED BY public.operator_credentials.id;
+
+
+--
 -- Name: operators; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -660,7 +699,7 @@ CREATE TABLE public.operators (
     active boolean DEFAULT true NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT operators_role_check CHECK (((role)::text = ANY ((ARRAY['teller'::character varying, 'supervisor'::character varying])::text[])))
+    CONSTRAINT operators_role_check CHECK (((role)::text = ANY ((ARRAY['teller'::character varying, 'supervisor'::character varying, 'operations'::character varying, 'admin'::character varying])::text[])))
 );
 
 
@@ -935,6 +974,13 @@ ALTER TABLE ONLY public.operational_events ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: operator_credentials id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_credentials ALTER COLUMN id SET DEFAULT nextval('public.operator_credentials_id_seq'::regclass);
+
+
+--
 -- Name: operators id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1087,6 +1133,14 @@ ALTER TABLE ONLY public.journal_lines
 
 ALTER TABLE ONLY public.operational_events
     ADD CONSTRAINT operational_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: operator_credentials operator_credentials_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_credentials
+    ADD CONSTRAINT operator_credentials_pkey PRIMARY KEY (id);
 
 
 --
@@ -1404,6 +1458,20 @@ CREATE UNIQUE INDEX index_operational_events_one_reversal_per_original ON public
 
 
 --
+-- Name: index_operator_credentials_on_lower_username; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_operator_credentials_on_lower_username ON public.operator_credentials USING btree (lower((username)::text));
+
+
+--
+-- Name: index_operator_credentials_on_operator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_operator_credentials_on_operator_id ON public.operator_credentials USING btree (operator_id);
+
+
+--
 -- Name: index_party_individual_profiles_on_party_record_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1539,6 +1607,14 @@ ALTER TABLE ONLY public.holds
 
 ALTER TABLE ONLY public.holds
     ADD CONSTRAINT fk_rails_4c0c5bf773 FOREIGN KEY (placed_by_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: operator_credentials fk_rails_580f3046fd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_credentials
+    ADD CONSTRAINT fk_rails_580f3046fd FOREIGN KEY (operator_id) REFERENCES public.operators(id);
 
 
 --
@@ -1684,6 +1760,8 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120013'),
+('20260424120012'),
 ('20260424120010'),
 ('20260424120009'),
 ('20260424120008'),

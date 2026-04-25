@@ -1,0 +1,101 @@
+<% content_for :title, "Ops Event Search - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Operational event search</h1>
+  <p class="mt-2 text-slate-600">Search event history across the current or historical business dates.</p>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <%= form_with url: ops_operational_events_path, method: :get, class: "grid gap-4 md:grid-cols-4" do |form| %>
+    <% {
+      business_date: "Business date",
+      business_date_from: "Date from",
+      business_date_to: "Date to",
+      status: "Status",
+      event_type: "Event type",
+      channel: "Channel",
+      source_account_id: "Source account id",
+      destination_account_id: "Destination account id",
+      actor_id: "Actor id",
+      deposit_product_id: "Product id",
+      product_code: "Product code",
+      limit: "Limit"
+    }.each do |field, label| %>
+      <div>
+        <%= form.label field, label, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field field, value: params[field], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+    <% end %>
+
+    <div class="flex items-end gap-3 md:col-span-4">
+      <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= link_to "Clear", ops_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    </div>
+  <% end %>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <%= @error_message %>
+  </section>
+<% elsif @event_search.present? %>
+  <% envelope = @event_search[:envelope] %>
+  <section class="mt-6 rounded border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm">
+    Showing <%= envelope[:business_date_from].iso8601 %> to <%= envelope[:business_date_to].iso8601 %>.
+    Current business date is <%= envelope[:current_business_on].iso8601 %>.
+    Posting day closed: <%= envelope[:posting_day_closed] ? "yes" : "no" %>.
+  </section>
+
+  <section class="mt-6 rounded border border-slate-200 bg-white shadow-sm">
+    <% if @event_search[:rows].any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <tr>
+              <th class="px-5 py-3">Event</th>
+              <th class="px-5 py-3">Status</th>
+              <th class="px-5 py-3">Business date</th>
+              <th class="px-5 py-3">Channel</th>
+              <th class="px-5 py-3 text-right">Amount</th>
+              <th class="px-5 py-3">Source</th>
+              <th class="px-5 py-3">Destination</th>
+              <th class="px-5 py-3">Actor/session</th>
+              <th class="px-5 py-3">Created</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <% @event_search[:rows].each do |event| %>
+              <tr>
+                <td class="px-5 py-4">
+                  <%= link_to "##{event.id}", ops_operational_event_path(event), class: "font-medium text-slate-950 underline" %>
+                  <div class="text-xs text-slate-500"><%= event.event_type %></div>
+                </td>
+                <td class="px-5 py-4"><%= ops_status_badge(event.status) %></td>
+                <td class="px-5 py-4"><%= event.business_date.iso8601 %></td>
+                <td class="px-5 py-4"><%= event.channel %></td>
+                <td class="px-5 py-4 text-right"><%= ops_event_amount(event) %></td>
+                <td class="px-5 py-4"><%= ops_account_label(event.source_account) %></td>
+                <td class="px-5 py-4"><%= ops_account_label(event.destination_account) %></td>
+                <td class="px-5 py-4">
+                  <div>Actor <%= event.actor_id || "none" %></div>
+                  <div class="text-xs text-slate-500">Session <%= event.teller_session_id || "none" %></div>
+                </td>
+                <td class="px-5 py-4"><%= ops_time(event.created_at) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No operational events matched these filters.</div>
+    <% end %>
+  </section>
+
+  <% if @event_search[:has_more] %>
+    <div class="mt-6">
+      <%= link_to "Next page",
+        ops_operational_events_path(request.query_parameters.except("after_id").merge(after_id: @event_search[:next_after_id])),
+        class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+<% end %>

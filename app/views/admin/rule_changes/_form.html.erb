@@ -1,0 +1,54 @@
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <%= form_with url: admin_preview_rule_change_path(rule_kind), method: :post, scope: :rule_change, class: "grid gap-4 md:grid-cols-3" do |form| %>
+    <div>
+      <%= form.label :deposit_product_id, "Product", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.select :deposit_product_id,
+        deposit_products.map { |product| [admin_product_label(product), product.id] },
+        { selected: rule_attrs[:deposit_product_id], include_blank: "Choose product" },
+        class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+
+    <% if rule_kind == "fee_rule" %>
+      <%= form.hidden_field :fee_code, value: Products::Models::DepositProductFeeRule::FEE_CODE_MONTHLY_MAINTENANCE %>
+      <div>
+        <%= form.label :amount_minor_units, "Amount minor units", class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :amount_minor_units, value: rule_attrs[:amount_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+    <% elsif rule_kind == "overdraft_policy" %>
+      <%= form.hidden_field :mode, value: Products::Models::DepositProductOverdraftPolicy::MODE_DENY_NSF %>
+      <div>
+        <%= form.label :nsf_fee_minor_units, "NSF fee minor units", class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :nsf_fee_minor_units, value: rule_attrs[:nsf_fee_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+    <% else %>
+      <%= form.hidden_field :frequency, value: Products::Models::DepositProductStatementProfile::FREQUENCY_MONTHLY %>
+      <div>
+        <%= form.label :cycle_day, "Cycle day", class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :cycle_day, value: rule_attrs[:cycle_day], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.label :currency, "Currency", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :currency, value: rule_attrs[:currency] || "USD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+
+    <%= form.hidden_field :status, value: Products::Models::DepositProductFeeRule::STATUS_ACTIVE %>
+
+    <div>
+      <%= form.label :effective_on, "Effective on", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :effective_on, value: rule_attrs[:effective_on], placeholder: "YYYY-MM-DD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :ended_on, "Ended on", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :ended_on, value: rule_attrs[:ended_on], placeholder: "Optional", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-3">
+      <%= form.label :description, "Description", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :description, value: rule_attrs[:description], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-3">
+      <%= form.submit submit_label, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>

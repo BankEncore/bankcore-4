@@ -37,4 +37,23 @@ class ActionDispatch::IntegrationTest
     supervisor = Workspace::Models::Operator.create!(role: "supervisor", display_name: "Test Supervisor", active: true)
     [ teller, supervisor ]
   end
+
+  def create_operator_with_credential!(role:, username:, password: "password123", active: true)
+    operator = Workspace::Models::Operator.create!(
+      role: role,
+      display_name: "Test #{role.titleize}",
+      active: active
+    )
+    operator.create_credential!(
+      username: username,
+      password: password,
+      password_changed_at: Time.current
+    )
+    operator
+  end
+
+  def internal_login!(username:, password: "password123")
+    post "/login", params: { username: username, password: password }
+    assert_redirected_to "/internal"
+  end
 end

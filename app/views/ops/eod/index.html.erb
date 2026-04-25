@@ -1,0 +1,70 @@
+<% content_for :title, "Ops EOD - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">EOD readiness</h1>
+    <p class="mt-2 text-slate-600">Read-only close readiness and activity trial balance.</p>
+  </div>
+
+  <%= form_with url: ops_eod_path, method: :get, class: "flex items-end gap-3" do |form| %>
+    <div>
+      <%= form.label :business_date, "Business date", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :business_date, value: @business_date&.iso8601 || params[:business_date], placeholder: "YYYY-MM-DD", class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <%= form.submit "Review", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <% end %>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <%= @error_message %>
+  </section>
+<% elsif @readiness.present? %>
+  <section class="mt-8 grid gap-4 md:grid-cols-3">
+    <%= render "readiness_card", label: "EOD ready", value: @readiness[:eod_ready] ? "Yes" : "No", state: @readiness[:eod_ready] %>
+    <%= render "readiness_card", label: "Journal totals balanced", value: @readiness[:journal_totals_balanced] ? "Yes" : "No", state: @readiness[:journal_totals_balanced] %>
+    <%= render "readiness_card", label: "Posting day closed", value: @readiness[:posting_day_closed] ? "Yes" : "No", state: !@readiness[:posting_day_closed] %>
+    <%= render "readiness_card", label: "Open/pending sessions", value: @readiness[:open_teller_sessions_count], state: @readiness[:all_sessions_closed] %>
+    <%= render "readiness_card", label: "Pending events", value: @readiness[:pending_operational_events_count], state: @readiness[:pending_operational_events_count].to_i.zero? %>
+    <%= render "readiness_card", label: "Trial balance rows", value: @readiness[:trial_balance_row_count], state: true %>
+  </section>
+
+  <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Activity trial balance</h2>
+      <p class="mt-1 text-sm text-slate-600">
+        Business date <%= @readiness[:business_date] %>; current open date <%= @readiness[:current_business_on] %>.
+      </p>
+    </div>
+
+    <% if @trial_balance_rows.any? %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <tr>
+              <th class="px-5 py-3">Account</th>
+              <th class="px-5 py-3">Type</th>
+              <th class="px-5 py-3 text-right">Debit</th>
+              <th class="px-5 py-3 text-right">Credit</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <% @trial_balance_rows.each do |row| %>
+              <tr>
+                <td class="px-5 py-4">
+                  <div class="font-medium text-slate-950"><%= row.account_number %></div>
+                  <div class="text-xs text-slate-500"><%= row.account_name %></div>
+                </td>
+                <td class="px-5 py-4"><%= row.account_type.humanize %></td>
+                <td class="px-5 py-4 text-right"><%= ops_money(row.debit_minor_units) %></td>
+                <td class="px-5 py-4 text-right"><%= ops_money(row.credit_minor_units) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No GL activity for this business date.</div>
+    <% end %>
+  </section>
+<% end %>

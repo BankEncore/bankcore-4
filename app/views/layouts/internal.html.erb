@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "BankCORE Internal" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-slate-100 text-slate-950">
+    <header class="border-b border-slate-200 bg-white">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div>
+          <%= link_to "BankCORE Internal", internal_path, class: "font-semibold text-slate-950" %>
+          <% if respond_to?(:current_business_date, true) && current_business_date %>
+            <span class="ml-3 text-sm text-slate-500">Business date <%= current_business_date.iso8601 %></span>
+          <% end %>
+        </div>
+
+        <% if respond_to?(:current_operator, true) && current_operator %>
+          <nav class="flex items-center gap-4 text-sm">
+            <%= link_to "Home", internal_path, class: "text-slate-700 hover:text-slate-950" %>
+            <% if branch_access? %>
+              <%= link_to "Branch", branch_path, class: "text-slate-700 hover:text-slate-950" %>
+            <% end %>
+            <% if ops_access? %>
+              <%= link_to "Ops", ops_path, class: "text-slate-700 hover:text-slate-950" %>
+            <% end %>
+            <% if admin_access? %>
+              <%= link_to "Admin", admin_path, class: "text-slate-700 hover:text-slate-950" %>
+            <% end %>
+            <span class="text-slate-500"><%= current_operator.display_name.presence || current_operator.role.titleize %></span>
+            <%= button_to "Sign out", logout_path, method: :delete, class: "rounded bg-slate-900 px-3 py-1.5 text-white" %>
+          </nav>
+        <% end %>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-6 py-8">
+      <% if notice.present? %>
+        <div class="mb-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"><%= notice %></div>
+      <% end %>
+      <% if alert.present? %>
+        <div class="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= alert %></div>
+      <% end %>
+
+      <%= yield %>
+    </main>
+  </body>
+</html>

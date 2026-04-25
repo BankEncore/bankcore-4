@@ -1,0 +1,44 @@
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Change summary</h2>
+    <p class="mt-1 text-sm text-slate-600"><%= admin_rule_kind_label(@rule_kind) %> <%= result.action.to_s.humanize.downcase %> preview.</p>
+  </div>
+
+  <div class="grid gap-4 p-5 md:grid-cols-3">
+    <div>
+      <div class="text-sm text-slate-500">Product</div>
+      <div class="mt-1 font-medium"><%= admin_product_label(result.rule.deposit_product) %></div>
+    </div>
+    <div>
+      <div class="text-sm text-slate-500">Type</div>
+      <div class="mt-1 font-medium"><%= admin_rule_type(result.rule) %></div>
+    </div>
+    <div>
+      <div class="text-sm text-slate-500"><%= admin_rule_kind_value_label(@rule_kind) %></div>
+      <div class="mt-1 font-medium"><%= admin_rule_value(result.rule) %></div>
+    </div>
+    <div>
+      <div class="text-sm text-slate-500">Effective</div>
+      <div class="mt-1 font-medium"><%= admin_date(result.rule.effective_on) %></div>
+    </div>
+    <div>
+      <div class="text-sm text-slate-500">Ended</div>
+      <div class="mt-1 font-medium"><%= admin_date(result.rule.ended_on) %></div>
+    </div>
+    <div>
+      <div class="text-sm text-slate-500">Description</div>
+      <div class="mt-1 font-medium"><%= result.rule.description.presence || "None" %></div>
+    </div>
+  </div>
+
+  <% if result.superseded_rules.any? %>
+    <div class="border-t border-slate-200 px-5 py-4">
+      <h3 class="font-semibold">Rows that will be superseded</h3>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+        <% result.superseded_rules.each do |row| %>
+          <li>#<%= row.id %>, effective <%= admin_date(row.effective_on) %>, current ended date <%= admin_date(row.ended_on) %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+</section>

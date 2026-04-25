@@ -1,0 +1,43 @@
+<% content_for :title, "Teller Variances - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Teller variances</h1>
+  <p class="mt-2 text-slate-600">Pending supervisor teller-session variance approvals.</p>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <% if @sessions.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Session</th>
+            <th class="px-5 py-3">Drawer</th>
+            <th class="px-5 py-3">Opened</th>
+            <th class="px-5 py-3 text-right">Expected</th>
+            <th class="px-5 py-3 text-right">Actual</th>
+            <th class="px-5 py-3 text-right">Variance</th>
+            <th class="px-5 py-3">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @sessions.each do |session| %>
+            <tr>
+              <td class="px-5 py-4 font-medium text-slate-950">#<%= session.id %></td>
+              <td class="px-5 py-4"><%= session.drawer_code %></td>
+              <td class="px-5 py-4"><%= ops_time(session.opened_at) %></td>
+              <td class="px-5 py-4 text-right"><%= ops_money(session.expected_cash_minor_units) %></td>
+              <td class="px-5 py-4 text-right"><%= ops_money(session.actual_cash_minor_units) %></td>
+              <td class="px-5 py-4 text-right"><%= ops_money(session.variance_minor_units, signed: true) %></td>
+              <td class="px-5 py-4">
+                <%= button_to "Approve", approve_ops_teller_variance_path(session), method: :post, class: "rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No teller variances are pending approval.</div>
+  <% end %>
+</section>

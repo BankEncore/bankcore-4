@@ -13,7 +13,7 @@ module Deposits
         end
       end
 
-      def self.call(business_date: nil, deposit_product_id: nil, account_ids: nil)
+      def self.call(business_date: nil, deposit_product_id: nil, account_ids: nil, preview: false)
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
         profiles = Products::Queries::ActiveStatementProfiles.monthly(
           business_date: on_date,
@@ -23,7 +23,11 @@ module Deposits
         outcomes = []
         profiles.find_each do |profile|
           eligible_accounts(profile, account_ids).find_each do |account|
-            account_outcomes = generate_for_account(profile: profile, account: account, business_date: on_date)
+            account_outcomes = if preview
+              preview_for_account(profile: profile, account: account, business_date: on_date)
+            else
+              generate_for_account(profile: profile, account: account, business_date: on_date)
+            end
             outcomes.concat(account_outcomes)
           end
         end
@@ -67,6 +71,39 @@ module Deposits
         end
       end
       private_class_method :generate_for_account
+
+      def self.preview_for_account(profile:, account:, business_date:)
+        last_statement = Models::DepositStatement
+          .where(deposit_account_id: account.id, deposit_product_statement_profile_id: profile.id)
+          .order(period_end_on: :desc, id: :desc)
+          .first
+        last_complete = Services::StatementCycleService.last_completed_period(
+          generated_on: business_date,
+          cycle_day: profile.cycle_day
+        )
+        if last_statement && last_complete && last_statement.period_end_on >= last_complete.period_end_on
+          return [ outcome_row(profile: profile, account: account, statement: last_statement, outcome: OUTCOME_ALREADY_GENERATED) ]
+        end
+
+        periods = Services::StatementCycleService.due_periods(
+          profile: profile,
+          account: account,
+          generated_on: business_date,
+          last_statement: last_statement
+        )
+        return [ outcome_row(profile: profile, account: account, outcome: OUTCOME_NOT_DUE) ] if periods.empty?
+
+        periods.map do |period|
+          outcome_row(
+            profile: profile,
+            account: account,
+            outcome: OUTCOME_GENERATED,
+            period_start_on: period.period_start_on,
+            period_end_on: period.period_end_on
+          )
+        end
+      end
+      private_class_method :preview_for_account
 
       def self.generate_period(profile:, account:, period:, business_date:)
         existing = Models::DepositStatement.find_by(
@@ -113,14 +150,14 @@ module Deposits
         "deposit-statement:#{account.id}:#{period.period_start_on.iso8601}:#{period.period_end_on.iso8601}"
       end
 
-      def self.outcome_row(profile:, account:, outcome:, statement: nil)
+      def self.outcome_row(profile:, account:, outcome:, statement: nil, period_start_on: nil, period_end_on: nil)
         {
           outcome: outcome,
           deposit_account_id: account.id,
           deposit_product_statement_profile_id: profile.id,
           deposit_statement_id: statement&.id,
-          period_start_on: statement&.period_start_on,
-          period_end_on: statement&.period_end_on
+          period_start_on: period_start_on || statement&.period_start_on,
+          period_end_on: period_end_on || statement&.period_end_on
         }.compact
       end
       private_class_method :outcome_row

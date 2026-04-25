@@ -1,0 +1,45 @@
+<% content_for :title, "Deposit Products - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Deposit products</h1>
+    <p class="mt-2 text-slate-600">Read-only product catalog and configuration summary.</p>
+  </div>
+  <%= link_to "Admin dashboard", admin_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <% if @deposit_products.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Product</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3">Currency</th>
+            <th class="px-5 py-3 text-right">Fee rules</th>
+            <th class="px-5 py-3 text-right">OD policies</th>
+            <th class="px-5 py-3 text-right">Statement profiles</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @deposit_products.each do |product| %>
+            <tr>
+              <td class="px-5 py-4">
+                <%= link_to product.product_code, admin_deposit_product_path(product), class: "font-medium text-slate-950 underline" %>
+                <div class="text-xs text-slate-500"><%= product.name %></div>
+              </td>
+              <td class="px-5 py-4"><%= admin_status_badge(product.status) %></td>
+              <td class="px-5 py-4"><%= product.currency %></td>
+              <td class="px-5 py-4 text-right"><%= product.fee_rules_count %></td>
+              <td class="px-5 py-4 text-right"><%= product.overdraft_policies_count %></td>
+              <td class="px-5 py-4 text-right"><%= product.statement_profiles_count %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No deposit products configured.</div>
+  <% end %>
+</section>

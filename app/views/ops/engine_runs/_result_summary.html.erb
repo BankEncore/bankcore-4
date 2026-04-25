@@ -1,0 +1,53 @@
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold"><%= preview ? "Preview summary" : "Execution summary" %></h2>
+    <p class="mt-1 text-sm text-slate-600">Business date <%= result.business_date.iso8601 %>.</p>
+  </div>
+
+  <div class="grid gap-4 p-5 md:grid-cols-3">
+    <% ops_result_counts(result).each do |outcome, count| %>
+      <div class="rounded border border-slate-200 p-4">
+        <div class="text-sm text-slate-500"><%= outcome.to_s.humanize %></div>
+        <div class="mt-1 text-2xl font-semibold"><%= count %></div>
+      </div>
+    <% end %>
+    <% if result.outcomes.empty? %>
+      <div class="text-sm text-slate-600">No eligible rows matched this run.</div>
+    <% end %>
+  </div>
+
+  <% if result.outcomes.any? %>
+    <div class="overflow-x-auto border-t border-slate-200">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Outcome</th>
+            <th class="px-5 py-3">Account</th>
+            <th class="px-5 py-3">Rule/Profile</th>
+            <th class="px-5 py-3">Result id</th>
+            <th class="px-5 py-3">Period</th>
+            <th class="px-5 py-3">Message</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% result.outcomes.first(50).each do |row| %>
+            <tr>
+              <td class="px-5 py-4"><%= ops_status_badge(row.fetch(:outcome)) %></td>
+              <td class="px-5 py-4">#<%= row[:deposit_account_id] %></td>
+              <td class="px-5 py-4"><%= row[:deposit_product_fee_rule_id] || row[:deposit_product_statement_profile_id] || "None" %></td>
+              <td class="px-5 py-4"><%= row[:operational_event_id] || row[:deposit_statement_id] || "Pending" %></td>
+              <td class="px-5 py-4">
+                <% if row[:period_start_on] && row[:period_end_on] %>
+                  <%= row[:period_start_on] %> to <%= row[:period_end_on] %>
+                <% else %>
+                  None
+                <% end %>
+              </td>
+              <td class="px-5 py-4"><%= row[:message].presence || "None" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</section>

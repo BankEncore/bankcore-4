@@ -1,0 +1,16 @@
+<% content_for :title, "Deposit Product Fee Rules - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Fee rules</h1>
+    <p class="mt-2 text-slate-600">Monthly maintenance fee configuration for deposit products.</p>
+  </div>
+  <%= link_to "New fee rule", admin_new_rule_change_path("fee_rule", deposit_product_id: @deposit_product_id), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+</section>
+
+<%= render "admin/shared/rule_filters", path: admin_deposit_product_fee_rules_path, as_of: @as_of %>
+<%= render "admin/shared/rule_index_table",
+  rows: @fee_rules,
+  value_label: "Amount",
+  rule_kind: "fee_rule",
+  empty_message: "No fee rules matched these filters." %>

@@ -1,0 +1,16 @@
+<% content_for :title, "Deposit Product Statement Profiles - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Statement profiles</h1>
+    <p class="mt-2 text-slate-600">Statement cycle profile configuration for deposit products.</p>
+  </div>
+  <%= link_to "New statement profile", admin_new_rule_change_path("statement_profile", deposit_product_id: @deposit_product_id), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+</section>
+
+<%= render "admin/shared/rule_filters", path: admin_deposit_product_statement_profiles_path, as_of: @as_of %>
+<%= render "admin/shared/rule_index_table",
+  rows: @statement_profiles,
+  value_label: "Cycle",
+  rule_kind: "statement_profile",
+  empty_message: "No statement profiles matched these filters." %>
