@@ -1,0 +1,23 @@
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-semibold"><%= title %></h2>
+
+  <% if event.present? %>
+    <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+      <div><dt class="font-medium text-slate-500">Operational event</dt><dd>#<%= event.id %></dd></div>
+      <div><dt class="font-medium text-slate-500">Event type</dt><dd><%= event.event_type %></dd></div>
+      <div><dt class="font-medium text-slate-500">Status</dt><dd><%= event.status %></dd></div>
+      <div><dt class="font-medium text-slate-500">Record outcome</dt><dd><%= outcome %></dd></div>
+      <div><dt class="font-medium text-slate-500">Account</dt><dd>#<%= event.source_account_id %></dd></div>
+      <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(event.amount_minor_units) %> <%= event.currency %></dd></div>
+      <% if post_result.present? %>
+        <div><dt class="font-medium text-slate-500">Post outcome</dt><dd><%= post_result[:outcome] %></dd></div>
+      <% end %>
+    </dl>
+
+    <% if event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
+      <div class="mt-6">
+        <%= button_to "Post event", branch_operational_event_post_path(event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

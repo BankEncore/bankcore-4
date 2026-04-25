@@ -5,6 +5,13 @@ Rails.application.routes.draw do
 
   get "internal", to: "internal/dashboard#index", as: :internal
   get "branch", to: "branch/dashboard#index", as: :branch
+  scope path: "branch", module: :branch, as: :branch do
+    resources :parties, only: [ :new, :create ]
+    resources :deposit_accounts, only: [ :new, :create ]
+    resources :deposits, only: [ :new, :create ]
+    resources :withdrawals, only: [ :new, :create ]
+    post "operational_events/:id/post", to: "operational_event_posts#create", as: :operational_event_post
+  end
   get "ops", to: "ops/dashboard#index", as: :ops
   scope path: "ops", module: :ops, as: :ops do
     get "eod", to: "eod#index", as: :eod

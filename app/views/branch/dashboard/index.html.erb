@@ -8,9 +8,12 @@
     </p>
   </div>
 
-  <div class="rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
-    Open and close session actions are planned for the next branch UI slice.
-  </div>
+  <nav class="flex flex-wrap gap-2 text-sm">
+    <%= link_to "Create party", new_branch_party_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <%= link_to "Open account", new_branch_deposit_account_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <%= link_to "Record withdrawal", new_branch_withdrawal_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+  </nav>
 </section>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">
