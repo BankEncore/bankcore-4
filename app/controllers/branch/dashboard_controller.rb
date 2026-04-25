@@ -2,6 +2,8 @@
 
 module Branch
   class DashboardController < ApplicationController
-    def index; end
+    def index
+      @session_dashboard = Teller::Queries::BranchSessionDashboard.call
+    end
   end
 end

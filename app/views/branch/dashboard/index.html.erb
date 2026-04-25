@@ -1,8 +1,52 @@
 <% content_for :title, "Branch Workspace - BankCORE" %>
 
-<section class="rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <h1 class="text-3xl font-semibold">Branch workspace</h1>
-  <p class="mt-2 text-slate-600">
-    Teller session and transaction screens will build on this authenticated branch shell.
-  </p>
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Branch session dashboard</h1>
+    <p class="mt-2 text-slate-600">
+      Read-only view of active drawer sessions, supervisor exceptions, and recent closes.
+    </p>
+  </div>
+
+  <div class="rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+    Open and close session actions are planned for the next branch UI slice.
+  </div>
 </section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Open sessions</p>
+    <p class="mt-2 text-3xl font-semibold"><%= @session_dashboard.open_sessions.size %></p>
+  </div>
+
+  <div class="rounded border border-amber-200 bg-amber-50 p-5 shadow-sm">
+    <p class="text-sm font-medium text-amber-800">Pending supervisor</p>
+    <p class="mt-2 text-3xl font-semibold text-amber-950"><%= @session_dashboard.pending_supervisor_sessions.size %></p>
+  </div>
+
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Recent closed</p>
+    <p class="mt-2 text-3xl font-semibold"><%= @session_dashboard.recent_closed_sessions.size %></p>
+  </div>
+</section>
+
+<%= render "session_group",
+  title: "Open sessions",
+  description: "Drawer sessions currently available for teller cash activity.",
+  sessions: @session_dashboard.open_sessions,
+  empty_message: "No open teller sessions.",
+  show_close_fields: false %>
+
+<%= render "session_group",
+  title: "Pending supervisor sessions",
+  description: "Closed attempts with variance above the configured threshold.",
+  sessions: @session_dashboard.pending_supervisor_sessions,
+  empty_message: "No sessions are waiting for supervisor variance approval.",
+  show_close_fields: true %>
+
+<%= render "session_group",
+  title: "Recent closed sessions",
+  description: "Most recently closed drawer sessions.",
+  sessions: @session_dashboard.recent_closed_sessions,
+  empty_message: "No closed teller sessions yet.",
+  show_close_fields: true %>
