@@ -1,0 +1,39 @@
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold"><%= title %></h2>
+    <%= link_to "View index", index_path, class: "text-sm font-medium text-slate-700 underline" %>
+  </div>
+
+  <% if rows.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Type</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3 text-right">Amount</th>
+            <th class="px-5 py-3">Currency</th>
+            <th class="px-5 py-3">Effective</th>
+            <th class="px-5 py-3">Ended</th>
+            <th class="px-5 py-3">Description</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% rows.each do |row| %>
+            <tr>
+              <td class="px-5 py-4"><%= admin_rule_type(row) %></td>
+              <td class="px-5 py-4"><%= admin_status_badge(row.status) %></td>
+              <td class="px-5 py-4 text-right"><%= admin_rule_value(row) %></td>
+              <td class="px-5 py-4"><%= row.currency %></td>
+              <td class="px-5 py-4"><%= admin_date(row.effective_on) %></td>
+              <td class="px-5 py-4"><%= admin_date(row.ended_on) %></td>
+              <td class="px-5 py-4"><%= row.description.presence || "None" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600"><%= empty_message %></div>
+  <% end %>
+</section>

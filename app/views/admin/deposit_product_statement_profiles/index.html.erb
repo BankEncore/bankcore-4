@@ -1,0 +1,12 @@
+<% content_for :title, "Deposit Product Statement Profiles - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Statement profiles</h1>
+  <p class="mt-2 text-slate-600">Statement cycle profile configuration for deposit products.</p>
+</section>
+
+<%= render "admin/shared/rule_filters", path: admin_deposit_product_statement_profiles_path, as_of: @as_of %>
+<%= render "admin/shared/rule_index_table",
+  rows: @statement_profiles,
+  value_label: "Cycle",
+  empty_message: "No statement profiles matched these filters." %>

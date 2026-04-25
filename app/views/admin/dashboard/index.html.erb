@@ -1,8 +1,30 @@
 <% content_for :title, "Admin Workspace - BankCORE" %>
 
-<section class="rounded border border-slate-200 bg-white p-6 shadow-sm">
+<section>
   <h1 class="text-3xl font-semibold">Admin workspace</h1>
   <p class="mt-2 text-slate-600">
-    Product and internal configuration screens will build on this authenticated admin shell.
+    Review deposit products and active product configuration.
   </p>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-2">
+  <%= link_to admin_deposit_products_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Deposit products</h2>
+    <p class="mt-2 text-sm text-slate-600">Browse products and related fee, overdraft, and statement configuration.</p>
+  <% end %>
+
+  <%= link_to admin_deposit_product_fee_rules_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Fee rules</h2>
+    <p class="mt-2 text-sm text-slate-600">Review monthly maintenance fee rules and active-as-of results.</p>
+  <% end %>
+
+  <%= link_to admin_deposit_product_overdraft_policies_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Overdraft policies</h2>
+    <p class="mt-2 text-sm text-slate-600">Review deny-NSF policy configuration by product and date.</p>
+  <% end %>
+
+  <%= link_to admin_deposit_product_statement_profiles_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Statement profiles</h2>
+    <p class="mt-2 text-sm text-slate-600">Review statement cycle profile configuration and active-as-of results.</p>
+  <% end %>
 </section>

@@ -1,0 +1,12 @@
+<% content_for :title, "Deposit Product Fee Rules - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Fee rules</h1>
+  <p class="mt-2 text-slate-600">Monthly maintenance fee configuration for deposit products.</p>
+</section>
+
+<%= render "admin/shared/rule_filters", path: admin_deposit_product_fee_rules_path, as_of: @as_of %>
+<%= render "admin/shared/rule_index_table",
+  rows: @fee_rules,
+  value_label: "Amount",
+  empty_message: "No fee rules matched these filters." %>

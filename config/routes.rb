@@ -11,6 +11,12 @@ Rails.application.routes.draw do
     resources :operational_events, only: [ :index, :show ]
   end
   get "admin", to: "admin/dashboard#index", as: :admin
+  scope path: "admin", module: :admin, as: :admin do
+    resources :deposit_products, only: [ :index, :show ]
+    resources :deposit_product_fee_rules, only: [ :index ]
+    resources :deposit_product_overdraft_policies, only: [ :index ]
+    resources :deposit_product_statement_profiles, only: [ :index ]
+  end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

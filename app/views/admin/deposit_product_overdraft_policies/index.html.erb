@@ -1,0 +1,12 @@
+<% content_for :title, "Deposit Product Overdraft Policies - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Overdraft policies</h1>
+  <p class="mt-2 text-slate-600">Deny-NSF policy configuration for deposit products.</p>
+</section>
+
+<%= render "admin/shared/rule_filters", path: admin_deposit_product_overdraft_policies_path, as_of: @as_of %>
+<%= render "admin/shared/rule_index_table",
+  rows: @overdraft_policies,
+  value_label: "NSF fee",
+  empty_message: "No overdraft policies matched these filters." %>
