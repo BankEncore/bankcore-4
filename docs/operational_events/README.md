@@ -51,6 +51,7 @@ Catalog metadata fields:
 | Spec | `event_type` | GL posting | Record command | Lifecycle | Channels | Customer visible | Statement visible |
 | ---- | ------------ | ---------- | -------------- | --------- | -------- | ---------------- | ----------------- |
 | [deposit-accepted.md](deposit-accepted.md) | `deposit.accepted` | Yes | `RecordEvent` | `pending_to_posted` | `teller`, `api`, `batch` | Yes | Yes |
+| [ach-credit-received.md](ach-credit-received.md) | `ach.credit.received` | Yes | `Integration::Ach::Commands::IngestReceiptFile` | `pending_to_posted` | `batch` | Yes | Yes |
 | [withdrawal-posted.md](withdrawal-posted.md) | `withdrawal.posted` | Yes | `RecordEvent` | `pending_to_posted` | `teller`, `api`, `batch` | Yes | Yes |
 | [transfer-completed.md](transfer-completed.md) | `transfer.completed` | Yes | `RecordEvent` | `pending_to_posted` | `teller`, `api`, `batch` | Yes | Yes |
 | [compensating-reversal.md](compensating-reversal.md) | `posting.reversal` | Yes | `RecordReversal` | `pending_to_posted` | `teller`, `branch`, `api`, `batch` | Yes | Yes |
