@@ -4,6 +4,8 @@
       <tr>
         <th class="px-5 py-3">Hold</th>
         <th class="px-5 py-3">Status</th>
+        <th class="px-5 py-3">Reason</th>
+        <th class="px-5 py-3">Expiration</th>
         <th class="px-5 py-3 text-right">Amount</th>
         <th class="px-5 py-3">Events</th>
         <th class="px-5 py-3">Actions</th>
@@ -17,10 +19,20 @@
             <div class="text-xs text-slate-500">Created <%= branch_date(hold.created_at) %></div>
           </td>
           <td class="px-5 py-4"><%= hold.status %></td>
+          <td class="px-5 py-4">
+            <div class="font-medium text-slate-800"><%= hold.reason_code.humanize %></div>
+            <div class="text-xs text-slate-500"><%= hold.customer_explanation %></div>
+            <% if hold.reason_description.present? %>
+              <div class="mt-1 text-xs text-slate-500">Staff note: <%= hold.reason_description %></div>
+            <% end %>
+            <div class="mt-1 text-xs text-slate-500">Type: <%= hold.hold_type.humanize %></div>
+          </td>
+          <td class="px-5 py-4"><%= branch_date(hold.expires_on) %></td>
           <td class="px-5 py-4 text-right"><%= branch_money(hold.amount_minor_units) %> <%= hold.currency %></td>
           <td class="px-5 py-4 text-xs text-slate-600">
             <div>Placed: <%= hold.placed_by_operational_event_id || "None" %></div>
             <div>Released: <%= hold.released_by_operational_event_id || "None" %></div>
+            <div>Expired: <%= hold.expired_by_operational_event_id || "None" %></div>
             <div>For deposit: <%= hold.placed_for_operational_event_id || "None" %></div>
           </td>
           <td class="px-5 py-4">

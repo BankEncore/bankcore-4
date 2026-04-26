@@ -7,6 +7,7 @@ module Branch
     def show
       @profile = Accounts::Queries::DepositAccountProfile.call(deposit_account_id: params[:id])
       @account = @profile.account
+      @account_relationships = Accounts::Queries::DepositAccountPartyTimeline.call(deposit_account_id: @account.id)
       @holds = Accounts::Queries::ListHoldsForAccount.call(deposit_account_id: @account.id, limit: 10)
       @statements = Deposits::Queries::ListDepositStatements.call(deposit_account_id: @account.id, limit: 5)
       @activity = Deposits::Queries::StatementActivity.call(

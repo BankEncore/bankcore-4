@@ -22,7 +22,8 @@
   </div>
   <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-medium text-slate-500">Linked accounts</p>
-    <p class="mt-2 text-2xl font-semibold"><%= @account_relationships.size %></p>
+    <p class="mt-2 text-2xl font-semibold"><%= @account_relationships.current_rows.size %></p>
+    <p class="mt-1 text-xs text-slate-500"><%= pluralize(@account_relationships.historical_rows.size, "historical relationship") %></p>
   </div>
 </section>
 
@@ -42,40 +43,23 @@
 
 <section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
   <div class="border-b border-slate-200 px-5 py-4">
-    <h2 class="text-xl font-semibold">Linked deposit accounts</h2>
+    <h2 class="text-xl font-semibold">Current deposit account relationships</h2>
+    <p class="mt-1 text-sm text-slate-500">As of <%= branch_date(@account_relationships.as_of) %></p>
   </div>
-  <% if @account_relationships.any? %>
-    <table class="min-w-full divide-y divide-slate-200 text-sm">
-      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-        <tr>
-          <th class="px-5 py-3">Account</th>
-          <th class="px-5 py-3">Product</th>
-          <th class="px-5 py-3">Relationship</th>
-          <th class="px-5 py-3">Effective</th>
-          <th class="px-5 py-3">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        <% @account_relationships.each do |row| %>
-          <tr>
-            <td class="px-5 py-4">
-              <div class="font-medium text-slate-950"><%= row.account.account_number %></div>
-              <div class="text-xs text-slate-500"><%= row.account.status %> · <%= row.account.currency %></div>
-            </td>
-            <td class="px-5 py-4">
-              <div><%= row.product.product_code %></div>
-              <div class="text-xs text-slate-500"><%= row.product.name %></div>
-            </td>
-            <td class="px-5 py-4"><%= row.relationship.role %> · <%= row.relationship.status %></td>
-            <td class="px-5 py-4"><%= branch_date(row.relationship.effective_on) %></td>
-            <td class="px-5 py-4">
-              <%= link_to "Service account", branch_servicing_deposit_account_path(row.account), class: "rounded bg-slate-900 px-3 py-1.5 font-medium text-white" %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  <% else %>
-    <div class="p-6 text-sm text-slate-600">No linked deposit accounts.</div>
-  <% end %>
+  <%= render "branch/shared/account_relationship_table",
+    rows: @account_relationships.current_rows,
+    show_account: true,
+    show_actions: true,
+    empty_message: "No current deposit account relationships." %>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Historical deposit account relationships</h2>
+  </div>
+  <%= render "branch/shared/account_relationship_table",
+    rows: @account_relationships.historical_rows,
+    show_account: true,
+    show_actions: true,
+    empty_message: "No historical deposit account relationships." %>
 </section>

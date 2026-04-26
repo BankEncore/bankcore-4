@@ -28,6 +28,53 @@ class AccountsPlaceHoldDepositLinkTest < ActiveSupport::TestCase
     )
     assert_equal :created, r[:outcome]
     assert_equal dep.id, r[:hold].placed_for_operational_event_id
+    assert_equal Accounts::Models::Hold::HOLD_TYPE_DEPOSIT, r[:hold].hold_type
+    assert_equal Accounts::Models::Hold::REASON_DEPOSIT_AVAILABILITY, r[:hold].reason_code
+  end
+
+  test "places servicing hold with reason type expiration metadata" do
+    r = Accounts::Commands::PlaceHold.call(
+      deposit_account_id: @account_a.id,
+      amount_minor_units: 4_000,
+      currency: "USD",
+      channel: "branch",
+      idempotency_key: "hold-meta-#{SecureRandom.hex(4)}",
+      hold_type: Accounts::Models::Hold::HOLD_TYPE_LEGAL,
+      reason_code: Accounts::Models::Hold::REASON_LEGAL_ORDER,
+      reason_description: "Court order 123",
+      expires_on: Date.new(2026, 4, 30)
+    )
+
+    assert_equal :created, r[:outcome]
+    assert_equal Accounts::Models::Hold::HOLD_TYPE_LEGAL, r[:hold].hold_type
+    assert_equal Accounts::Models::Hold::REASON_LEGAL_ORDER, r[:hold].reason_code
+    assert_equal "Court order 123", r[:hold].reason_description
+    assert_equal Date.new(2026, 4, 30), r[:hold].expires_on
+    assert_equal "Funds are restricted due to a legal order.", r[:hold].customer_explanation
+  end
+
+  test "rejects invalid hold metadata and past expiration" do
+    assert_raises(Accounts::Commands::PlaceHold::InvalidRequest) do
+      Accounts::Commands::PlaceHold.call(
+        deposit_account_id: @account_a.id,
+        amount_minor_units: 4_000,
+        currency: "USD",
+        channel: "branch",
+        idempotency_key: "hold-bad-type-#{SecureRandom.hex(4)}",
+        hold_type: "bad_type"
+      )
+    end
+
+    assert_raises(Accounts::Commands::PlaceHold::InvalidRequest) do
+      Accounts::Commands::PlaceHold.call(
+        deposit_account_id: @account_a.id,
+        amount_minor_units: 4_000,
+        currency: "USD",
+        channel: "branch",
+        idempotency_key: "hold-past-exp-#{SecureRandom.hex(4)}",
+        expires_on: Date.new(2026, 4, 21)
+      )
+    end
   end
 
   test "allows multiple holds on same deposit when combined amount does not exceed deposit" do

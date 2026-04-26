@@ -15,5 +15,13 @@ module Branch
     def branch_date(value)
       value&.to_date&.iso8601 || "Not recorded"
     end
+
+    def branch_hold_type_options
+      Accounts::Models::Hold::HOLD_TYPES.map { |value| [ value.humanize, value ] }
+    end
+
+    def branch_hold_reason_options
+      Accounts::Models::Hold::REASON_CODES.map { |value| [ value.humanize, value ] }
+    end
   end
 end

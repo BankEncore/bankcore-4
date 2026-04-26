@@ -17,6 +17,10 @@
     <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
     <div><dt class="font-medium text-slate-500">Account</dt><dd>#<%= @event.source_account_id %></dd></div>
     <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></dd></div>
+    <div><dt class="font-medium text-slate-500">Hold type</dt><dd><%= @hold_record.hold_type.humanize %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reason</dt><dd><%= @hold_record.reason_code.humanize %></dd></div>
+    <div><dt class="font-medium text-slate-500">Customer explanation</dt><dd><%= @hold_record.customer_explanation %></dd></div>
+    <div><dt class="font-medium text-slate-500">Expires on</dt><dd><%= branch_date(@hold_record.expires_on) %></dd></div>
   </dl>
   <div class="mt-6 flex flex-wrap gap-3">
     <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>

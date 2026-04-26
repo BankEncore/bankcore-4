@@ -8,13 +8,17 @@ module Accounts
 
       # Creates an active hold and a posted `hold.placed` operational event (no GL posting).
       def self.call(deposit_account_id:, amount_minor_units:, currency:, channel:, idempotency_key:, business_date: nil,
-                    placed_for_operational_event_id: nil, actor_id: nil)
+                    placed_for_operational_event_id: nil, actor_id: nil, hold_type: nil, reason_code: nil,
+                    reason_description: nil, expires_on: nil)
         ch = channel.to_s
         unless Core::OperationalEvents::Commands::RecordEvent::CHANNELS.include?(ch)
           raise InvalidRequest, "channel must be one of: #{Core::OperationalEvents::Commands::RecordEvent::CHANNELS.join(", ")}"
         end
 
         placed_for_id = normalize_placed_for_operational_event_id(placed_for_operational_event_id)
+        normalized_hold_type = normalize_hold_type(hold_type, placed_for_id)
+        normalized_reason_code = normalize_reason_code(reason_code, normalized_hold_type)
+        normalized_expires_on = normalize_expires_on(expires_on)
 
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
         begin
@@ -24,12 +28,24 @@ module Accounts
         end
         validate_account!(deposit_account_id)
         validate_amount!(amount_minor_units, currency)
+        validate_metadata!(normalized_hold_type, normalized_reason_code)
+        validate_expiration!(normalized_expires_on, on_date)
 
         begin
           Core::OperationalEvents::Models::OperationalEvent.transaction(requires_new: true) do
             existing = Core::OperationalEvents::Models::OperationalEvent.lock.find_by(channel: ch, idempotency_key: idempotency_key)
             if existing
-              validate_hold_placed_replay!(existing, deposit_account_id, amount_minor_units, currency, placed_for_id)
+              validate_hold_placed_replay!(
+                existing,
+                deposit_account_id,
+                amount_minor_units,
+                currency,
+                placed_for_id,
+                normalized_hold_type,
+                normalized_reason_code,
+                reason_description,
+                normalized_expires_on
+              )
               return { outcome: :replay, event: existing, hold: find_hold_for_event(existing) }
             end
 
@@ -56,14 +72,28 @@ module Accounts
               currency: currency,
               status: Accounts::Models::Hold::STATUS_ACTIVE,
               placed_by_operational_event: event,
-              placed_for_operational_event_id: placed_for_id
+              placed_for_operational_event_id: placed_for_id,
+              hold_type: normalized_hold_type,
+              reason_code: normalized_reason_code,
+              reason_description: reason_description.presence,
+              expires_on: normalized_expires_on
             )
 
             { outcome: :created, event: event, hold: hold }
           end
         rescue ActiveRecord::RecordNotUnique
           existing = Core::OperationalEvents::Models::OperationalEvent.find_by!(channel: ch, idempotency_key: idempotency_key)
-          validate_hold_placed_replay!(existing, deposit_account_id, amount_minor_units, currency, placed_for_id)
+          validate_hold_placed_replay!(
+            existing,
+            deposit_account_id,
+            amount_minor_units,
+            currency,
+            placed_for_id,
+            normalized_hold_type,
+            normalized_reason_code,
+            reason_description,
+            normalized_expires_on
+          )
           { outcome: :replay, event: existing, hold: find_hold_for_event(existing) }
         end
       end
@@ -75,7 +105,42 @@ module Accounts
       end
       private_class_method :normalize_placed_for_operational_event_id
 
-      def self.validate_hold_placed_replay!(existing, deposit_account_id, amount_minor_units, currency, placed_for_operational_event_id)
+      def self.normalize_hold_type(value, placed_for_operational_event_id)
+        return value.to_s if value.present?
+        return Accounts::Models::Hold::HOLD_TYPE_DEPOSIT if placed_for_operational_event_id.present?
+
+        Accounts::Models::Hold::HOLD_TYPE_ADMINISTRATIVE
+      end
+      private_class_method :normalize_hold_type
+
+      def self.normalize_reason_code(value, hold_type)
+        return value.to_s if value.present?
+        return Accounts::Models::Hold::REASON_DEPOSIT_AVAILABILITY if hold_type == Accounts::Models::Hold::HOLD_TYPE_DEPOSIT
+
+        Accounts::Models::Hold::REASON_MANUAL_REVIEW
+      end
+      private_class_method :normalize_reason_code
+
+      def self.normalize_expires_on(value)
+        return nil if value.blank?
+
+        value.to_date
+      rescue ArgumentError, TypeError, NoMethodError
+        raise InvalidRequest, "expires_on must be a valid date"
+      end
+      private_class_method :normalize_expires_on
+
+      def self.validate_hold_placed_replay!(
+        existing,
+        deposit_account_id,
+        amount_minor_units,
+        currency,
+        placed_for_operational_event_id,
+        hold_type,
+        reason_code,
+        reason_description,
+        expires_on
+      )
         raise InvalidRequest, "idempotency replay type mismatch" unless existing.event_type == "hold.placed"
         raise InvalidRequest, "idempotency replay mismatch" unless existing.source_account_id == deposit_account_id &&
           existing.amount_minor_units == amount_minor_units && existing.currency == currency
@@ -87,6 +152,12 @@ module Accounts
         if (placed_for_operational_event_id.nil? && !actual_ref.nil?) ||
             (!placed_for_operational_event_id.nil? && actual_ref != placed_for_operational_event_id)
           raise InvalidRequest, "idempotency replay mismatch for placed_for_operational_event_id"
+        end
+        unless hold.hold_type == hold_type &&
+            hold.reason_code == reason_code &&
+            hold.reason_description.to_s == reason_description.to_s &&
+            hold.expires_on == expires_on
+          raise InvalidRequest, "idempotency replay mismatch for hold metadata"
         end
       end
       private_class_method :validate_hold_placed_replay!
@@ -137,6 +208,24 @@ module Accounts
         raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
       end
       private_class_method :validate_amount!
+
+      def self.validate_metadata!(hold_type, reason_code)
+        unless Accounts::Models::Hold::HOLD_TYPES.include?(hold_type)
+          raise InvalidRequest, "hold_type must be one of: #{Accounts::Models::Hold::HOLD_TYPES.join(", ")}"
+        end
+        return if Accounts::Models::Hold::REASON_CODES.include?(reason_code)
+
+        raise InvalidRequest, "reason_code must be one of: #{Accounts::Models::Hold::REASON_CODES.join(", ")}"
+      end
+      private_class_method :validate_metadata!
+
+      def self.validate_expiration!(expires_on, business_date)
+        return if expires_on.nil?
+        return if expires_on >= business_date.to_date
+
+        raise InvalidRequest, "expires_on must be on or after the business date"
+      end
+      private_class_method :validate_expiration!
     end
   end
 end

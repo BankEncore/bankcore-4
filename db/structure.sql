@@ -211,6 +211,50 @@ ALTER SEQUENCE public.deposit_account_parties_id_seq OWNED BY public.deposit_acc
 
 
 --
+-- Name: deposit_account_party_maintenance_audits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_account_party_maintenance_audits (
+    id bigint NOT NULL,
+    action character varying NOT NULL,
+    channel character varying NOT NULL,
+    idempotency_key character varying NOT NULL,
+    business_date date NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    deposit_account_party_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    role character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT dap_maintenance_audits_action_check CHECK (((action)::text = ANY ((ARRAY['authorized_signer.added'::character varying, 'authorized_signer.ended'::character varying])::text[]))),
+    CONSTRAINT dap_maintenance_audits_channel_check CHECK (((channel)::text = 'branch'::text)),
+    CONSTRAINT dap_maintenance_audits_role_check CHECK (((role)::text = 'authorized_signer'::text))
+);
+
+
+--
+-- Name: deposit_account_party_maintenance_audits_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_account_party_maintenance_audits_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_account_party_maintenance_audits_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_account_party_maintenance_audits_id_seq OWNED BY public.deposit_account_party_maintenance_audits.id;
+
+
+--
 -- Name: deposit_accounts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -503,7 +547,14 @@ CREATE TABLE public.holds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     placed_for_operational_event_id bigint,
+    hold_type character varying DEFAULT 'administrative'::character varying NOT NULL,
+    reason_code character varying DEFAULT 'manual_review'::character varying NOT NULL,
+    reason_description character varying,
+    expires_on date,
+    expired_by_operational_event_id bigint,
     CONSTRAINT holds_amount_positive CHECK ((amount_minor_units > 0)),
+    CONSTRAINT holds_hold_type_enum CHECK (((hold_type)::text = ANY ((ARRAY['administrative'::character varying, 'deposit'::character varying, 'legal'::character varying, 'channel_authorization'::character varying])::text[]))),
+    CONSTRAINT holds_reason_code_enum CHECK (((reason_code)::text = ANY ((ARRAY['deposit_availability'::character varying, 'customer_request'::character varying, 'fraud_review'::character varying, 'legal_order'::character varying, 'manual_review'::character varying, 'other'::character varying])::text[]))),
     CONSTRAINT holds_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'released'::character varying, 'expired'::character varying])::text[])))
 );
 
@@ -897,6 +948,13 @@ ALTER TABLE ONLY public.deposit_account_parties ALTER COLUMN id SET DEFAULT next
 
 
 --
+-- Name: deposit_account_party_maintenance_audits id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_party_maintenance_audits ALTER COLUMN id SET DEFAULT nextval('public.deposit_account_party_maintenance_audits_id_seq'::regclass);
+
+
+--
 -- Name: deposit_accounts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1048,6 +1106,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 
 --
+-- Name: deposit_account_party_maintenance_audits deposit_account_party_maintenance_audits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
+    ADD CONSTRAINT deposit_account_party_maintenance_audits_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: deposit_accounts deposit_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1192,6 +1258,20 @@ ALTER TABLE ONLY public.teller_sessions
 
 
 --
+-- Name: idx_dap_maintenance_audits_idempotency; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_dap_maintenance_audits_idempotency ON public.deposit_account_party_maintenance_audits USING btree (channel, idempotency_key);
+
+
+--
+-- Name: idx_dap_maintenance_audits_on_relationship_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_dap_maintenance_audits_on_relationship_id ON public.deposit_account_party_maintenance_audits USING btree (deposit_account_party_id);
+
+
+--
 -- Name: idx_deposit_product_fee_rules_resolver; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1227,6 +1307,20 @@ CREATE INDEX idx_deposit_statements_on_statement_profile_id ON public.deposit_st
 
 
 --
+-- Name: idx_on_deposit_account_id_c32203628a; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_deposit_account_id_c32203628a ON public.deposit_account_party_maintenance_audits USING btree (deposit_account_id);
+
+
+--
+-- Name: idx_on_party_record_id_91aa95b618; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_party_record_id_91aa95b618 ON public.deposit_account_party_maintenance_audits USING btree (party_record_id);
+
+
+--
 -- Name: index_core_business_date_close_events_on_closed_by_operator_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1259,6 +1353,13 @@ CREATE INDEX index_deposit_account_parties_on_deposit_account_id ON public.depos
 --
 
 CREATE INDEX index_deposit_account_parties_on_party_record_id ON public.deposit_account_parties USING btree (party_record_id);
+
+
+--
+-- Name: index_deposit_account_party_maintenance_audits_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_deposit_account_party_maintenance_audits_on_actor_id ON public.deposit_account_party_maintenance_audits USING btree (actor_id);
 
 
 --
@@ -1329,6 +1430,13 @@ CREATE UNIQUE INDEX index_gl_accounts_on_account_number ON public.gl_accounts US
 --
 
 CREATE INDEX index_holds_on_deposit_account_id ON public.holds USING btree (deposit_account_id);
+
+
+--
+-- Name: index_holds_on_expired_by_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_holds_on_expired_by_operational_event_id ON public.holds USING btree (expired_by_operational_event_id);
 
 
 --
@@ -1522,6 +1630,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 
 --
+-- Name: deposit_account_party_maintenance_audits fk_rails_07cbf95209; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
+    ADD CONSTRAINT fk_rails_07cbf95209 FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: holds fk_rails_09b889824c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1602,6 +1718,14 @@ ALTER TABLE ONLY public.holds
 
 
 --
+-- Name: deposit_account_party_maintenance_audits fk_rails_4749f6f4b0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
+    ADD CONSTRAINT fk_rails_4749f6f4b0 FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+
+
+--
 -- Name: holds fk_rails_4c0c5bf773; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1631,6 +1755,14 @@ ALTER TABLE ONLY public.deposit_product_overdraft_policies
 
 ALTER TABLE ONLY public.deposit_accounts
     ADD CONSTRAINT fk_rails_71f0b9310a FOREIGN KEY (deposit_product_id) REFERENCES public.deposit_products(id);
+
+
+--
+-- Name: holds fk_rails_75dfa621cd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.holds
+    ADD CONSTRAINT fk_rails_75dfa621cd FOREIGN KEY (expired_by_operational_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -1690,6 +1822,14 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: deposit_account_party_maintenance_audits fk_rails_9f4e22e9ce; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
+    ADD CONSTRAINT fk_rails_9f4e22e9ce FOREIGN KEY (deposit_account_party_id) REFERENCES public.deposit_account_parties(id);
+
+
+--
 -- Name: operational_events fk_rails_a650da481b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1711,6 +1851,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 ALTER TABLE ONLY public.journal_entries
     ADD CONSTRAINT fk_rails_d329a9d82b FOREIGN KEY (posting_batch_id) REFERENCES public.posting_batches(id);
+
+
+--
+-- Name: deposit_account_party_maintenance_audits fk_rails_d66a4f93d8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
+    ADD CONSTRAINT fk_rails_d66a4f93d8 FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
@@ -1760,8 +1908,10 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120014'),
 ('20260424120013'),
 ('20260424120012'),
+('20260424120011'),
 ('20260424120010'),
 ('20260424120009'),
 ('20260424120008'),

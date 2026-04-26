@@ -12,6 +12,10 @@
   <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
     <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @hold_record.status %></dd></div>
     <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@hold_record.amount_minor_units) %> <%= @hold_record.currency %></dd></div>
+    <div><dt class="font-medium text-slate-500">Hold type</dt><dd><%= @hold_record.hold_type.humanize %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reason</dt><dd><%= @hold_record.reason_code.humanize %></dd></div>
+    <div><dt class="font-medium text-slate-500">Customer explanation</dt><dd><%= @hold_record.customer_explanation %></dd></div>
+    <div><dt class="font-medium text-slate-500">Expires on</dt><dd><%= branch_date(@hold_record.expires_on) %></dd></div>
     <div><dt class="font-medium text-slate-500">Placed event</dt><dd><%= @hold_record.placed_by_operational_event_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Linked deposit event</dt><dd><%= @hold_record.placed_for_operational_event_id || "None" %></dd></div>
   </dl>

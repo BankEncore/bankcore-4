@@ -3,7 +3,8 @@
 module Branch
   class ApplicationController < Internal::ApplicationController
     before_action :require_branch_operator!
-    helper_method :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?, :can_reverse_event?
+    helper_method :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?, :can_reverse_event?,
+      :can_manage_authorized_signers?
 
     private
 
@@ -44,6 +45,10 @@ module Branch
     end
 
     def can_reverse_event?
+      current_operator&.supervisor?
+    end
+
+    def can_manage_authorized_signers?
       current_operator&.supervisor?
     end
   end
