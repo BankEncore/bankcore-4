@@ -22,6 +22,23 @@
       <%= form.text_field :placed_for_operational_event_id, value: @hold["placed_for_operational_event_id"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
     <div>
+      <%= form.label :hold_type, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.select :hold_type, branch_hold_type_options, { selected: @hold["hold_type"] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :reason_code, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.select :reason_code, branch_hold_reason_options, { selected: @hold["reason_code"] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :expires_on, "Expires on", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.date_field :expires_on, value: @hold["expires_on"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-2">
+      <%= form.label :reason_description, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_area :reason_description, value: @hold["reason_description"], rows: 3, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Use staff-safe detail. Customer-facing explanation is generated from the reason code.</p>
+    </div>
+    <div>
       <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :idempotency_key, value: @hold["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>

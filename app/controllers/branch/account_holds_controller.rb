@@ -22,7 +22,7 @@ module Branch
     end
 
     def create
-      @hold = hold_params
+      @hold = hold_params.with_indifferent_access
       result = Accounts::Commands::PlaceHold.call(
         deposit_account_id: @account.id,
         amount_minor_units: @hold[:amount_minor_units].to_i,
@@ -30,7 +30,11 @@ module Branch
         channel: branch_channel,
         idempotency_key: @hold[:idempotency_key],
         placed_for_operational_event_id: parse_optional_integer(@hold[:placed_for_operational_event_id]),
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        hold_type: @hold[:hold_type],
+        reason_code: @hold[:reason_code],
+        reason_description: @hold[:reason_description],
+        expires_on: @hold[:expires_on]
       )
       render_result(result)
     rescue Accounts::Commands::PlaceHold::InvalidRequest => e
@@ -44,7 +48,7 @@ module Branch
     end
 
     def create_release
-      @hold_release = release_params
+      @hold_release = release_params.with_indifferent_access
       result = Accounts::Commands::ReleaseHold.call(
         hold_id: params[:hold_id].to_i,
         channel: branch_channel,
@@ -75,12 +79,25 @@ module Branch
         "placed_for_operational_event_id" => params[:placed_for_operational_event_id],
         "amount_minor_units" => nil,
         "currency" => @account.currency,
+        "hold_type" => Accounts::Models::Hold::HOLD_TYPE_ADMINISTRATIVE,
+        "reason_code" => Accounts::Models::Hold::REASON_MANUAL_REVIEW,
+        "reason_description" => nil,
+        "expires_on" => nil,
         "idempotency_key" => default_idempotency_key(prefix)
       }
     end
 
     def hold_params
-      params.require(:hold).permit(:placed_for_operational_event_id, :amount_minor_units, :currency, :idempotency_key).to_h.symbolize_keys
+      params.require(:hold).permit(
+        :placed_for_operational_event_id,
+        :amount_minor_units,
+        :currency,
+        :hold_type,
+        :reason_code,
+        :reason_description,
+        :expires_on,
+        :idempotency_key
+      ).to_h.symbolize_keys
     end
 
     def release_params

@@ -11,6 +11,17 @@ Rails.application.routes.draw do
     resources :deposit_accounts, only: [ :new, :create ]
     get "deposit_accounts/:id", to: "servicing_deposit_accounts#show", as: :servicing_deposit_account
     get "deposit_accounts/:deposit_account_id/activity", to: "account_activities#show", as: :account_activity
+    get "deposit_accounts/:deposit_account_id/authorized_signers/new",
+      to: "account_parties#new_authorized_signer",
+      as: :new_account_authorized_signer
+    post "deposit_accounts/:deposit_account_id/authorized_signers",
+      to: "account_parties#create_authorized_signer",
+      as: :account_authorized_signers
+    get "deposit_accounts/:deposit_account_id/authorized_signers/:relationship_id/end",
+      to: "account_parties#end_authorized_signer",
+      as: :end_account_authorized_signer
+    post "deposit_accounts/:deposit_account_id/authorized_signers/:relationship_id/end",
+      to: "account_parties#create_end_authorized_signer"
     get "deposit_accounts/:deposit_account_id/holds", to: "account_holds#index", as: :account_holds
     get "deposit_accounts/:deposit_account_id/holds/new", to: "account_holds#new", as: :new_account_hold
     post "deposit_accounts/:deposit_account_id/holds", to: "account_holds#create", as: :account_hold_placements

@@ -8,6 +8,16 @@ module Ops
 
       @readiness = Teller::Queries::EodReadiness.call(business_date: @business_date)
       @trial_balance_rows = Core::Ledger::Queries::TrialBalanceForBusinessDate.call(business_date: @business_date)
+      @current_business_date = Core::BusinessDate::Services::CurrentBusinessDate.call
+      @close_event = Core::BusinessDate::Models::BusinessDateCloseEvent
+        .includes(:closed_by_operator)
+        .find_by(closed_on: @business_date)
+      @posting_day_closed = @business_date < @current_business_date || @close_event.present?
+      event_scope = Core::OperationalEvents::Models::OperationalEvent.where(business_date: @business_date)
+      @event_total_count = event_scope.count
+      @event_status_counts = event_scope.group(:status).count.sort.to_h
+      @event_channel_counts = event_scope.group(:channel).count.sort.to_h
+      @event_type_counts = event_scope.group(:event_type).count.sort.to_h
       @pending_events = Core::OperationalEvents::Models::OperationalEvent
         .where(business_date: @business_date, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING)
         .order(:id)

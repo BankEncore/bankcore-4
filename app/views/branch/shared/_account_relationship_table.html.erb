@@ -1,0 +1,65 @@
+<% if rows.any? %>
+  <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <tr>
+        <% if local_assigns.fetch(:show_party, false) %>
+          <th class="px-5 py-3">Party</th>
+        <% end %>
+        <% if local_assigns.fetch(:show_account, false) %>
+          <th class="px-5 py-3">Account</th>
+          <th class="px-5 py-3">Product</th>
+        <% end %>
+        <th class="px-5 py-3">Relationship</th>
+        <th class="px-5 py-3">Effective</th>
+        <th class="px-5 py-3">Ended</th>
+        <% if local_assigns.fetch(:show_actions, false) %>
+          <th class="px-5 py-3">Actions</th>
+        <% end %>
+        <% if local_assigns.fetch(:can_end_authorized_signers, false) %>
+          <th class="px-5 py-3">Maintenance</th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% rows.each do |row| %>
+        <tr>
+          <% if local_assigns.fetch(:show_party, false) %>
+            <td class="px-5 py-4">
+              <%= link_to row.party.name, branch_customer_path(row.party), class: "font-medium text-slate-950" %>
+              <div class="text-xs text-slate-500">Party #<%= row.party.id %></div>
+            </td>
+          <% end %>
+          <% if local_assigns.fetch(:show_account, false) %>
+            <td class="px-5 py-4">
+              <div class="font-medium text-slate-950"><%= row.account.account_number %></div>
+              <div class="text-xs text-slate-500"><%= row.account.status %> · <%= row.account.currency %></div>
+            </td>
+            <td class="px-5 py-4">
+              <div><%= row.product.product_code %></div>
+              <div class="text-xs text-slate-500"><%= row.product.name %></div>
+            </td>
+          <% end %>
+          <td class="px-5 py-4"><%= row.relationship.role %> · <%= row.relationship.status %></td>
+          <td class="px-5 py-4"><%= branch_date(row.relationship.effective_on) %></td>
+          <td class="px-5 py-4"><%= branch_date(row.relationship.ended_on) %></td>
+          <% if local_assigns.fetch(:show_actions, false) %>
+            <td class="px-5 py-4">
+              <%= link_to "Service account", branch_servicing_deposit_account_path(row.account), class: "rounded bg-slate-900 px-3 py-1.5 font-medium text-white" %>
+            </td>
+          <% end %>
+          <% if local_assigns.fetch(:can_end_authorized_signers, false) %>
+            <td class="px-5 py-4">
+              <% if row.relationship.role == Accounts::Models::DepositAccountParty::ROLE_AUTHORIZED_SIGNER && row.relationship.status == Accounts::Models::DepositAccountParty::STATUS_ACTIVE && row.relationship.ended_on.nil? %>
+                <%= link_to "End signer", branch_end_account_authorized_signer_path(row.account, row.relationship), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+              <% else %>
+                <span class="text-slate-500">No action</span>
+              <% end %>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <div class="p-6 text-sm text-slate-600"><%= local_assigns.fetch(:empty_message, "No account-party relationships found.") %></div>
+<% end %>

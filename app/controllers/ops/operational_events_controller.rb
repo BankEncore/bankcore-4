@@ -31,11 +31,13 @@ module Ops
       p = params.permit(
         :business_date, :business_date_from, :business_date_to,
         :source_account_id, :destination_account_id, :status, :event_type, :channel, :actor_id,
+        :reference_id, :idempotency_key, :reversal_of_event_id,
         :deposit_product_id, :product_code, :after_id, :limit
       ).to_h.symbolize_keys
       p[:source_account_id] = p[:source_account_id].to_i if p[:source_account_id].present?
       p[:destination_account_id] = p[:destination_account_id].to_i if p[:destination_account_id].present?
       p[:actor_id] = p[:actor_id].to_i if p[:actor_id].present?
+      p[:reversal_of_event_id] = p[:reversal_of_event_id].to_i if p[:reversal_of_event_id].present?
       p[:deposit_product_id] = p[:deposit_product_id].to_i if p[:deposit_product_id].present?
       p
     end

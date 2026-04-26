@@ -119,6 +119,68 @@ Same columns, with `loan_account_id` (FK → `loan_accounts`) replacing `deposit
 
 For **`deposit_account_parties`** only, the first teller-backed path ships **primary `owner`** plus optional **`joint_owner`** at account open per [ADR-0011 §2.3](0011-accounts-deposit-vertical-slice-mvp.md) (`Accounts::Commands::OpenAccount`, partial unique index **`20260422130005`**). This ADR’s overall **Status** remains **Proposed** until loan participation and broader role workflows are implemented; the deposit slice behavior above is **accepted** as the current contract for MVP sequencing.
 
+### 2.11 Phase 4.4 post-open maintenance authority
+
+Phase 4.4 resolves a narrow post-open deposit account-party maintenance path for Branch CSR servicing. It does **not** generalize account ownership maintenance.
+
+#### Role semantics
+
+For deposit accounts, the first post-open mutable role is **`authorized_signer`** only.
+
+| Role | Phase 4.4 post-open behavior |
+| ---- | ---------------------------- |
+| `owner` | Read and history only after account open. Adding, removing, or ending ownership remains deferred because it can affect contract, tax, statement, survivorship, and regulatory treatment. |
+| `joint_owner` | Read and history only after account open. Post-open joint ownership changes remain deferred for the same reasons as `owner`. |
+| `authorized_signer` | May be added or ended post-open by a Branch supervisor. This role grants signatory/transaction authority for servicing purposes only and does **not** imply ownership, beneficial interest, statement ownership, tax reporting ownership, or liability allocation. |
+| `beneficiary`, `trustee`, `custodian`, `other` | Read vocabulary only. No Branch post-open mutation workflow in Phase 4.4. |
+
+#### Authority and controls
+
+Phase 4.4 may add **only** these deposit commands:
+
+- `Accounts::Commands::AddAuthorizedSigner`
+- `Accounts::Commands::EndAuthorizedSigner`
+
+Required controls:
+
+- The account must exist and be open.
+- The target party must exist and must not already have an open active `authorized_signer` row for the same deposit account.
+- `AddAuthorizedSigner` creates a new `deposit_account_parties` row with `role: "authorized_signer"`, `status: "active"`, `effective_on` equal to the supplied or current business date, and `ended_on: NULL`.
+- `EndAuthorizedSigner` ends only an open active `authorized_signer` row by setting `ended_on` to the supplied or current business date and `status: "inactive"`.
+- `effective_on` and `ended_on` are business dates; backdating before the current open business date is not allowed in Branch Phase 4.4.
+- Ending a signer is terminal for that row. Re-adding the same party later creates a new row, preserving history.
+- Branch HTML access is **supervisor-only**. `teller` may read current and historical parties but must not submit add/end signer workflows.
+- Role claims must come from the authenticated `Workspace::Models::Operator` row, never from params, headers, hidden fields, or form copy.
+
+#### Audit requirements
+
+Post-open account-party writes must leave durable audit evidence before Branch forms are exposed:
+
+- authenticated `actor_id`
+- channel `branch`
+- idempotency key
+- current open business date
+- deposit account id
+- target party id
+- relationship row id
+- role and effective/ended dates
+- created/replay outcome
+
+Because `deposit_account_parties` changes are non-GL servicing activity, they must not create journal entries or call `Core::Posting::Commands::PostEvent`.
+
+The Phase 4.4 implementation uses the Accounts-owned `deposit_account_party_maintenance_audits` table for add/end signer evidence rather than introducing new operational-event types. If a later slice moves these writes into operational events, the event types must be added to `Core::OperationalEvents::EventCatalog`, operational-event specs, and drift tests before those forms ship.
+
+#### Explicit deferrals
+
+Phase 4.4 does **not** add:
+
+- post-open owner or joint-owner add/end workflows
+- ownership percentage, survivorship, tax-owner, statement-owner, liability, or beneficial-owner semantics
+- customer self-service signer maintenance
+- external API, ACH, card, wire, or partner authority propagation
+- document collection, e-signature, or approval workflows beyond supervisor authorization
+- mutation support for loan account parties
+
 ---
 
 ## 3. Consequences

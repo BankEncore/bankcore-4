@@ -86,20 +86,22 @@ Likely slices:
 
 Shipped narrow slice: single-owner account open plus two-party joint ownership at open. `Accounts::Commands::OpenAccount` creates the primary `owner` row and, when the teller request includes `joint_party_record_id`, a second active `joint_owner` participation row (see [ADR-0011](adr/0011-accounts-deposit-vertical-slice-mvp.md) and [ADR-0007](adr/0007-party-account-ownership.md)).
 
+Phase 4.4 added the first post-open servicing depth without broadening ownership semantics: `Accounts::Queries::DepositAccountPartyTimeline` separates current and historical `deposit_account_parties` for Branch Customer 360/account profile reads, and Branch supervisors can add/end `authorized_signer` relationships through `Accounts::Commands::AddAuthorizedSigner` / `EndAuthorizedSigner` with `deposit_account_party_maintenance_audits` evidence. This does not make `authorized_signer` an owner and does not add post-open owner or joint-owner maintenance.
+
 To complete:
 
-- Support additional participation roles beyond owner/joint owner, such as signer, custodian, beneficiary, and authorized user.
-- Add post-open add/remove/supersede workflows with effective dating.
-- Define signature authority and account access rules for each role.
-- Add audit events for ownership and authority changes.
-- Expose teller or servicing APIs for party maintenance.
+- Support participation roles beyond the Phase 4.4 `authorized_signer` servicing slice, such as custodian, beneficiary, trustee, and institution-defined roles.
+- Add post-open owner/joint-owner add/remove/supersede workflows with effective dating.
+- Define statement-owner, tax-owner, liability, survivorship, beneficial-owner, and access rules for each role.
+- Add audit/event taxonomy for ownership changes if ownership maintenance moves beyond the Accounts-owned audit table pattern.
+- Expose teller, external API, or broader servicing APIs for party maintenance only after a role/authority ADR covers that channel.
 
 Likely slices:
 
-- ADR update for role taxonomy and authority semantics.
-- `Accounts::Commands::AddAccountParty` and `EndAccountParty`.
-- Servicing read model for current and historical parties.
-- Teller/CSR integration tests for post-open ownership changes.
+- Ownership-change ADR for post-open `owner` / `joint_owner` maintenance.
+- Generalized `Accounts::Commands::AddAccountParty` and `EndAccountParty` only if more roles are approved.
+- Channel-specific authority propagation for external APIs, ACH, card, wire, or customer self-service.
+- Teller/CSR integration tests for post-open ownership changes when those changes are approved.
 
 ### 3.2 Full Product Configuration
 
@@ -334,11 +336,11 @@ Use this classification when moving deferred items into roadmap Phase 4:
 | --- | --- | --- |
 | Event catalog depth | **Phase 4 candidate — 4.2** | Channel work, statement/history reads, support search, and customer-safe APIs all need consistent lifecycle/channel/customer-visibility metadata before new external surfaces spread event semantics. |
 | Product resolver depth / product configuration baseline | **Phase 4 candidate — 4.3** | External money movement must not infer behavior from `product_code`; add resolver contracts and effective-dated helper conventions before ACH or partner writes. Full product-engine breadth remains deferred. |
-| Holds depth | **Phase 4 candidate — 4.4** | Branch CSR already exposes holds; expiration, reason/type taxonomy, and customer-visible explanations are natural servicing follow-ons. Partial release/adjustment should wait for an ADR. |
-| Account-party maintenance | **Phase 4 candidate — 4.4, narrow** | Customer 360 creates demand for current/historical party reads and selected post-open maintenance. Role/authority semantics must be resolved before mutating workflows. |
-| Operational event observability | **Phase 4 candidate — 4.5** | External channels need support search by account/reference/actor/channel identifiers; full-text and branch-aware filters can wait for branch identity and volume. |
-| Business-date close packages | **Phase 4 candidate — 4.5, read-only first** | External ingestion needs EOD impact visibility. Close packages/evidence should precede reopen or branch-scoped business date changes. |
-| External customer/partner/fintech read APIs | **Phase 4 candidate — 4.6** | Start with read contracts over existing state after auth/redaction/rate-limit ADR; no external writes until separate review. |
+| Holds depth | **Shipped in 4.4, narrow** | Holds now carry type/reason/expiration metadata, customer-safe explanations, Branch display, and due-expiration behavior. Partial release/adjustment remains deferred until a separate ADR. |
+| Account-party maintenance | **Shipped in 4.4, narrow** | Branch Customer 360/account profile reads now show current/historical parties, and supervisors can add/end `authorized_signer` rows with audit evidence. Post-open owner/joint-owner changes and broader authority semantics remain deferred. |
+| Operational event observability | **Shipped in 4.5, narrow** | Ops support search now covers reference, idempotency, reversal, actor, account, channel, status, event type, product, and bounded business-date filters with targeted operational-event indexes. Full-text and branch-aware filters can wait for branch identity and volume. |
+| Business-date close packages | **Shipped in 4.5, read-only first** | Ops close packages now include EOD impact evidence by event status, channel, and type. Reopen workflows and branch-scoped business date changes remain deferred. |
+| External customer/partner/fintech read APIs | **Phase 4 candidate — 4.6, next** | ADR-0027 and the external read API contract plan define the trust boundary and planned read contracts. No external writes until separate review. |
 | ACH narrow receipt ingestion | **Phase 4 candidate — 4.7** | Preferred first external money-moving channel after 4.2-4.6 prerequisites; requires a dedicated ADR. |
 | Reporting snapshots/materialized balances | **Defer until needed** | Keep compute-on-read until close evidence, support volume, or external API performance requires materialization with rebuild/drift rules. |
 | Multi-branch / multi-entity foundations | **Phase 5 candidate unless pulled by channel** | Branch/entity dimensions affect GL, business date, cash, and reporting; only pull into Phase 4 if ACH/support scope explicitly needs them. |
@@ -436,15 +438,11 @@ First slices should add measurable performance targets and drift detection befor
 
 ## 8. Suggested Sequencing
 
-Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and Phase 4.1 Branch CSR servicing shipped):
+Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and Phase 4.1-4.5 Branch servicing / event catalog / product resolver / servicing-depth / support-observability slices shipped):
 
 1. Reconcile this deferred guide and roadmap references whenever shipped narrow slices change, so Phase 4 planning starts from the same checkpoint as `roadmap.md`.
-2. Complete **4.2 Event Catalog and Channel Metadata**: lifecycle/channel metadata, statement/customer visibility, payload schema references, and docs drift checks across `EventCatalog`, the posting registry, and operational-event docs.
-3. Complete the **4.3 Product Resolver Baseline** only to the contract/effective-dating depth needed for channel-safe behavior; defer the full product engine.
-4. Add **4.4 Servicing Depth** for holds and account parties where Branch CSR created immediate support needs.
-5. Add **4.5 Support Observability and Close Readiness**: support search fields, indexes, and read-only close evidence before external ingestion volume grows.
-6. Define **4.6 External Read APIs** through an ADR covering auth, redaction, rate limits, response contracts, audit attribution, and idempotency expectations.
-7. For **4.7 ACH**, write the ACH ADR before implementation and prove file/item idempotency, event recording, posting, settlement GL, returns/cutoffs, EOD impact, and reconciliation in one narrow receipt-ingestion path.
-8. Pull forward branch/business-date, reporting snapshot, cash-location, compliance, or scale work only when the selected channel needs it.
+2. Implement **4.6 External Read APIs** only after ADR-0027's trust boundary is accepted for the chosen client/subject model; start with read-only account, activity, statement, event, and product contracts over existing domain queries.
+3. For **4.7 ACH**, write the ACH ADR before implementation and prove file/item idempotency, event recording, posting, settlement GL, returns/cutoffs, EOD impact, and reconciliation in one narrow receipt-ingestion path.
+4. Pull forward branch/business-date, reporting snapshot, cash-location, compliance, or scale work only when the selected channel needs it.
 
 This order keeps financial invariants close to already-shipped code while delaying broad channel, regulatory, and scale scope until each Phase 4 slice has explicit ADR coverage.

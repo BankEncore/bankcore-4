@@ -27,13 +27,91 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get branch_customer_path(@party)
     assert_response :success
-    assert_includes response.body, "Linked deposit accounts"
+    assert_includes response.body, "Current deposit account relationships"
     assert_includes response.body, @account.account_number
 
     get branch_servicing_deposit_account_path(@account)
     assert_response :success
     assert_includes response.body, "Available balance"
     assert_includes response.body, "Operational events"
+  end
+
+  test "branch customer and account views show current and historical account-party relationships" do
+    former_party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Former", last_name: "Signer")
+    Accounts::Models::DepositAccountParty.create!(
+      deposit_account: @account,
+      party_record: former_party,
+      role: Accounts::Models::DepositAccountParty::ROLE_JOINT_OWNER,
+      status: Accounts::Models::DepositAccountParty::STATUS_INACTIVE,
+      effective_on: Date.new(2026, 8, 1),
+      ended_on: Date.new(2026, 8, 31)
+    )
+
+    internal_login!(username: "csr-teller")
+
+    get branch_customer_path(@party)
+    assert_response :success
+    assert_includes response.body, "Current deposit account relationships"
+    assert_includes response.body, "Historical deposit account relationships"
+    assert_includes response.body, @account.account_number
+
+    get branch_servicing_deposit_account_path(@account)
+    assert_response :success
+    assert_includes response.body, "Current parties"
+    assert_includes response.body, "Historical parties (1)"
+    assert_includes response.body, "Former Signer"
+  end
+
+  test "supervisor can add and end authorized signer with audit coverage" do
+    signer = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Auth", last_name: "Signer")
+
+    internal_login!(username: "csr-teller")
+    get branch_new_account_authorized_signer_path(@account)
+    assert_redirected_to branch_path
+    delete logout_path
+
+    internal_login!(username: "csr-supervisor")
+    get branch_new_account_authorized_signer_path(@account)
+    assert_response :success
+    assert_includes response.body, "Add authorized signer"
+
+    post branch_account_authorized_signers_path(@account), params: {
+      authorized_signer: {
+        party_record_id: signer.id,
+        effective_on: "2026-09-10",
+        idempotency_key: "branch-add-signer"
+      }
+    }
+    assert_response :created
+    assert_includes response.body, "authorized_signer.added"
+
+    relationship = Accounts::Models::DepositAccountParty.find_by!(
+      deposit_account: @account,
+      party_record: signer,
+      role: Accounts::Models::DepositAccountParty::ROLE_AUTHORIZED_SIGNER
+    )
+    audit = Accounts::Models::DepositAccountPartyMaintenanceAudit.find_by!(idempotency_key: "branch-add-signer")
+    assert_equal "branch", audit.channel
+    assert_equal @supervisor.id, audit.actor_id
+    assert_equal relationship.id, audit.deposit_account_party_id
+
+    get branch_servicing_deposit_account_path(@account)
+    assert_response :success
+    assert_includes response.body, "Auth Signer"
+    assert_includes response.body, "End signer"
+
+    post branch_end_account_authorized_signer_path(@account, relationship), params: {
+      authorized_signer_end: {
+        ended_on: "2026-09-10",
+        idempotency_key: "branch-end-signer"
+      }
+    }
+    assert_response :created
+    assert_includes response.body, "authorized_signer.ended"
+
+    end_audit = Accounts::Models::DepositAccountPartyMaintenanceAudit.find_by!(idempotency_key: "branch-end-signer")
+    assert_equal @supervisor.id, end_audit.actor_id
+    assert_equal Accounts::Models::DepositAccountParty::STATUS_INACTIVE, relationship.reload.status
   end
 
   test "branch account holds use branch channel and actor attribution" do
@@ -43,10 +121,15 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
       hold: {
         amount_minor_units: 800,
         currency: "USD",
+        hold_type: "legal",
+        reason_code: "legal_order",
+        reason_description: "Court order 456",
+        expires_on: "2026-09-15",
         idempotency_key: "csr-place-hold"
       }
     }
     assert_response :created
+    assert_includes response.body, "Funds are restricted due to a legal order."
 
     hold_event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "csr-place-hold")
     assert_equal "hold.placed", hold_event.event_type
@@ -57,6 +140,10 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
       hold: {
         amount_minor_units: 800,
         currency: "USD",
+        hold_type: "legal",
+        reason_code: "legal_order",
+        reason_description: "Court order 456",
+        expires_on: "2026-09-15",
         idempotency_key: "csr-place-hold"
       }
     }
@@ -74,6 +161,10 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "idempotency replay mismatch"
 
     hold = Accounts::Models::Hold.find_by!(placed_by_operational_event: hold_event)
+    assert_equal "legal", hold.hold_type
+    assert_equal "legal_order", hold.reason_code
+    assert_equal "Court order 456", hold.reason_description
+    assert_equal Date.new(2026, 9, 15), hold.expires_on
 
     get branch_release_account_hold_path(@account, hold)
     assert_redirected_to branch_path

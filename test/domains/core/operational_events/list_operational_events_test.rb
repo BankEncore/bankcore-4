@@ -72,6 +72,34 @@ class CoreOperationalEventsListOperationalEventsTest < ActiveSupport::TestCase
     assert_equal 1, result[:rows].size
   end
 
+  test "filters by support search keys" do
+    original = create_event!(
+      event_type: "fee.assessed",
+      idempotency_key: "support-original",
+      reference_id: "support-case-1"
+    )
+    create_event!(
+      event_type: "fee.assessed",
+      idempotency_key: "support-other",
+      reference_id: "support-case-2"
+    )
+    reversal = create_event!(
+      event_type: "posting.reversal",
+      idempotency_key: "support-reversal",
+      reference_id: original.id.to_s,
+      reversal_of_event_id: original.id
+    )
+
+    by_reference = Core::OperationalEvents::Queries::ListOperationalEvents.call(reference_id: "support-case-1")
+    assert_equal [ original.id ], by_reference[:rows].map(&:id)
+
+    by_idempotency = Core::OperationalEvents::Queries::ListOperationalEvents.call(idempotency_key: "support-reversal")
+    assert_equal [ reversal.id ], by_idempotency[:rows].map(&:id)
+
+    by_reversal = Core::OperationalEvents::Queries::ListOperationalEvents.call(reversal_of_event_id: original.id)
+    assert_equal [ reversal.id ], by_reversal[:rows].map(&:id)
+  end
+
   private
 
   def record_deposit!(idem:, amount:)
@@ -84,5 +112,20 @@ class CoreOperationalEventsListOperationalEventsTest < ActiveSupport::TestCase
       source_account_id: @account.id,
       teller_session_id: @session.id
     )[:event]
+  end
+
+  def create_event!(event_type:, idempotency_key:, reference_id: nil, reversal_of_event_id: nil)
+    Core::OperationalEvents::Models::OperationalEvent.create!(
+      event_type: event_type,
+      status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED,
+      business_date: Date.new(2026, 5, 10),
+      channel: "branch",
+      idempotency_key: idempotency_key,
+      amount_minor_units: 100,
+      currency: "USD",
+      source_account_id: @account.id,
+      reference_id: reference_id,
+      reversal_of_event_id: reversal_of_event_id
+    )
   end
 end

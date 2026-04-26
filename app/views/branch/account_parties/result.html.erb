@@ -1,0 +1,27 @@
+<% content_for :title, "Authorized Signer Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Authorized signer result</h1>
+  <p class="mt-2 text-slate-600">Review the maintenance audit row.</p>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-semibold"><%= @audit.action %></h2>
+  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Outcome</dt><dd><%= @outcome %></dd></div>
+    <div><dt class="font-medium text-slate-500">Audit</dt><dd>#<%= @audit.id %></dd></div>
+    <div><dt class="font-medium text-slate-500">Relationship</dt><dd>#<%= @relationship.id %> (<%= @relationship.status %>)</dd></div>
+    <div><dt class="font-medium text-slate-500">Party</dt><dd><%= @relationship.party_record.name %> (#<%= @relationship.party_record_id %>)</dd></div>
+    <div><dt class="font-medium text-slate-500">Role</dt><dd><%= @relationship.role %></dd></div>
+    <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= @audit.channel %></dd></div>
+    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @audit.actor.display_name || @audit.actor_id %></dd></div>
+    <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(@audit.business_date) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Effective on</dt><dd><%= branch_date(@audit.effective_on) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Ended on</dt><dd><%= branch_date(@audit.ended_on) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @audit.idempotency_key %></dd></div>
+  </dl>
+  <div class="mt-6 flex flex-wrap gap-3">
+    <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <%= link_to "Party profile", branch_customer_path(@relationship.party_record), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  </div>
+</section>

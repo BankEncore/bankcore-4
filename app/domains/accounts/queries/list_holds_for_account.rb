@@ -16,7 +16,12 @@ module Accounts
       def self.call(deposit_account_id:, status: nil, limit: nil)
         account = Models::DepositAccount.find(deposit_account_id)
         rel = Models::Hold
-          .includes(:placed_by_operational_event, :released_by_operational_event, :placed_for_operational_event)
+          .includes(
+            :placed_by_operational_event,
+            :released_by_operational_event,
+            :expired_by_operational_event,
+            :placed_for_operational_event
+          )
           .where(deposit_account_id: account.id)
 
         if status.present?
