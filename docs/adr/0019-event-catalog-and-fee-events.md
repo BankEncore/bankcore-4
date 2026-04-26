@@ -18,7 +18,7 @@
 ### 2.1 `Core::OperationalEvents::EventCatalog`
 
 - **Purpose:** machine-readable metadata for clients, tests, and drift checks—not a replacement for `operational_events.event_type` strings in the database.
-- **Contents:** each known `event_type` exposes at least: **`category`** (`financial` | `servicing` | `operational`), **`posts_to_gl`** (boolean), **`record_command`** (`RecordEvent` | `RecordControlEvent` | `PlaceHold` | `ReleaseHold` | `RecordReversal` | `other`), **`reversible_via_posting_reversal`** (boolean), **`compensating_event_type`** (nullable string; business compensator when not `posting.reversal`).
+- **Contents:** each known `event_type` exposes at least: **`category`** (`financial` | `servicing` | `operational`), **`posts_to_gl`** (boolean), **`record_command`** (`RecordEvent` | `RecordControlEvent` | `PlaceHold` | `ReleaseHold` | `RecordReversal` | `other`), **`reversible_via_posting_reversal`** (boolean), **`compensating_event_type`** (nullable string; business compensator when not `posting.reversal`). Phase 4.2 extends the same code-first catalog with lifecycle, allowed channel, financial-impact, customer/statement visibility, payload-schema, and support-search metadata so external channel planning does not create a second event semantics registry.
 - **HTTP:** **`GET /teller/event_types`** returns the catalog as JSON (operator auth per [ADR-0015](0015-teller-workspace-authentication.md); no supervisor gate, same posture as other teller reads).
 
 ### 2.2 Fee events (`fee.assessed`, `fee.waived`)

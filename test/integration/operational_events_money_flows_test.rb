@@ -30,6 +30,13 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
     fee = types.find { |h| h["event_type"] == "fee.assessed" }
     assert fee["posts_to_gl"]
     assert_equal "fee.waived", fee["compensating_event_type"]
+    assert_equal "pending_to_posted", fee["lifecycle"]
+    assert_includes fee["allowed_channels"], "system"
+    assert_equal "gl_posting", fee["financial_impact"]
+    assert_equal true, fee["customer_visible"]
+    assert_equal true, fee["statement_visible"]
+    assert_equal "docs/operational_events/fee-assessed.md", fee["payload_schema"]
+    assert_includes fee["support_search_keys"], "source_account_id"
   end
 
   test "fee assessed post waive posts end to end via teller JSON" do

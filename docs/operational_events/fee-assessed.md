@@ -11,6 +11,13 @@ Records a **deposit service charge** assessed to a demand deposit account (`sour
 | **`event_type`** | `fee.assessed` |
 | **Category** | Financial |
 | **Phase** | Implemented ([ADR-0019](../adr/0019-event-catalog-and-fee-events.md)). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `teller`, `api`, `batch`, `system` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/fee-assessed.md` |
+| **Support search keys** | `source_account_id`, `reference_id`, `actor_id` |
 
 ## Semantics
 

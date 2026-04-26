@@ -11,6 +11,13 @@ Records ledger-recognized deposit interest expense and accrued payable for one d
 | **`event_type`** | `interest.accrued` |
 | **Category** | Financial |
 | **Phase** | P3-2 first vertical slice ([ADR-0021](../adr/0021-interest-accrual-and-payout-slice.md)). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `system` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | No |
+| **Statement visible** | No |
+| **Payload schema** | `docs/operational_events/interest-accrued.md` |
+| **Support search keys** | `source_account_id`, `reference_id` |
 
 ## Semantics
 

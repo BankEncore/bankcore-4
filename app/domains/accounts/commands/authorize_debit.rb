@@ -78,10 +78,10 @@ module Accounts
         source = Accounts::Models::DepositAccount.find_by(id: source_account_id)
         raise original_error if source.nil?
 
-        policy = Products::Queries::ActiveOverdraftPolicies.deny_nsf_for_product(
-          business_date: business_date,
-          deposit_product_id: source.deposit_product_id
-        )
+        policy = Products::Services::DepositProductResolver.call(
+          deposit_account: source,
+          as_of: business_date
+        ).deny_nsf_policy
         raise original_error if policy.nil?
 
         denial_result = Core::OperationalEvents::Commands::RecordControlEvent.call(
@@ -111,10 +111,10 @@ module Accounts
           idempotency_key: nsf_fee_idempotency_key(denial_event)
         )
         unless fee_event
-          policy = Products::Queries::ActiveOverdraftPolicies.deny_nsf_for_product(
-            business_date: business_date,
-            deposit_product_id: denial_event.source_account.deposit_product_id
-          )
+          policy = Products::Services::DepositProductResolver.call(
+            deposit_account: denial_event.source_account,
+            as_of: business_date
+          ).deny_nsf_policy
           fee_event = record_and_post_nsf_fee!(policy, denial_event, business_date)
         end
 

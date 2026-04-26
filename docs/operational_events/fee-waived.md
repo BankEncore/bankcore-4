@@ -11,6 +11,13 @@ Records a **full waiver** of a previously **posted** `fee.assessed` for the same
 | **`event_type`** | `fee.waived` |
 | **Category** | Financial |
 | **Phase** | Implemented ([ADR-0019](../adr/0019-event-catalog-and-fee-events.md)). |
+| **Lifecycle** | `pending_to_posted` |
+| **Allowed channels** | `teller`, `branch`, `api`, `batch` |
+| **Financial impact** | `gl_posting` |
+| **Customer visible** | Yes |
+| **Statement visible** | Yes |
+| **Payload schema** | `docs/operational_events/fee-waived.md` |
+| **Support search keys** | `source_account_id`, `reference_id`, `actor_id` |
 
 ## Semantics
 
