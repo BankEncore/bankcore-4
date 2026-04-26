@@ -1307,6 +1307,55 @@ CREATE INDEX idx_deposit_statements_on_statement_profile_id ON public.deposit_st
 
 
 --
+-- Name: idx_oe_actor_business_date_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_actor_business_date_id ON public.operational_events USING btree (actor_id, business_date, id) WHERE (actor_id IS NOT NULL);
+
+
+--
+-- Name: idx_oe_business_date_channel_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_business_date_channel_id ON public.operational_events USING btree (business_date, channel, id);
+
+
+--
+-- Name: idx_oe_business_date_event_type_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_business_date_event_type_id ON public.operational_events USING btree (business_date, event_type, id);
+
+
+--
+-- Name: idx_oe_business_date_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_business_date_id ON public.operational_events USING btree (business_date, id);
+
+
+--
+-- Name: idx_oe_business_date_status_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_business_date_status_id ON public.operational_events USING btree (business_date, status, id);
+
+
+--
+-- Name: idx_oe_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_idempotency_key ON public.operational_events USING btree (idempotency_key);
+
+
+--
+-- Name: idx_oe_reference_business_date_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_oe_reference_business_date_id ON public.operational_events USING btree (reference_id, business_date, id) WHERE (reference_id IS NOT NULL);
+
+
+--
 -- Name: idx_on_deposit_account_id_c32203628a; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1908,6 +1957,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120015'),
 ('20260424120014'),
 ('20260424120013'),
 ('20260424120012'),

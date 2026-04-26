@@ -56,6 +56,38 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Exception queues"
   end
 
+  test "ops search and close package expose support observability evidence" do
+    account = open_account!
+    event = Core::OperationalEvents::Models::OperationalEvent.create!(
+      event_type: "fee.assessed",
+      status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED,
+      business_date: Date.new(2026, 4, 22),
+      channel: "branch",
+      idempotency_key: "ops-support-event",
+      amount_minor_units: 125,
+      currency: "USD",
+      source_account_id: account.id,
+      reference_id: "support-case-123",
+      actor_id: @operations.id
+    )
+
+    internal_login!(username: "ops-user")
+
+    get ops_operational_events_path(reference_id: "support-case-123")
+    assert_response :success
+    assert_includes response.body, "Support keys"
+    assert_includes response.body, "Reference: support-case-123"
+    assert_includes response.body, "Idempotency: ops-support-event"
+    assert_includes response.body, "##{event.id}"
+
+    get ops_close_package_path
+    assert_response :success
+    assert_includes response.body, "EOD impact evidence"
+    assert_includes response.body, "By channel"
+    assert_includes response.body, "branch"
+    assert_includes response.body, "fee.assessed"
+  end
+
   test "admin product workspace exposes readiness review" do
     internal_login!(username: "admin-user")
     product = Products::Queries::FindDepositProduct.default_slice1!
@@ -67,5 +99,12 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
     get admin_deposit_product_readiness_path(product)
     assert_response :success
     assert_includes response.body, "Product readiness"
+  end
+
+  private
+
+  def open_account!
+    party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Ops", last_name: SecureRandom.hex(3))
+    Accounts::Commands::OpenAccount.call(party_record_id: party.id)
   end
 end

@@ -338,9 +338,9 @@ Use this classification when moving deferred items into roadmap Phase 4:
 | Product resolver depth / product configuration baseline | **Phase 4 candidate — 4.3** | External money movement must not infer behavior from `product_code`; add resolver contracts and effective-dated helper conventions before ACH or partner writes. Full product-engine breadth remains deferred. |
 | Holds depth | **Shipped in 4.4, narrow** | Holds now carry type/reason/expiration metadata, customer-safe explanations, Branch display, and due-expiration behavior. Partial release/adjustment remains deferred until a separate ADR. |
 | Account-party maintenance | **Shipped in 4.4, narrow** | Branch Customer 360/account profile reads now show current/historical parties, and supervisors can add/end `authorized_signer` rows with audit evidence. Post-open owner/joint-owner changes and broader authority semantics remain deferred. |
-| Operational event observability | **Phase 4 candidate — 4.5** | External channels need support search by account/reference/actor/channel identifiers; full-text and branch-aware filters can wait for branch identity and volume. |
-| Business-date close packages | **Phase 4 candidate — 4.5, read-only first** | External ingestion needs EOD impact visibility. Close packages/evidence should precede reopen or branch-scoped business date changes. |
-| External customer/partner/fintech read APIs | **Phase 4 candidate — 4.6** | Start with read contracts over existing state after auth/redaction/rate-limit ADR; no external writes until separate review. |
+| Operational event observability | **Shipped in 4.5, narrow** | Ops support search now covers reference, idempotency, reversal, actor, account, channel, status, event type, product, and bounded business-date filters with targeted operational-event indexes. Full-text and branch-aware filters can wait for branch identity and volume. |
+| Business-date close packages | **Shipped in 4.5, read-only first** | Ops close packages now include EOD impact evidence by event status, channel, and type. Reopen workflows and branch-scoped business date changes remain deferred. |
+| External customer/partner/fintech read APIs | **Phase 4 candidate — 4.6, next** | ADR-0027 and the external read API contract plan define the trust boundary and planned read contracts. No external writes until separate review. |
 | ACH narrow receipt ingestion | **Phase 4 candidate — 4.7** | Preferred first external money-moving channel after 4.2-4.6 prerequisites; requires a dedicated ADR. |
 | Reporting snapshots/materialized balances | **Defer until needed** | Keep compute-on-read until close evidence, support volume, or external API performance requires materialization with rebuild/drift rules. |
 | Multi-branch / multi-entity foundations | **Phase 5 candidate unless pulled by channel** | Branch/entity dimensions affect GL, business date, cash, and reporting; only pull into Phase 4 if ACH/support scope explicitly needs them. |
@@ -438,15 +438,11 @@ First slices should add measurable performance targets and drift detection befor
 
 ## 8. Suggested Sequencing
 
-Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and Phase 4.1 Branch CSR servicing shipped):
+Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and Phase 4.1-4.5 Branch servicing / event catalog / product resolver / servicing-depth / support-observability slices shipped):
 
 1. Reconcile this deferred guide and roadmap references whenever shipped narrow slices change, so Phase 4 planning starts from the same checkpoint as `roadmap.md`.
-2. Complete **4.2 Event Catalog and Channel Metadata**: lifecycle/channel metadata, statement/customer visibility, payload schema references, and docs drift checks across `EventCatalog`, the posting registry, and operational-event docs.
-3. Complete the **4.3 Product Resolver Baseline** only to the contract/effective-dating depth needed for channel-safe behavior; defer the full product engine.
-4. Add **4.4 Servicing Depth** for holds and account parties where Branch CSR created immediate support needs.
-5. Add **4.5 Support Observability and Close Readiness**: support search fields, indexes, and read-only close evidence before external ingestion volume grows.
-6. Define **4.6 External Read APIs** through an ADR covering auth, redaction, rate limits, response contracts, audit attribution, and idempotency expectations.
-7. For **4.7 ACH**, write the ACH ADR before implementation and prove file/item idempotency, event recording, posting, settlement GL, returns/cutoffs, EOD impact, and reconciliation in one narrow receipt-ingestion path.
-8. Pull forward branch/business-date, reporting snapshot, cash-location, compliance, or scale work only when the selected channel needs it.
+2. Implement **4.6 External Read APIs** only after ADR-0027's trust boundary is accepted for the chosen client/subject model; start with read-only account, activity, statement, event, and product contracts over existing domain queries.
+3. For **4.7 ACH**, write the ACH ADR before implementation and prove file/item idempotency, event recording, posting, settlement GL, returns/cutoffs, EOD impact, and reconciliation in one narrow receipt-ingestion path.
+4. Pull forward branch/business-date, reporting snapshot, cash-location, compliance, or scale work only when the selected channel needs it.
 
 This order keeps financial invariants close to already-shipped code while delaying broad channel, regulatory, and scale scope until each Phase 4 slice has explicit ADR coverage.

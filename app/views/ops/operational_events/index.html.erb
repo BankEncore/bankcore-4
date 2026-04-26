@@ -17,6 +17,9 @@
       source_account_id: "Source account id",
       destination_account_id: "Destination account id",
       actor_id: "Actor id",
+      reference_id: "Reference id",
+      idempotency_key: "Idempotency key",
+      reversal_of_event_id: "Reversal of event id",
       deposit_product_id: "Product id",
       product_code: "Product code",
       limit: "Limit"
@@ -60,6 +63,7 @@
               <th class="px-5 py-3">Source</th>
               <th class="px-5 py-3">Destination</th>
               <th class="px-5 py-3">Actor/session</th>
+              <th class="px-5 py-3">Support keys</th>
               <th class="px-5 py-3">Created</th>
             </tr>
           </thead>
@@ -79,6 +83,11 @@
                 <td class="px-5 py-4">
                   <div>Actor <%= event.actor_id || "none" %></div>
                   <div class="text-xs text-slate-500">Session <%= event.teller_session_id || "none" %></div>
+                </td>
+                <td class="px-5 py-4 text-xs text-slate-600">
+                  <div>Reference: <%= event.reference_id.presence || "none" %></div>
+                  <div>Idempotency: <%= event.idempotency_key %></div>
+                  <div>Reversal of: <%= event.reversal_of_event_id || "none" %></div>
                 </td>
                 <td class="px-5 py-4"><%= ops_time(event.created_at) %></td>
               </tr>

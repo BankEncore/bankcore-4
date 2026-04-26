@@ -22,6 +22,9 @@ module Core
           event_type: nil,
           channel: nil,
           actor_id: nil,
+          reference_id: nil,
+          idempotency_key: nil,
+          reversal_of_event_id: nil,
           deposit_product_id: nil,
           product_code: nil,
           after_id: nil,
@@ -52,6 +55,9 @@ module Core
             event_type: event_type,
             channel: channel,
             actor_id: actor_id,
+            reference_id: reference_id,
+            idempotency_key: idempotency_key,
+            reversal_of_event_id: reversal_of_event_id,
             deposit_product_id: deposit_product_id,
             product_code: product_code
           )
@@ -122,7 +128,8 @@ module Core
         private_class_method :validate_range!
 
         def self.base_scope(from_date:, to_date:, source_account_id:, destination_account_id:, status:, event_type:,
-                            channel:, actor_id:, deposit_product_id:, product_code:)
+                            channel:, actor_id:, reference_id:, idempotency_key:, reversal_of_event_id:,
+                            deposit_product_id:, product_code:)
           scope = Models::OperationalEvent.where(business_date: from_date..to_date)
           scope = scope.where(source_account_id: source_account_id.to_i) if source_account_id.present?
           scope = scope.where(destination_account_id: destination_account_id.to_i) if destination_account_id.present?
@@ -130,6 +137,9 @@ module Core
           scope = scope.where(event_type: event_type.to_s) if event_type.present?
           scope = scope.where(channel: channel.to_s) if channel.present?
           scope = scope.where(actor_id: actor_id.to_i) if actor_id.present?
+          scope = scope.where(reference_id: reference_id.to_s) if reference_id.present?
+          scope = scope.where(idempotency_key: idempotency_key.to_s) if idempotency_key.present?
+          scope = scope.where(reversal_of_event_id: reversal_of_event_id.to_i) if reversal_of_event_id.present?
 
           account_ids = matching_deposit_account_ids(deposit_product_id: deposit_product_id, product_code: product_code)
           if account_ids.nil?
