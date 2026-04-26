@@ -24,7 +24,7 @@ Decision drivers:
 
 ## 2. Decision
 
-Phase 4.7 will add a first-slice inbound ACH credit path centered on one customer-posting event type:
+Phase 4.7 adds a first-slice inbound ACH credit path centered on one customer-posting event type:
 
 - `ach.credit.received`
 
@@ -59,7 +59,7 @@ Rationale: `batch` already represents supervised file or engine activity and is 
 
 ACH receipt idempotency is deterministic at the item level.
 
-The first implementation must build:
+The implementation builds:
 
 ```text
 idempotency_key = ach-credit-received:{file_id}:{batch_id}:{item_id}
@@ -156,7 +156,7 @@ Required evidence per item:
 - ACH settlement GL line
 - customer DDA `2110` line with `deposit_account_id`
 
-The first implementation may return this evidence from the ingestion command and prove it through integration tests. A persistent ACH file/batch/item model is optional in the first slice; add it only if command-returned evidence is insufficient for support workflows.
+The first implementation returns this evidence from the ingestion command and Ops result screen, and proves it through integration tests. A persistent ACH file/batch/item model is optional in a later slice; add it only if command-returned and Ops-displayed evidence is insufficient for support workflows.
 
 ---
 
@@ -220,20 +220,20 @@ This ADR does **not** add:
 
 ---
 
-## 5. Implementation Checklist
+## 5. Implemented Surfaces
 
-After this ADR is accepted, the implementation should update:
+This ADR is implemented by:
 
-- `Core::OperationalEvents::EventCatalog`
-- `Core::OperationalEvents::Commands::RecordEvent` allowlist/fingerprint or a dedicated ACH command with equivalent idempotency checks
-- `Core::Posting::PostingRules::Registry`
-- a new ACH posting rule under `app/domains/core/posting/posting_rules/`
-- seeded COA for ACH settlement GL
+- `Core::OperationalEvents::EventCatalog` entry for `ach.credit.received`
+- `Core::OperationalEvents::Commands::RecordEvent` allowlist, validation, and fingerprint support
+- `Core::Posting::PostingRules::Registry` plus the ACH credit posting rule
+- seeded COA account **1120 ACH Settlement**
 - `Accounts::Queries::FindDepositAccountByAccountNumber`
-- an ACH receipt ingestion command under the ADR-approved Integration/ACH namespace
-- `docs/operational_events/README.md`
+- `Integration::Ach::Commands::IngestReceiptFile`
+- Ops HTML ACH receipt upload/paste form and result screen
 - `docs/operational_events/ach-credit-received.md`
-- focused tests proving account lookup, idempotency, posting, support search, reconciliation, and EOD behavior
+- `docs/samples/ach-receipt-sample.json`
+- focused tests proving account lookup, idempotency, posting, support search, reconciliation, preview, upload, and posting-failure behavior
 
 ---
 

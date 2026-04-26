@@ -16,7 +16,7 @@ The financial kernel is ready enough to design Phase 4: operational events are d
 
 Do not expand ACH, wires, card settlement, partner writes, or fintech money movement beyond the accepted first slice without a channel-specific ADR. That ADR must define event taxonomy, channel identity, idempotency, settlement GL, cutoffs/business-date behavior, returns or reversals, reconciliation, and support visibility.
 
-The first Phase 4 slice was **Branch CSR servicing** ([ADR-0026](adr/0026-branch-csr-servicing.md)): internal staff customer/account servicing under the existing Branch HTML workspace. The first external money-moving Phase 4 slice is now the narrow **ACH receipt ingestion** path ([ADR-0028](adr/0028-ach-receipt-ingestion.md)): structured credit receipt input, deterministic item idempotency, exact account-number lookup, `ach.credit.received`, settlement GL **1120**, immediate posting on the current open business date, support search, and returned reconciliation evidence.
+The first Phase 4 slice was **Branch CSR servicing** ([ADR-0026](adr/0026-branch-csr-servicing.md)): internal staff customer/account servicing under the existing Branch HTML workspace. The first external money-moving Phase 4 slice is now the narrow **ACH receipt ingestion** path ([ADR-0028](adr/0028-ach-receipt-ingestion.md)): structured credit receipt input, deterministic item idempotency, exact account-number lookup, `ach.credit.received`, settlement GL **1120**, immediate posting on the current open business date, Ops HTML upload/paste support, support search, and returned reconciliation evidence.
 
 ## 2. Shipped State Inventory
 
@@ -64,6 +64,7 @@ Phase 4.7 ACH receipt ingestion is present:
 - Account lookup is Accounts-owned through `Accounts::Queries::FindDepositAccountByAccountNumber` and preserves account-number leading zeroes.
 - Accepted items record and post `ach.credit.received` through `Core::OperationalEvents` and `Core::Posting`.
 - Posting debits ACH settlement GL **1120** and credits DDA liability **2110** with deposit-account subledger evidence.
+- Ops staff can upload or paste structured ACH receipt JSON through the internal Ops HTML workspace.
 - Ops support search can find ACH receipt items by `reference_id` and `idempotency_key`.
 
 ## 3. Documentation Drift
@@ -155,7 +156,7 @@ Backlog by revised Phase 4 slice:
 - **4.4 Servicing Depth:** shipped narrow Branch servicing depth: hold reason/type/expiration metadata and due expiration, current/historical account-party reads, and supervisor-only `authorized_signer` add/end workflows with audit evidence. Partial hold release/adjustment and post-open owner/joint-owner maintenance still need separate ADRs.
 - **4.5 Support Observability and Close Readiness:** shipped narrow Ops readiness depth: operational-event support-key filters and indexes for reference/idempotency/reversal support search, plus read-only close-package EOD impact evidence by event status, channel, and type. Materialized balance snapshots and branch-scoped business dates remain deferred.
 - **4.6 External Read APIs:** ADR-0027 and the external read API contract plan define the next implementation gate. Cover client identity, auth, redaction, rate limits, response contracts, idempotency expectations, and audit attribution. Start with reads over existing account, event, product, statement, and ledger-derived state; do not reuse Branch browser sessions or teller headers.
-- **4.7 First Money-Moving Channel:** shipped narrow ACH receipt ingestion per ADR-0028. It proves structured file/item input, exact open-account lookup, deterministic item idempotency, `ach.credit.received`, settlement GL **1120**, immediate posting, support search by reference/idempotency key, and reconciliation evidence. ACH origination, debits, returns/NOCs, prenotes, cutoff warehousing, full NACHA parsing, file/batch persistence, and receiver-name matching remain deferred.
+- **4.7 First Money-Moving Channel:** shipped narrow ACH receipt ingestion per ADR-0028. It proves structured file/item input, exact open-account lookup, deterministic item idempotency, `ach.credit.received`, settlement GL **1120**, immediate posting, Ops HTML upload/paste ingestion, support search by reference/idempotency key, and reconciliation evidence. ACH origination, debits, returns/NOCs, prenotes, cutoff warehousing, full NACHA parsing, persisted file/batch lifecycle tables, and receiver-name matching remain deferred.
 
 Items to keep outside Phase 4 unless a selected channel requires them:
 
@@ -170,7 +171,7 @@ Items to keep outside Phase 4 unless a selected channel requires them:
 ACH ADR status:
 
 - ADR-0028 is accepted for the first narrow ACH receipt slice.
-- Implemented scope covers inbound ACH credits only, with no ACH file/batch persistence tables.
+- Implemented scope covers inbound ACH credits only, with no ACH file/batch persistence tables. Ops upload/paste is a structured JSON ingestion surface, not a raw NACHA parser.
 - Future ACH ADRs or amendments are still required before adding debits, returns, NOCs, prenotes, cutoff queues, full NACHA parsing, origination, receiver-name matching, or settlement-date warehousing.
 
 Future ACH depth:
@@ -208,11 +209,11 @@ First external API ADR:
 
 ## 8. First Slice Recommendation
 
-The current checkpoint has shipped Phase 4.1 through 4.5 plus the narrow 4.7 ACH receipt slice. Phase 4.6 external read APIs remain planned from ADR-0027, and deeper ACH lifecycle work should wait for a follow-up ACH depth plan.
+The current checkpoint has shipped Phase 4.1 through 4.5 plus the narrow 4.7 ACH receipt slice. Phase 4.6 external read APIs remain the planned Phase 4 implementation gap from ADR-0027, and deeper ACH lifecycle work should wait for a follow-up ACH depth plan.
 
 Completed readiness slices include Branch CSR servicing over existing operational events, account summary, product summary, generated statement metadata, and guarded existing servicing actions. That validated internal staff contract shape, Branch auth assumptions, and audit attribution without introducing a new posting pathway.
 
-The first money movement is now narrow ACH receipt ingestion for one deposit-credit path. The shipped slice accepts minimal structured input, assigns stable file/item keys, records `ach.credit.received`, posts through the registry, exposes support search by item id, and proves balanced journals through tests.
+The first money movement is now narrow ACH receipt ingestion for one deposit-credit path. The shipped slice accepts minimal structured input through a command and Ops HTML form, assigns stable file/item keys, records `ach.credit.received`, posts through the registry, exposes support search by item id, and proves balanced journals through tests.
 
 Do not start with wires or card settlement unless the product goal specifically requires dual control, authorization holds, dispute handling, or settlement matching as the first Phase 4 story.
 
