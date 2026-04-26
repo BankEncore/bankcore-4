@@ -11,6 +11,7 @@ module Core
           "posting.reversal" => PostingReversal,
           "fee.assessed" => FeeAssessed,
           "fee.waived" => FeeWaived,
+          "ach.credit.received" => AchCreditReceived,
           "interest.accrued" => InterestAccrued,
           "interest.posted" => InterestPosted,
           "teller.drawer.variance.posted" => TellerDrawerVariancePosted

@@ -57,6 +57,8 @@ Rails.application.routes.draw do
     get "engine_runs", to: "engine_runs#index", as: :engine_runs
     get "engine_runs/:engine/new", to: "engine_runs#new", as: :new_engine_run
     post "engine_runs/:engine", to: "engine_runs#create", as: :engine_run
+    get "ach_receipt_ingestions/new", to: "ach_receipt_ingestions#new", as: :new_ach_receipt_ingestion
+    post "ach_receipt_ingestions", to: "ach_receipt_ingestions#create", as: :ach_receipt_ingestions
     resources :teller_variances, only: [ :index ] do
       post :approve, on: :member, action: :create
     end

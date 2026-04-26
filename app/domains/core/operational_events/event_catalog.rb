@@ -39,6 +39,22 @@ module Core
           support_search_keys: %w[source_account_id actor_id teller_session_id]
         ),
         Entry.new(
+          event_type: "ach.credit.received",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "Integration::Ach::Commands::IngestReceiptFile",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Inbound ACH credit accepted for posting to an open DDA",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[batch],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/ach-credit-received.md",
+          support_search_keys: %w[source_account_id reference_id idempotency_key]
+        ),
+        Entry.new(
           event_type: "withdrawal.posted",
           category: "financial",
           posts_to_gl: true,

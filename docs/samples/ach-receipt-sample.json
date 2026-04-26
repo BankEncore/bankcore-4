@@ -1,0 +1,22 @@
+{
+  "file_id": "file-20260425-001",
+  "batches": [
+    {
+      "batch_id": "batch-1",
+      "items": [
+        {
+          "item_id": "trace-091000019-000001",
+          "account_number": "REPLACE_WITH_OPEN_ACCOUNT_NUMBER",
+          "amount_minor_units": 12500,
+          "currency": "USD"
+        },
+        {
+          "item_id": "trace-091000019-000002",
+          "account_number": "REPLACE_WITH_OPEN_ACCOUNT_NUMBER",
+          "amount_minor_units": 5000,
+          "currency": "USD"
+        }
+      ]
+    }
+  ]
+}

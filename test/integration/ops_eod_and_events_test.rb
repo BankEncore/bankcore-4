@@ -77,8 +77,8 @@ class OpsEodAndEventsTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "Operational event search"
-    assert_includes response.body, "##{first.id}"
-    assert_no_match(/##{second.id}/, response.body)
+    assert_select "a[href='#{ops_operational_event_path(first)}']", text: "##{first.id}"
+    assert_select "a[href='#{ops_operational_event_path(second)}']", count: 0
     assert_includes response.body, "Next page"
 
     get "/ops/operational_events", params: { business_date: @business_date.iso8601, event_type: "fee.assessed" }

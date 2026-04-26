@@ -1,7 +1,7 @@
 Account Code	Name	Type	Control Account	Description	Subledger Applies	Subledger Schema	Examples
 1100	Cash and Due from Banks	Asset	Yes	Aggregate cash and correspondent balances; parent for cash-related accounts	No		
 1110	Cash in Vaults (teller drawers)	Asset	Yes	Physical cash under branch custody including vaults and drawers	Yes	1110:{branch}:{vault|drawer}	1110:NYC:vault ; 1110:NYC:DR03
-1120	Due from Federal Reserve	Asset	Yes	Balances at Federal Reserve (master and subaccounts)	Yes	1120:{fed_acct}	1120:042000000:MAIN
+1120	ACH Settlement	Asset	Yes	Settlement asset for accepted inbound ACH receipt files and items	Yes	1120:{file_id}:{trace}	1120:FILE20260425:TRACE0001
 1130	Due from Correspondent Banks	Asset	Yes	Nostro accounts at correspondent banks	Yes	1130:{bank_id}:{nostro_acct}	1130:CITI:USDCHK
 1140	Cash Items in Process of Collection (CIPC)	Asset	Yes	Checks accepted and in transit for external collection	Yes	1140:{branch}:{batch_id}	1140:NYC:20251012A
 1150	Returned Item Clearing	Asset	Yes	Temporary holding for on-us checks and returns while resolving	Yes	1150:{ons|ret}:{ref}	1150:ons:TXN123

@@ -340,8 +340,8 @@ Use this classification when moving deferred items into roadmap Phase 4:
 | Account-party maintenance | **Shipped in 4.4, narrow** | Branch Customer 360/account profile reads now show current/historical parties, and supervisors can add/end `authorized_signer` rows with audit evidence. Post-open owner/joint-owner changes and broader authority semantics remain deferred. |
 | Operational event observability | **Shipped in 4.5, narrow** | Ops support search now covers reference, idempotency, reversal, actor, account, channel, status, event type, product, and bounded business-date filters with targeted operational-event indexes. Full-text and branch-aware filters can wait for branch identity and volume. |
 | Business-date close packages | **Shipped in 4.5, read-only first** | Ops close packages now include EOD impact evidence by event status, channel, and type. Reopen workflows and branch-scoped business date changes remain deferred. |
-| External customer/partner/fintech read APIs | **Phase 4 candidate — 4.6, next** | ADR-0027 and the external read API contract plan define the trust boundary and planned read contracts. No external writes until separate review. |
-| ACH narrow receipt ingestion | **Phase 4 candidate — 4.7** | Preferred first external money-moving channel after 4.2-4.6 prerequisites; requires a dedicated ADR. |
+| External customer/partner/fintech read APIs | **Remaining Phase 4 candidate — 4.6** | ADR-0027 and the external read API contract plan define the trust boundary, route shape, serializers, redaction tests, and planned read contracts. No external writes until separate review. |
+| ACH narrow receipt ingestion | **Shipped in 4.7, narrow** | First external money-moving channel is implemented as structured ACH credit receipt ingestion with deterministic item idempotency, exact account-number lookup, `ach.credit.received`, settlement GL **1120**, immediate posting, Ops HTML upload/paste ingestion, support search, returned reconciliation evidence, and a sample structured JSON file. ACH origination, debits, returns/NOCs, cutoff warehousing, full NACHA parsing, and persisted file/batch lifecycle tables remain deferred. |
 | Reporting snapshots/materialized balances | **Defer until needed** | Keep compute-on-read until close evidence, support volume, or external API performance requires materialization with rebuild/drift rules. |
 | Multi-branch / multi-entity foundations | **Phase 5 candidate unless pulled by channel** | Branch/entity dimensions affect GL, business date, cash, and reporting; only pull into Phase 4 if ACH/support scope explicitly needs them. |
 | Cash/vault operations | **Defer until needed** | Teller sessions and variance are sufficient for current Branch work; vault/drawer location depth is a separate cash-control product choice. |
@@ -352,14 +352,17 @@ Use this classification when moving deferred items into roadmap Phase 4:
 
 ### 6.1 ACH
 
+Current state: Phase 4.7 ships a narrow inbound ACH credit receipt path. `Integration::Ach::Commands::IngestReceiptFile` accepts minimal structured file/batch/item input, preserves account-number leading zeroes, resolves open deposit accounts through `Accounts::Queries::FindDepositAccountByAccountNumber`, records and posts `ach.credit.received`, posts Dr **1120** / Cr **2110**, and returns per-item outcomes with operational-event, posting-batch, journal-entry, reference, and idempotency evidence. Ops staff can use the internal HTML ACH receipt ingestion form to upload or paste structured JSON and inspect item outcomes; `docs/samples/ach-receipt-sample.json` provides a replaceable test payload.
+
 To complete:
 
-- Add ACH file/batch ingestion with idempotent item identity.
-- Separate origination, receipt, settlement, return, and reversal lifecycles.
+- Add persisted ACH file/batch/item lifecycle tables only when support or reconciliation needs durable run history beyond the command result and Ops form output.
+- Separate origination, receipt, settlement, return, NOC, prenote, and reversal lifecycles.
 - Define NACHA-specific validation and return code handling.
-- Post only through operational events and posting rules.
+- Add cutoff, settlement-date, and next-day warehousing rules.
+- Continue posting only through operational events and posting rules.
 
-First ADR should cover ACH event taxonomy, settlement accounts, file idempotency, and return handling.
+ADR-0028 covers the shipped first slice. Future ACH depth ADRs should cover return handling, file/batch persistence, full NACHA validation, cutoff queues, receiver-name matching, and origination/debit authority before those workflows are implemented.
 
 ### 6.2 Wires
 
@@ -438,11 +441,11 @@ First slices should add measurable performance targets and drift detection befor
 
 ## 8. Suggested Sequencing
 
-Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and Phase 4.1-4.5 Branch servicing / event catalog / product resolver / servicing-depth / support-observability slices shipped):
+Recommended order from the current checkpoint (Phase 1 breadth, Phase 2/3 narrow slices, Phase 3.5 internal workspace foundations, and shipped Phase 4 Branch servicing / event catalog / product resolver / servicing-depth / support-observability / narrow ACH receipt slices):
 
 1. Reconcile this deferred guide and roadmap references whenever shipped narrow slices change, so Phase 4 planning starts from the same checkpoint as `roadmap.md`.
-2. Implement **4.6 External Read APIs** only after ADR-0027's trust boundary is accepted for the chosen client/subject model; start with read-only account, activity, statement, event, and product contracts over existing domain queries.
-3. For **4.7 ACH**, write the ACH ADR before implementation and prove file/item idempotency, event recording, posting, settlement GL, returns/cutoffs, EOD impact, and reconciliation in one narrow receipt-ingestion path.
+2. Implement **4.6 External Read APIs** as the remaining planned Phase 4 slice, following ADR-0027's trust boundary for the chosen client/subject model; start with read-only account, activity, statement, event, and product contracts over existing domain queries.
+3. Expand ACH only with follow-up ADR coverage for returns/NOCs, debits, origination, cutoff queues, full NACHA parsing, receiver-name matching, or persisted file/batch lifecycle state.
 4. Pull forward branch/business-date, reporting snapshot, cash-location, compliance, or scale work only when the selected channel needs it.
 
 This order keeps financial invariants close to already-shipped code while delaying broad channel, regulatory, and scale scope until each Phase 4 slice has explicit ADR coverage.

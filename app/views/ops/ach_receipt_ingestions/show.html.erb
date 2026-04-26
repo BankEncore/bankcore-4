@@ -1,0 +1,78 @@
+<% content_for :title, "ACH Receipt Results - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">ACH receipt <%= @preview ? "preview" : "results" %></h1>
+  <p class="mt-2 text-slate-600">
+    File <span class="font-mono"><%= @result.file_id %></span> for business date <%= @result.business_date.iso8601 %>.
+  </p>
+</section>
+
+<section class="mt-6 grid gap-4 md:grid-cols-4">
+  <% ops_result_counts(@result).each do |outcome, count| %>
+    <div class="rounded border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="text-sm text-slate-500"><%= outcome.to_s.humanize %></div>
+      <div class="mt-1 text-2xl font-semibold"><%= count %></div>
+    </div>
+  <% end %>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Per-item outcomes</h2>
+    <p class="mt-1 text-sm text-slate-600">
+      <%= @preview ? "Preview did not create events or journals." : "Posted rows include operational-event and journal evidence." %>
+    </p>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Outcome</th>
+          <th class="px-5 py-3">File / batch / item</th>
+          <th class="px-5 py-3">Account</th>
+          <th class="px-5 py-3">Event</th>
+          <th class="px-5 py-3">Posting</th>
+          <th class="px-5 py-3">Support keys</th>
+          <th class="px-5 py-3">Message</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% @result.outcomes.each do |row| %>
+          <tr>
+            <td class="px-5 py-4"><%= ops_status_badge(row.fetch(:outcome)) %></td>
+            <td class="px-5 py-4">
+              <div><%= row.fetch(:file_id) %></div>
+              <div class="text-xs text-slate-500"><%= row.fetch(:batch_id) %> / <%= row.fetch(:item_id) %></div>
+            </td>
+            <td class="px-5 py-4">
+              <div class="font-mono"><%= row.fetch(:account_number) %></div>
+              <div class="text-xs text-slate-500">Account #<%= row[:deposit_account_id] || "none" %></div>
+            </td>
+            <td class="px-5 py-4">
+              <% if row[:operational_event_id].present? %>
+                <%= link_to "##{row[:operational_event_id]}", ops_operational_event_path(row[:operational_event_id]), class: "font-medium text-slate-950 underline" %>
+              <% else %>
+                None
+              <% end %>
+            </td>
+            <td class="px-5 py-4">
+              <div>Batch <%= row[:posting_batch_id] || "none" %></div>
+              <div class="text-xs text-slate-500">Journal <%= row[:journal_entry_id] || "none" %></div>
+            </td>
+            <td class="px-5 py-4 text-xs text-slate-600">
+              <div>Reference: <%= row[:reference_id].presence || "none" %></div>
+              <div>Idempotency: <%= row[:idempotency_key].presence || "none" %></div>
+            </td>
+            <td class="px-5 py-4"><%= row[:message].presence || "None" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="mt-6 flex flex-wrap gap-3">
+  <%= link_to "Upload another ACH receipt", ops_new_ach_receipt_ingestion_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  <%= link_to "Search ACH events", ops_operational_events_path(event_type: "ach.credit.received"), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+</section>
