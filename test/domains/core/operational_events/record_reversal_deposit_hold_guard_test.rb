@@ -12,6 +12,7 @@ class RecordReversalDepositHoldGuardTest < ActiveSupport::TestCase
     @account = Accounts::Commands::OpenAccount.call(party_record_id: @party.id)
     @cash_session_id = Teller::Commands::OpenSession.call(drawer_code: "rev-hold-#{SecureRandom.hex(4)}").id
     @supervisor = Workspace::Models::Operator.create!(role: "supervisor", display_name: "Rev Supervisor", active: true)
+    @teller = Workspace::Models::Operator.create!(role: "teller", display_name: "Rev Teller", active: true)
   end
 
   test "rejects reversal of deposit while active deposit-linked hold exists" do
@@ -52,7 +53,8 @@ class RecordReversalDepositHoldGuardTest < ActiveSupport::TestCase
     Accounts::Commands::ReleaseHold.call(
       hold_id: hold_r[:hold].id,
       channel: "teller",
-      idempotency_key: "rel-rev2-#{SecureRandom.hex(4)}"
+      idempotency_key: "rel-rev2-#{SecureRandom.hex(4)}",
+      actor_id: @supervisor.id
     )
 
     r = Core::OperationalEvents::Commands::RecordReversal.call(
@@ -63,6 +65,19 @@ class RecordReversalDepositHoldGuardTest < ActiveSupport::TestCase
     )
     assert_equal :created, r[:outcome]
     assert_equal "posting.reversal", r[:event].event_type
+  end
+
+  test "teller channel reversal requires reversal capability in command" do
+    dep = record_and_post_deposit!(10_000, "dep-rev-denied-#{SecureRandom.hex(4)}")
+
+    assert_raises(Workspace::Authorization::Forbidden) do
+      Core::OperationalEvents::Commands::RecordReversal.call(
+        original_operational_event_id: dep.id,
+        channel: "teller",
+        idempotency_key: "rev-denied-#{SecureRandom.hex(4)}",
+        actor_id: @teller.id
+      )
+    end
   end
 
   private

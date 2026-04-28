@@ -9,6 +9,11 @@ module Core
         # @param business_date [Date, nil] when present, must equal current open day
         # @return [Hash] :setting (reload), :closed_on (Date), :previous_business_on (same as closed_on)
         def self.call(closed_by_operator_id: nil, business_date: nil)
+          Workspace::Authorization::Authorizer.require_capability!(
+            actor_id: closed_by_operator_id,
+            capability_code: Workspace::Authorization::CapabilityRegistry::BUSINESS_DATE_CLOSE
+          )
+
           Models::BusinessDateSetting.transaction do
             setting = Models::BusinessDateSetting.lock.first
             raise Errors::NotSet, "core_business_date_settings has no row" if setting.nil?

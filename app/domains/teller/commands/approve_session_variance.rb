@@ -9,6 +9,11 @@ module Teller
 
       # @param supervisor_operator_id [Integer, nil] FK to operators; from current_operator in teller workspace.
       def self.call(teller_session_id:, supervisor_operator_id: nil)
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: supervisor_operator_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::TELLER_SESSION_VARIANCE_APPROVE
+        )
+
         Teller::Models::TellerSession.transaction do
           session = Teller::Models::TellerSession.lock.find_by(id: teller_session_id)
           raise NotFound, "teller_session_id=#{teller_session_id}" if session.nil?

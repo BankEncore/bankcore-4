@@ -7,6 +7,7 @@ class ListHoldsForAccountTest < ActiveSupport::TestCase
     Core::BusinessDate::Models::BusinessDateSetting.delete_all
     Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.new(2026, 9, 3))
     @operator = Workspace::Models::Operator.create!(role: "teller", display_name: "Hold Teller", active: true)
+    @supervisor = Workspace::Models::Operator.create!(role: "supervisor", display_name: "Hold Supervisor", active: true)
   end
 
   test "lists holds and active total for an account" do
@@ -31,7 +32,7 @@ class ListHoldsForAccountTest < ActiveSupport::TestCase
       hold_id: released.id,
       channel: "branch",
       idempotency_key: "release-hold",
-      actor_id: @operator.id
+      actor_id: @supervisor.id
     )
 
     result = Accounts::Queries::ListHoldsForAccount.call(deposit_account_id: account.id)

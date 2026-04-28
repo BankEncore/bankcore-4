@@ -3,7 +3,7 @@
 module Branch
   class AccountHoldsController < ApplicationController
     before_action :load_account
-    before_action :require_branch_supervisor!, only: %i[release create_release]
+    before_action :require_hold_release_capability!, only: %i[release create_release]
 
     def index
       @holds = Accounts::Queries::ListHoldsForAccount.call(
@@ -69,6 +69,10 @@ module Branch
     end
 
     private
+
+    def require_hold_release_capability!
+      require_branch_capability!(Workspace::Authorization::CapabilityRegistry::HOLD_RELEASE)
+    end
 
     def load_account
       @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])

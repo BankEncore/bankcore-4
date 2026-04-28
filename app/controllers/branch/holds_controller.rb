@@ -2,6 +2,8 @@
 
 module Branch
   class HoldsController < ApplicationController
+    before_action :require_hold_release_capability!, only: %i[release create_release]
+
     def new
       @hold = default_hold_params("branch-hold")
     end
@@ -49,6 +51,10 @@ module Branch
     end
 
     private
+
+    def require_hold_release_capability!
+      require_branch_capability!(Workspace::Authorization::CapabilityRegistry::HOLD_RELEASE)
+    end
 
     def default_hold_params(prefix)
       {

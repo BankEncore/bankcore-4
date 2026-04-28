@@ -2,7 +2,7 @@
 
 module Branch
   class FeeWaiversController < ApplicationController
-    before_action :require_branch_supervisor!
+    before_action :require_fee_waive_capability!
     before_action :load_account
 
     def new
@@ -34,9 +34,16 @@ module Branch
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message
       render :new, status: :unprocessable_entity
+    rescue Workspace::Authorization::Forbidden => e
+      @error_message = e.message
+      render :new, status: :forbidden
     end
 
     private
+
+    def require_fee_waive_capability!
+      require_branch_capability!(Workspace::Authorization::CapabilityRegistry::FEE_WAIVE)
+    end
 
     def load_account
       @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])

@@ -32,6 +32,13 @@ module Teller
       render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
     end
 
+    def require_capability!(capability_code, message: "supervisor role required")
+      return if performed?
+      return if current_operator&.has_capability?(capability_code)
+
+      render json: { error: "forbidden", message: message }, status: :forbidden
+    end
+
     def current_operator
       @current_operator
     end

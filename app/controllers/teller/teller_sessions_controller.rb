@@ -2,7 +2,7 @@
 
 module Teller
   class TellerSessionsController < ApplicationController
-    before_action :require_supervisor!, only: [ :approve_variance ]
+    before_action :require_variance_approval_capability!, only: [ :approve_variance ]
 
     def create
       drawer = params.permit(:drawer_code)[:drawer_code]
@@ -47,6 +47,14 @@ module Teller
       render json: { error: "not_found", message: e.message }, status: :not_found
     rescue Teller::Commands::ApproveSessionVariance::InvalidState => e
       render json: { error: "invalid_state", message: e.message }, status: :unprocessable_entity
+    rescue Workspace::Authorization::Forbidden
+      render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
+    end
+
+    private
+
+    def require_variance_approval_capability!
+      require_capability!(Workspace::Authorization::CapabilityRegistry::TELLER_SESSION_VARIANCE_APPROVE)
     end
   end
 end

@@ -856,7 +856,7 @@ Each table family should have **one owning domain** even if all tables live in o
 | `holds`                                                      | `Accounts`                |
 | `deposit_statements`                                         | `Deposits`                |
 | `authorization_decisions`                                    | `Limits`                  |
-| `operators`                                                  | `Workspace`               |
+| `operators`, `operator_credentials`, `capabilities`, `roles`, `role_capabilities`, `operator_role_assignments`, future `operator_role_assignment_audits` | `Workspace`               |
 | `teller_sessions`, `teller_transactions`                     | `Teller`                  |
 | `cash_locations`, `vault_transfers`, `cash_counts`           | `Cash`                    |
 | `approval_requests`, `approval_decisions`                    | `Workflow`                |

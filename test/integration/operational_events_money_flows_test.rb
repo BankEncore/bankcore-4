@@ -72,7 +72,7 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
           reference_id: fee_id.to_s
         }
       }.to_json,
-      headers: teller_json_headers(@teller_operator)
+      headers: teller_json_headers(@supervisor_operator)
     assert_response :created
     waive_id = response.parsed_body["id"]
     post "/teller/operational_events/#{waive_id}/post", headers: teller_json_headers(@teller_operator)

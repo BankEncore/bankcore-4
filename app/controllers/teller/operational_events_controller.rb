@@ -88,6 +88,8 @@ module Teller
       render json: { error: "idempotency_conflict", fingerprint: e.fingerprint }, status: :conflict
     rescue Core::OperationalEvents::Commands::RecordEvent::PostedReplay => e
       render json: { error: "posted_replay", message: e.message.presence || "already posted" }, status: :conflict
+    rescue Workspace::Authorization::Forbidden
+      render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
     end
 
     private
