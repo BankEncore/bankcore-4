@@ -1,6 +1,6 @@
 # ADR-0029: Capability-first authorization layer
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Date:** 2026-04-27  
 **Aligns with:** [module catalog](../architecture/bankcore-module-catalog.md) §7, [ADR-0015](0015-teller-workspace-authentication.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0027](0027-external-read-api-boundary.md), [roadmap](../roadmap.md) Phase 1G / Phase 4
 
