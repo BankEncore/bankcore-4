@@ -6,7 +6,7 @@ module Internal
 
     before_action :require_internal_operator!
 
-    helper_method :current_operator, :current_business_date, :branch_access?, :ops_access?, :admin_access?
+    helper_method :current_operator, :current_operating_unit, :current_business_date, :branch_access?, :ops_access?, :admin_access?
 
     private
 
@@ -23,6 +23,14 @@ module Internal
     def current_business_date
       @current_business_date ||= Core::BusinessDate::Services::CurrentBusinessDate.call
     rescue Core::BusinessDate::Errors::NotSet
+      nil
+    end
+
+    def current_operating_unit
+      @current_operating_unit ||= Organization::Services::ResolveOperatingUnit.call(operator: current_operator)
+    rescue Organization::Services::ResolveOperatingUnit::Error,
+      Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+      Organization::Services::DefaultOperatingUnit::NotFound
       nil
     end
 
@@ -71,7 +79,7 @@ module Internal
     end
 
     def has_any_capability?(*capability_codes)
-      capability_codes.any? { |code| current_operator&.has_capability?(code) }
+      capability_codes.any? { |code| current_operator&.has_capability?(code, scope: current_operating_unit) }
     end
   end
 end

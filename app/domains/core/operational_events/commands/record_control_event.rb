@@ -22,7 +22,8 @@ module Core
         CONTROL_EVENT_TYPES = %w[override.requested override.approved overdraft.nsf_denied].freeze
 
         def self.call(event_type:, channel:, idempotency_key:, reference_id:, actor_id: nil, business_date: nil,
-                      amount_minor_units: nil, currency: nil, source_account_id: nil, destination_account_id: nil)
+                      amount_minor_units: nil, currency: nil, source_account_id: nil, destination_account_id: nil,
+                      operating_unit_id: nil)
           RecordEvent.validate_channel!(channel)
           type = event_type.to_s
           unless CONTROL_EVENT_TYPES.include?(type)
@@ -37,10 +38,13 @@ module Core
           rescue Core::BusinessDate::Errors::InvalidPostingBusinessDate => e
             raise InvalidRequest, e.message
           end
+          resolved_operating_unit = resolve_operating_unit(channel, actor_id, operating_unit_id)
+
           incoming_fp = fingerprint(event_type: type, channel: channel, idempotency_key: idempotency_key,
                                     reference_id: reference_id.to_s, actor_id: actor_id,
                                     amount_minor_units: amount_minor_units, currency: currency,
-                                    source_account_id: source_account_id, destination_account_id: destination_account_id)
+                                    source_account_id: source_account_id, destination_account_id: destination_account_id,
+                                    operating_unit_id: resolved_operating_unit&.id)
 
           begin
             Models::OperationalEvent.transaction(requires_new: true) do
@@ -60,7 +64,8 @@ module Core
                 amount_minor_units: amount_minor_units,
                 currency: currency,
                 source_account_id: source_account_id,
-                destination_account_id: destination_account_id
+                destination_account_id: destination_account_id,
+                operating_unit: resolved_operating_unit
               )
               { outcome: :created, event: event }
             end
@@ -71,7 +76,8 @@ module Core
         end
 
         def self.fingerprint(event_type:, channel:, idempotency_key:, reference_id:, actor_id:,
-                             amount_minor_units: nil, currency: nil, source_account_id: nil, destination_account_id: nil)
+                             amount_minor_units: nil, currency: nil, source_account_id: nil, destination_account_id: nil,
+                             operating_unit_id: nil)
           payload = {
             event_type: event_type,
             channel: channel.to_s,
@@ -81,10 +87,26 @@ module Core
             amount_minor_units: amount_minor_units&.to_i,
             currency: currency&.to_s,
             source_account_id: source_account_id&.to_i,
-            destination_account_id: destination_account_id&.to_i
+            destination_account_id: destination_account_id&.to_i,
+            operating_unit_id: operating_unit_id&.to_i
           }
           Digest::SHA256.hexdigest(payload.to_json)
         end
+
+        def self.resolve_operating_unit(channel, actor_id, operating_unit_id)
+          return nil unless RecordEvent::STAFF_CHANNELS.include?(channel.to_s)
+
+          actor = Workspace::Models::Operator.find_by(id: actor_id) if actor_id.present?
+          Organization::Services::ResolveOperatingUnit.call(
+            operator: actor,
+            operating_unit_id: operating_unit_id
+          )
+        rescue Organization::Services::ResolveOperatingUnit::Error,
+          Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+          Organization::Services::DefaultOperatingUnit::NotFound => e
+          raise InvalidRequest, e.message
+        end
+        private_class_method :resolve_operating_unit
 
         def self.validate_nsf_denied!(type, amount_minor_units, currency, source_account_id, destination_account_id, reference_id)
           return unless type == NSF_DENIED
@@ -126,7 +148,8 @@ module Core
             amount_minor_units: existing.amount_minor_units,
             currency: existing.currency,
             source_account_id: existing.source_account_id,
-            destination_account_id: existing.destination_account_id
+            destination_account_id: existing.destination_account_id,
+            operating_unit_id: existing.operating_unit_id
           )
           raise MismatchedIdempotency.new(incoming_fp) if existing_fp != incoming_fp
 

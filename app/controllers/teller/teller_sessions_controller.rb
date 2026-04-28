@@ -5,11 +5,24 @@ module Teller
     before_action :require_variance_approval_capability!, only: [ :approve_variance ]
 
     def create
-      drawer = params.permit(:drawer_code)[:drawer_code]
-      session = Teller::Commands::OpenSession.call(drawer_code: drawer)
-      render json: { id: session.id, status: session.status, opened_at: session.opened_at }, status: :created
+      attrs = params.permit(:drawer_code, :operating_unit_id)
+      session = Teller::Commands::OpenSession.call(
+        drawer_code: attrs[:drawer_code],
+        operator_id: current_operator.id,
+        operating_unit_id: attrs[:operating_unit_id]
+      )
+      render json: {
+        id: session.id,
+        status: session.status,
+        opened_at: session.opened_at,
+        operating_unit_id: session.operating_unit_id
+      }, status: :created
     rescue Teller::Commands::OpenSession::SessionAlreadyOpen => e
       render json: { error: "session_already_open", message: e.message }, status: :unprocessable_entity
+    rescue Organization::Services::ResolveOperatingUnit::Error,
+      Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+      Organization::Services::DefaultOperatingUnit::NotFound => e
+      render json: { error: "invalid_operating_unit", message: e.message }, status: :unprocessable_entity
     end
 
     def close

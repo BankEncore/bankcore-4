@@ -11,10 +11,14 @@ module BankCore
       ].freeze
 
       def self.seed!
+        default_operating_unit = Organization::Services::DefaultOperatingUnit.branch
+
         LOCAL_OPERATORS.each do |attrs|
           operator = Workspace::Models::Operator.find_or_initialize_by(role: attrs.fetch(:role))
           operator.display_name = attrs.fetch(:display_name)
           operator.active = true
+          operator.default_operating_unit = default_operating_unit if default_operating_unit.present? &&
+            operator.respond_to?(:default_operating_unit=)
           operator.save!
 
           credential = operator.credential || operator.build_credential

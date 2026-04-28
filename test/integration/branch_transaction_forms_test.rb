@@ -100,6 +100,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_response :created
     event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-deposit-record")
     assert_equal "pending", event.status
+    assert_equal @teller.default_operating_unit_id, event.operating_unit_id
     assert_includes response.body, "Post event"
 
     post "/branch/operational_events/#{event.id}/post"
@@ -150,6 +151,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_response :created
     posted_event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-withdrawal-post")
     assert_equal "posted", posted_event.status
+    assert_equal @teller.default_operating_unit_id, posted_event.operating_unit_id
   end
 
   test "withdrawal form renders NSF denial and fee ids" do
@@ -165,6 +167,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Withdrawal denied for NSF"
     denial = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-withdrawal-nsf")
     assert_equal "overdraft.nsf_denied", denial.event_type
+    assert_equal @teller.default_operating_unit_id, denial.operating_unit_id
     assert_includes response.body, "Denial event"
     assert_includes response.body, "Fee event"
   end
@@ -191,7 +194,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
   end
 
   def open_session!
-    Teller::Commands::OpenSession.call(drawer_code: "branch-form-#{SecureRandom.hex(6)}")
+    Teller::Commands::OpenSession.call(drawer_code: "branch-form-#{SecureRandom.hex(6)}", operator_id: @teller.id)
   end
 
   def funded_account!(amount:)

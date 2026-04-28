@@ -9,7 +9,7 @@ module Accounts
       # Creates an active hold and a posted `hold.placed` operational event (no GL posting).
       def self.call(deposit_account_id:, amount_minor_units:, currency:, channel:, idempotency_key:, business_date: nil,
                     placed_for_operational_event_id: nil, actor_id: nil, hold_type: nil, reason_code: nil,
-                    reason_description: nil, expires_on: nil)
+                    reason_description: nil, expires_on: nil, operating_unit_id: nil)
         ch = channel.to_s
         unless Core::OperationalEvents::Commands::RecordEvent::CHANNELS.include?(ch)
           raise InvalidRequest, "channel must be one of: #{Core::OperationalEvents::Commands::RecordEvent::CHANNELS.join(", ")}"
@@ -30,6 +30,7 @@ module Accounts
         validate_amount!(amount_minor_units, currency)
         validate_metadata!(normalized_hold_type, normalized_reason_code)
         validate_expiration!(normalized_expires_on, on_date)
+        resolved_operating_unit = resolve_operating_unit(ch, actor_id, operating_unit_id)
 
         begin
           Core::OperationalEvents::Models::OperationalEvent.transaction(requires_new: true) do
@@ -44,7 +45,8 @@ module Accounts
                 normalized_hold_type,
                 normalized_reason_code,
                 reason_description,
-                normalized_expires_on
+                normalized_expires_on,
+                resolved_operating_unit&.id
               )
               return { outcome: :replay, event: existing, hold: find_hold_for_event(existing) }
             end
@@ -63,7 +65,8 @@ module Accounts
               amount_minor_units: amount_minor_units,
               currency: currency,
               source_account_id: deposit_account_id,
-              actor_id: actor_id
+              actor_id: actor_id,
+              operating_unit: resolved_operating_unit
             )
 
             hold = Accounts::Models::Hold.create!(
@@ -92,7 +95,8 @@ module Accounts
             normalized_hold_type,
             normalized_reason_code,
             reason_description,
-            normalized_expires_on
+            normalized_expires_on,
+            resolved_operating_unit&.id
           )
           { outcome: :replay, event: existing, hold: find_hold_for_event(existing) }
         end
@@ -139,7 +143,8 @@ module Accounts
         hold_type,
         reason_code,
         reason_description,
-        expires_on
+        expires_on,
+        operating_unit_id
       )
         raise InvalidRequest, "idempotency replay type mismatch" unless existing.event_type == "hold.placed"
         raise InvalidRequest, "idempotency replay mismatch" unless existing.source_account_id == deposit_account_id &&
@@ -156,11 +161,24 @@ module Accounts
         unless hold.hold_type == hold_type &&
             hold.reason_code == reason_code &&
             hold.reason_description.to_s == reason_description.to_s &&
-            hold.expires_on == expires_on
+            hold.expires_on == expires_on &&
+            existing.operating_unit_id == operating_unit_id
           raise InvalidRequest, "idempotency replay mismatch for hold metadata"
         end
       end
       private_class_method :validate_hold_placed_replay!
+
+      def self.resolve_operating_unit(channel, actor_id, operating_unit_id)
+        return nil unless %w[teller branch].include?(channel)
+
+        actor = Workspace::Models::Operator.find_by(id: actor_id) if actor_id.present?
+        Organization::Services::ResolveOperatingUnit.call(operator: actor, operating_unit_id: operating_unit_id)
+      rescue Organization::Services::ResolveOperatingUnit::Error,
+        Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+        Organization::Services::DefaultOperatingUnit::NotFound => e
+        raise InvalidRequest, e.message
+      end
+      private_class_method :resolve_operating_unit
 
       def self.validate_deposit_link!(deposit_oe, deposit_account_id, amount_minor_units, currency)
         raise InvalidRequest, "placed_for_operational_event_id not found" if deposit_oe.nil?

@@ -16,7 +16,8 @@ module Branch
         currency: @transfer[:currency],
         source_account_id: @transfer[:source_account_id].to_i,
         destination_account_id: @transfer[:destination_account_id].to_i,
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       if result[:outcome].in?([ Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED, Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED_REPLAY ])
         @outcome = result[:outcome]

@@ -34,7 +34,8 @@ module Branch
         hold_type: @hold[:hold_type],
         reason_code: @hold[:reason_code],
         reason_description: @hold[:reason_description],
-        expires_on: @hold[:expires_on]
+        expires_on: @hold[:expires_on],
+        operating_unit_id: current_operating_unit&.id
       )
       render_result(result)
     rescue Accounts::Commands::PlaceHold::InvalidRequest => e
@@ -53,7 +54,8 @@ module Branch
         hold_id: params[:hold_id].to_i,
         channel: branch_channel,
         idempotency_key: @hold_release[:idempotency_key],
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       render_result(result)
     rescue Accounts::Commands::ReleaseHold::InvalidRequest,

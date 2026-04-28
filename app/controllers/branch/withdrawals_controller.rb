@@ -16,7 +16,8 @@ module Branch
         currency: @withdrawal[:currency],
         source_account_id: @withdrawal[:deposit_account_id].to_i,
         teller_session_id: parse_optional_integer(@withdrawal[:teller_session_id]),
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       if result[:outcome].in?([ Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED, Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED_REPLAY ])
         @outcome = result[:outcome]

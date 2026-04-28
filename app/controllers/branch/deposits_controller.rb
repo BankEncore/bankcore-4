@@ -16,7 +16,8 @@ module Branch
         currency: @deposit[:currency],
         source_account_id: @deposit[:deposit_account_id].to_i,
         teller_session_id: parse_optional_integer(@deposit[:teller_session_id]),
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       @event = result[:event]
       @outcome = result[:outcome]

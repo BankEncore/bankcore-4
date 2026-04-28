@@ -10,6 +10,7 @@ module Workspace
       has_one :credential, class_name: "Workspace::Models::OperatorCredential", dependent: :destroy
       has_many :operator_role_assignments, class_name: "Workspace::Models::OperatorRoleAssignment", dependent: :destroy
       has_many :roles, through: :operator_role_assignments, class_name: "Workspace::Models::Role"
+      belongs_to :default_operating_unit, class_name: "Organization::Models::OperatingUnit", optional: true
 
       validates :role, presence: true, inclusion: { in: ROLES }
 

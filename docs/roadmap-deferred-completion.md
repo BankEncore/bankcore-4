@@ -62,19 +62,20 @@ Likely slices:
 
 ### 2.3 Multi-Branch and Multi-Entity Foundations
 
-Current state: the system assumes a singleton business date and a simple institution ledger.
+Current state: ADR-0032's first slice is shipped. `Organization` owns `operating_units`, seeds one institution and one branch, operators have default operating units, teller sessions persist `operating_unit_id`, staff-originated operational events carry `operating_unit_id` where scope is resolved, and RBAC supports exact operating-unit scoped assignments. The system still assumes a singleton business date and a simple institution ledger.
 
 To complete:
 
-- Introduce branch/location identity where operational activity occurs.
+- Add cash-location identity and custody workflows on top of the shipped operating-unit scope.
 - Decide business-date scope: institution-wide, branch-specific, or entity-specific.
 - Extend GL and reporting dimensions without breaking existing posted history.
 - Define consolidation rules before adding multi-entity accounting.
+- Decide whether parent/region/department operating-unit authorization inheritance is needed.
 
 Likely slices:
 
-- Branch/location data model and operator assignment.
-- Branch-scoped teller session and cash location model.
+- Cash-domain branch vault / teller drawer locations using `cash_locations.operating_unit_id`.
+- Branch-aware operational-event filters and support reports using existing `operational_events.operating_unit_id`.
 - Branch-aware business date reads before branch-aware posting.
 - Multi-entity GL ADR only after branch scoping is stable.
 
@@ -141,12 +142,12 @@ Likely slices:
 
 ### 3.4 Operational Event Observability
 
-Shipped narrow slice: Teller has write endpoints plus bounded `GET /teller/operational_events` with business-date range limits, product/account filters, pagination, response envelope, and posting/journal traceability. The internal ops workspace also exposes operational event search/detail over the same read model.
+Shipped narrow slice: Teller has write endpoints plus bounded `GET /teller/operational_events` with business-date range limits, product/account filters, pagination, response envelope, and posting/journal traceability. The internal ops workspace also exposes operational event search/detail over the same read model. ADR-0032 adds durable `operating_unit_id` attribution on staff-originated internal events where scope is resolved.
 
 To complete:
 
 - Add full-text search over event type, account number, reference id, and actor.
-- Add branch-aware and multi-operator filters once branch identity exists.
+- Add branch-aware filters and multi-operator filters over `operating_unit_id` and actor.
 - Decide customer-safe redaction rules versus teller/ops visibility.
 - Add cursor pagination over compound ordering if IDs alone are not sufficient at volume.
 
@@ -154,7 +155,7 @@ Likely slices:
 
 - Search index migration and query tests.
 - Role-aware response shaping.
-- Branch filter after branch model lands.
+- Branch/operating-unit filter in Teller/Ops event search.
 - Performance benchmark fixture for larger event volumes.
 
 ### 3.5 Business Date Close
@@ -177,11 +178,11 @@ Likely slices:
 
 ### 3.6 Drawer Variance and Cash Operations
 
-Shipped narrow slice: teller sessions, open/close lifecycle, expected cash display on branch session close, variance thresholding, supervisor variance approval, and optional GL posting via `teller.drawer.variance.posted` are shipped. Deeper cash operations such as vaults, drawers as explicit cash locations, transfers, denominations, and in-transit cash remain deferred.
+Shipped narrow slice: teller sessions, open/close lifecycle, expected cash display on branch session close, variance thresholding, supervisor variance approval, optional GL posting via `teller.drawer.variance.posted`, and teller-session `operating_unit_id` are shipped. Deeper cash operations such as vaults, drawers as explicit cash locations, transfers, denominations, and in-transit cash remain deferred.
 
 To complete:
 
-- Model cash locations, vaults, teller drawers, and cash transfers.
+- Model cash locations, vaults, teller drawers, and cash transfers using ADR-0032 operating-unit scope.
 - Add denomination-level cash counts where needed.
 - Distinguish teller drawer GL, vault cash GL, and in-transit cash GL if product requires it.
 - Add approvals for vault transfers and large cash movements.
