@@ -22,9 +22,11 @@ module Core
         end
 
         REVERSIBLE_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed interest.accrued interest.posted].freeze
+        STAFF_CHANNELS = %w[teller branch].freeze
 
         def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
           RecordEvent.validate_channel!(channel)
+          authorize_staff_reversal!(channel, actor_id)
 
           original = Models::OperationalEvent.find_by(id: original_operational_event_id)
           raise NotFound, "original_operational_event_id=#{original_operational_event_id}" if original.nil?
@@ -115,6 +117,16 @@ module Core
           { outcome: :replay, event: existing }
         end
         private_class_method :handle_existing
+
+        def self.authorize_staff_reversal!(channel, actor_id)
+          return unless STAFF_CHANNELS.include?(channel.to_s)
+
+          Workspace::Authorization::Authorizer.require_capability!(
+            actor_id: actor_id,
+            capability_code: Workspace::Authorization::CapabilityRegistry::REVERSAL_CREATE
+          )
+        end
+        private_class_method :authorize_staff_reversal!
       end
     end
   end

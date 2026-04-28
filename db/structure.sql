@@ -111,6 +111,44 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: capabilities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.capabilities (
+    id bigint NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description text,
+    category character varying NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT capabilities_category_present_check CHECK ((btrim((category)::text) <> ''::text)),
+    CONSTRAINT capabilities_code_present_check CHECK ((btrim((code)::text) <> ''::text)),
+    CONSTRAINT capabilities_name_present_check CHECK ((btrim((name)::text) <> ''::text))
+);
+
+
+--
+-- Name: capabilities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.capabilities_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: capabilities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.capabilities_id_seq OWNED BY public.capabilities.id;
+
+
+--
 -- Name: core_business_date_close_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -740,6 +778,45 @@ ALTER SEQUENCE public.operator_credentials_id_seq OWNED BY public.operator_crede
 
 
 --
+-- Name: operator_role_assignments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.operator_role_assignments (
+    id bigint NOT NULL,
+    operator_id bigint NOT NULL,
+    role_id bigint NOT NULL,
+    scope_type character varying,
+    scope_id bigint,
+    active boolean DEFAULT true NOT NULL,
+    starts_at timestamp(6) without time zone,
+    ends_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT operator_role_assignments_scope_pair_check CHECK ((((scope_type IS NULL) AND (scope_id IS NULL)) OR ((scope_type IS NOT NULL) AND (scope_id IS NOT NULL)))),
+    CONSTRAINT operator_role_assignments_time_window_check CHECK (((starts_at IS NULL) OR (ends_at IS NULL) OR (starts_at < ends_at)))
+);
+
+
+--
+-- Name: operator_role_assignments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.operator_role_assignments_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: operator_role_assignments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.operator_role_assignments_id_seq OWNED BY public.operator_role_assignments.id;
+
+
+--
 -- Name: operators; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -878,6 +955,75 @@ ALTER SEQUENCE public.posting_batches_id_seq OWNED BY public.posting_batches.id;
 
 
 --
+-- Name: role_capabilities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.role_capabilities (
+    id bigint NOT NULL,
+    role_id bigint NOT NULL,
+    capability_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: role_capabilities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.role_capabilities_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: role_capabilities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.role_capabilities_id_seq OWNED BY public.role_capabilities.id;
+
+
+--
+-- Name: roles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.roles (
+    id bigint NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    description text,
+    active boolean DEFAULT true NOT NULL,
+    system_role boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT roles_code_present_check CHECK ((btrim((code)::text) <> ''::text)),
+    CONSTRAINT roles_name_present_check CHECK ((btrim((name)::text) <> ''::text))
+);
+
+
+--
+-- Name: roles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.roles_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.roles_id_seq OWNED BY public.roles.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -924,6 +1070,13 @@ CREATE SEQUENCE public.teller_sessions_id_seq
 --
 
 ALTER SEQUENCE public.teller_sessions_id_seq OWNED BY public.teller_sessions.id;
+
+
+--
+-- Name: capabilities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.capabilities ALTER COLUMN id SET DEFAULT nextval('public.capabilities_id_seq'::regclass);
 
 
 --
@@ -1039,6 +1192,13 @@ ALTER TABLE ONLY public.operator_credentials ALTER COLUMN id SET DEFAULT nextval
 
 
 --
+-- Name: operator_role_assignments id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_role_assignments ALTER COLUMN id SET DEFAULT nextval('public.operator_role_assignments_id_seq'::regclass);
+
+
+--
 -- Name: operators id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1067,6 +1227,20 @@ ALTER TABLE ONLY public.posting_batches ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
+-- Name: role_capabilities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_capabilities ALTER COLUMN id SET DEFAULT nextval('public.role_capabilities_id_seq'::regclass);
+
+
+--
+-- Name: roles id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles ALTER COLUMN id SET DEFAULT nextval('public.roles_id_seq'::regclass);
+
+
+--
 -- Name: teller_sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1079,6 +1253,14 @@ ALTER TABLE ONLY public.teller_sessions ALTER COLUMN id SET DEFAULT nextval('pub
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: capabilities capabilities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.capabilities
+    ADD CONSTRAINT capabilities_pkey PRIMARY KEY (id);
 
 
 --
@@ -1210,6 +1392,14 @@ ALTER TABLE ONLY public.operator_credentials
 
 
 --
+-- Name: operator_role_assignments operator_role_assignments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_role_assignments
+    ADD CONSTRAINT operator_role_assignments_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: operators operators_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1239,6 +1429,22 @@ ALTER TABLE ONLY public.party_records
 
 ALTER TABLE ONLY public.posting_batches
     ADD CONSTRAINT posting_batches_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: role_capabilities role_capabilities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_capabilities
+    ADD CONSTRAINT role_capabilities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles
+    ADD CONSTRAINT roles_pkey PRIMARY KEY (id);
 
 
 --
@@ -1367,6 +1573,13 @@ CREATE INDEX idx_on_deposit_account_id_c32203628a ON public.deposit_account_part
 --
 
 CREATE INDEX idx_on_party_record_id_91aa95b618 ON public.deposit_account_party_maintenance_audits USING btree (party_record_id);
+
+
+--
+-- Name: index_capabilities_on_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_capabilities_on_code ON public.capabilities USING btree (code);
 
 
 --
@@ -1629,6 +1842,34 @@ CREATE UNIQUE INDEX index_operator_credentials_on_operator_id ON public.operator
 
 
 --
+-- Name: index_operator_role_assignments_on_global_role; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_operator_role_assignments_on_global_role ON public.operator_role_assignments USING btree (operator_id, role_id) WHERE ((scope_type IS NULL) AND (scope_id IS NULL));
+
+
+--
+-- Name: index_operator_role_assignments_on_operator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operator_role_assignments_on_operator_id ON public.operator_role_assignments USING btree (operator_id);
+
+
+--
+-- Name: index_operator_role_assignments_on_role_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operator_role_assignments_on_role_id ON public.operator_role_assignments USING btree (role_id);
+
+
+--
+-- Name: index_operator_role_assignments_on_scoped_role; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_operator_role_assignments_on_scoped_role ON public.operator_role_assignments USING btree (operator_id, role_id, scope_type, scope_id) WHERE ((scope_type IS NOT NULL) AND (scope_id IS NOT NULL));
+
+
+--
 -- Name: index_party_individual_profiles_on_party_record_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1640,6 +1881,34 @@ CREATE UNIQUE INDEX index_party_individual_profiles_on_party_record_id ON public
 --
 
 CREATE INDEX index_posting_batches_on_operational_event_id ON public.posting_batches USING btree (operational_event_id);
+
+
+--
+-- Name: index_role_capabilities_on_capability_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_role_capabilities_on_capability_id ON public.role_capabilities USING btree (capability_id);
+
+
+--
+-- Name: index_role_capabilities_on_role_and_capability; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_role_capabilities_on_role_and_capability ON public.role_capabilities USING btree (role_id, capability_id);
+
+
+--
+-- Name: index_role_capabilities_on_role_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_role_capabilities_on_role_id ON public.role_capabilities USING btree (role_id);
+
+
+--
+-- Name: index_roles_on_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_roles_on_code ON public.roles USING btree (code);
 
 
 --
@@ -1719,6 +1988,14 @@ ALTER TABLE ONLY public.posting_batches
 
 
 --
+-- Name: operator_role_assignments fk_rails_2034e16c17; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_role_assignments
+    ADD CONSTRAINT fk_rails_2034e16c17 FOREIGN KEY (role_id) REFERENCES public.roles(id);
+
+
+--
 -- Name: party_individual_profiles fk_rails_22a835d5da; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1783,11 +2060,27 @@ ALTER TABLE ONLY public.holds
 
 
 --
+-- Name: operator_role_assignments fk_rails_54957937ed; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operator_role_assignments
+    ADD CONSTRAINT fk_rails_54957937ed FOREIGN KEY (operator_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: operator_credentials fk_rails_580f3046fd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.operator_credentials
     ADD CONSTRAINT fk_rails_580f3046fd FOREIGN KEY (operator_id) REFERENCES public.operators(id);
+
+
+--
+-- Name: role_capabilities fk_rails_5a0544a242; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_capabilities
+    ADD CONSTRAINT fk_rails_5a0544a242 FOREIGN KEY (role_id) REFERENCES public.roles(id);
 
 
 --
@@ -1887,6 +2180,14 @@ ALTER TABLE ONLY public.operational_events
 
 
 --
+-- Name: role_capabilities fk_rails_a6e4d08394; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.role_capabilities
+    ADD CONSTRAINT fk_rails_a6e4d08394 FOREIGN KEY (capability_id) REFERENCES public.capabilities(id);
+
+
+--
 -- Name: deposit_account_parties fk_rails_bf2b31365a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1957,6 +2258,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120016'),
 ('20260424120015'),
 ('20260424120014'),
 ('20260424120013'),

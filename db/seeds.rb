@@ -7,6 +7,7 @@
 require_relative "../lib/bank_core/seeds/gl_coa"
 require_relative "../lib/bank_core/seeds/deposit_products"
 require_relative "../lib/bank_core/seeds/operators"
+require_relative "../lib/bank_core/seeds/rbac"
 
 BankCore::Seeds::GlCoa.seed!
 BankCore::Seeds::DepositProducts.seed!
@@ -18,3 +19,5 @@ end
 if Rails.env.development? || Rails.env.test?
   BankCore::Seeds::Operators.seed!
 end
+
+BankCore::Seeds::Rbac.seed!

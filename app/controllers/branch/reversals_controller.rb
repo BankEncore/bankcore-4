@@ -2,7 +2,7 @@
 
 module Branch
   class ReversalsController < ApplicationController
-    before_action :require_branch_supervisor!
+    before_action :require_reversal_capability!
 
     def new
       @reversal = default_form_params("branch-reversal")
@@ -23,6 +23,7 @@ module Branch
     rescue Core::OperationalEvents::Commands::RecordReversal::InvalidRequest,
       Core::OperationalEvents::Commands::RecordReversal::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordReversal::PostedReplay,
+      Workspace::Authorization::Forbidden,
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message
       render :new, status: :unprocessable_entity
@@ -32,6 +33,10 @@ module Branch
     end
 
     private
+
+    def require_reversal_capability!
+      require_branch_capability!(Workspace::Authorization::CapabilityRegistry::REVERSAL_CREATE)
+    end
 
     def default_form_params(prefix)
       {

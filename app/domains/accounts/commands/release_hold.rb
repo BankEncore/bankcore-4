@@ -6,6 +6,7 @@ module Accounts
       class Error < StandardError; end
       class InvalidRequest < Error; end
       class HoldNotFound < Error; end
+      STAFF_CHANNELS = %w[teller branch].freeze
 
       # Releases an active hold; creates a posted `hold.released` operational event (no GL).
       def self.call(hold_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
@@ -13,6 +14,7 @@ module Accounts
         unless Core::OperationalEvents::Commands::RecordEvent::CHANNELS.include?(ch)
           raise InvalidRequest, "channel must be one of: #{Core::OperationalEvents::Commands::RecordEvent::CHANNELS.join(", ")}"
         end
+        authorize_staff_release!(ch, actor_id)
 
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
         begin
@@ -60,6 +62,16 @@ module Accounts
         hold = Accounts::Models::Hold.find(hold_id)
         { outcome: :replay, event: existing, hold: hold.reload }
       end
+
+      def self.authorize_staff_release!(channel, actor_id)
+        return unless STAFF_CHANNELS.include?(channel)
+
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: actor_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::HOLD_RELEASE
+        )
+      end
+      private_class_method :authorize_staff_release!
     end
   end
 end

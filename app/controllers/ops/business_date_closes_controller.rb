@@ -24,6 +24,9 @@ module Ops
     rescue Core::BusinessDate::Errors::NotSet, ArgumentError => e
       @error_message = e.message
       render :new, status: :unprocessable_entity
+    rescue Workspace::Authorization::Forbidden => e
+      @error_message = e.message
+      render :new, status: :forbidden
     end
 
     private

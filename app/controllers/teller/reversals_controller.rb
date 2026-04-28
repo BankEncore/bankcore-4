@@ -2,7 +2,7 @@
 
 module Teller
   class ReversalsController < ApplicationController
-    before_action :require_supervisor!, only: [ :create ]
+    before_action :require_reversal_capability!, only: [ :create ]
 
     def create
       attrs = params.require(:reversal).permit(:original_operational_event_id, :channel, :idempotency_key, :business_date).to_h.symbolize_keys
@@ -24,6 +24,14 @@ module Teller
       render json: { error: "idempotency_conflict", fingerprint: e.fingerprint }, status: :conflict
     rescue Core::OperationalEvents::Commands::RecordReversal::PostedReplay => e
       render json: { error: "posted_replay", message: e.message.presence || "already posted" }, status: :conflict
+    rescue Workspace::Authorization::Forbidden
+      render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
+    end
+
+    private
+
+    def require_reversal_capability!
+      require_capability!(Workspace::Authorization::CapabilityRegistry::REVERSAL_CREATE)
     end
   end
 end

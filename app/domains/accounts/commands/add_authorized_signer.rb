@@ -21,7 +21,7 @@ module Accounts
 
           account = find_open_account!(deposit_account_id)
           party = find_party!(party_record_id)
-          actor = find_supervisor!(actor_id)
+        actor = authorize_actor!(actor_id)
           ensure_no_open_authorized_signer!(account.id, party.id)
 
           relationship = Models::DepositAccountParty.create!(
@@ -103,14 +103,15 @@ module Accounts
       end
       private_class_method :find_party!
 
-      def self.find_supervisor!(actor_id)
-        actor = Workspace::Models::Operator.find_by(id: actor_id)
-        raise InvalidRequest, "actor_id not found" if actor.nil?
-        return actor if actor.active? && actor.supervisor?
-
-        raise InvalidRequest, "actor must be an active supervisor"
+      def self.authorize_actor!(actor_id)
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: actor_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN
+        )
+      rescue Workspace::Authorization::Forbidden => e
+        raise InvalidRequest, e.message
       end
-      private_class_method :find_supervisor!
+      private_class_method :authorize_actor!
 
       def self.ensure_no_open_authorized_signer!(deposit_account_id, party_record_id)
         existing = Models::DepositAccountParty.exists?(

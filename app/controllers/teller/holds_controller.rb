@@ -18,7 +18,7 @@ module Teller
         attrs.delete(:business_date)
       end
 
-      result = Accounts::Commands::PlaceHold.call(**attrs)
+      result = Accounts::Commands::PlaceHold.call(**attrs, actor_id: current_operator.id)
       status = result[:outcome] == :created ? :created : :ok
       render json: { hold_id: result[:hold].id, operational_event_id: result[:event].id, outcome: result[:outcome] }, status: status
     rescue Accounts::Commands::PlaceHold::InvalidRequest => e
@@ -34,13 +34,15 @@ module Teller
         attrs.delete(:business_date)
       end
 
-      result = Accounts::Commands::ReleaseHold.call(**attrs)
+      result = Accounts::Commands::ReleaseHold.call(**attrs, actor_id: current_operator.id)
       status = result[:outcome] == :created ? :created : :ok
       render json: { operational_event_id: result[:event].id, outcome: result[:outcome] }, status: status
     rescue Accounts::Commands::ReleaseHold::InvalidRequest => e
       render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
     rescue Accounts::Commands::ReleaseHold::HoldNotFound => e
       render json: { error: "not_found", message: e.message }, status: :not_found
+    rescue Workspace::Authorization::Forbidden
+      render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
     end
   end
 end

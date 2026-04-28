@@ -21,7 +21,7 @@ module Accounts
 
           relationship = find_open_authorized_signer!(deposit_account_party_id)
           account = find_open_account!(relationship.deposit_account_id)
-          actor = find_supervisor!(actor_id)
+        actor = authorize_actor!(actor_id)
           raise InvalidRequest, "ended_on cannot be before effective_on" if end_date < relationship.effective_on
 
           relationship.update!(
@@ -106,14 +106,15 @@ module Accounts
       end
       private_class_method :find_open_account!
 
-      def self.find_supervisor!(actor_id)
-        actor = Workspace::Models::Operator.find_by(id: actor_id)
-        raise InvalidRequest, "actor_id not found" if actor.nil?
-        return actor if actor.active? && actor.supervisor?
-
-        raise InvalidRequest, "actor must be an active supervisor"
+      def self.authorize_actor!(actor_id)
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: actor_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN
+        )
+      rescue Workspace::Authorization::Forbidden => e
+        raise InvalidRequest, e.message
       end
-      private_class_method :find_supervisor!
+      private_class_method :authorize_actor!
 
       def self.validate_end_replay!(audit, deposit_account_party_id, actor_id, ended_on)
         unless audit.action == Models::DepositAccountPartyMaintenanceAudit::ACTION_AUTHORIZED_SIGNER_ENDED &&

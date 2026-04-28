@@ -18,6 +18,8 @@ module Ops
         notice: "Approved variance for teller session ##{session.id}."
     rescue Teller::Commands::ApproveSessionVariance::Error => e
       redirect_to ops_teller_variances_path, alert: e.message
+    rescue Workspace::Authorization::Forbidden => e
+      redirect_to ops_teller_variances_path, alert: e.message
     end
   end
 end

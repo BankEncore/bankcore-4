@@ -83,15 +83,15 @@ May this internal staff operator attempt this category of action?
 
 Examples:
 
-- `txn.cash.deposit`
-- `txn.cash.withdrawal`
-- `txn.override.fee`
-- `approval.standard`
-- `approval.reversal`
+- `deposit.accept`
+- `withdrawal.post`
+- `transfer.complete`
+- `fee.waive`
+- `reversal.create`
 - `ops.exception.resolve`
-- `audit.operational_events.view`
+- `operational_event.view`
 - `audit.export`
-- `admin.role.manage`
+- `role.manage`
 
 Capabilities must not encode conditional controls.
 
@@ -231,8 +231,8 @@ role_id
 scope_type
 scope_id
 active
-starts_on
-ends_on
+starts_at
+ends_at
 created_at
 updated_at
 ```
@@ -243,6 +243,16 @@ Scope rules for this ADR:
 - null scope means institution-wide assignment for the current narrow implementation.
 - future ADRs may define scoped values such as `branch`, `location`, or `operating_unit`.
 - until those scope models exist, implementation must not invent branch resolution rules.
+- until ADR-0032 scope resolution is implemented, scoped assignment rows grant no capabilities.
+- `scope: nil` and `scope: <non-nil>` resolver calls both evaluate active global assignments only.
+
+Temporal rules:
+
+- `starts_at` and `ends_at` are nullable `datetime` columns.
+- `starts_at: nil` means the assignment is eligible immediately.
+- `ends_at: nil` means the assignment has no scheduled end.
+- an assignment is effective when `active = true`, `starts_at` is nil or `starts_at <= Time.current`, and `ends_at` is nil or `Time.current < ends_at`.
+- `ends_at` is exclusive.
 
 Uniqueness:
 
@@ -266,8 +276,21 @@ Rules:
 - code references in application code must be covered by tests or registry checks
 - deleting or renaming a capability requires an explicit migration plan
 - institution-specific role bundles may compose registered capabilities, but must not create undeclared codes at runtime
+- capability codes should use the pattern `<object>.<action>`
+- capability actions should be present-tense authority verbs, while operational events remain past-tense business facts
+- when a capability protects an action that records an operational event, prefer the same business object noun as the event type
 
-The initial implementation should favor seed-managed baseline capabilities and role bundles. Role-management UI is deferred.
+Examples:
+
+```text
+Operational event: deposit.accepted
+Capability:        deposit.accept
+
+Operational event: fee.waived
+Capability:        fee.waive
+```
+
+The initial implementation should favor a Ruby `Workspace::Authorization::CapabilityRegistry` as the source for baseline capability definitions and role bundles. Migrations and seeds may use the registry to create database rows, but the registry remains the code-reviewed source for baseline RBAC data. Role-management UI is deferred.
 
 ---
 
@@ -288,17 +311,33 @@ If scope is nil:
   return capabilities assigned through active, unexpired, globally scoped operator role assignments.
 
 If scope is present:
-  return globally scoped capabilities plus capabilities for matching scope_type/scope_id,
-  once a future scoped-RBAC ADR defines valid scope resolution.
+  return capabilities assigned through active, unexpired, globally scoped operator role assignments.
+  Ignore scoped assignment rows until ADR-0032 defines valid scope resolution.
 ```
 
 Operators may expose a convenience method:
 
 ```ruby
-current_operator.has_capability?("approval.standard", scope: current_authorization_scope)
+current_operator.has_capability?("reversal.create", scope: current_authorization_scope)
 ```
 
 Convenience methods must delegate to the resolver and must not duplicate role/capability traversal logic.
+
+### 6.1 Command-layer enforcement
+
+Controllers may perform capability checks for navigation, button visibility, redirects, and friendly `403` responses, but controller authorization is not sufficient for privileged writes.
+
+Control-sensitive commands must enforce required capabilities at the command boundary. This applies to commands that waive fees, place or release holds, create reversals, close the business date, approve teller-session variances, maintain authorized signers, or perform similarly privileged state changes.
+
+Commands should:
+
+- accept `actor_id` as the durable staff actor reference
+- resolve `actor_id` to an active `Workspace::Models::Operator`
+- call `Workspace::Authorization::CapabilityResolver`
+- fail closed when the actor is missing, inactive, or lacks the required capability
+- avoid direct traversal of role or capability tables outside the Workspace resolver
+
+Business rules and conditional controls remain in the owning command, policy, or domain service. For example, a command may require `reversal.create`, but reversal age, linked-hold guards, source-event status, idempotency replay, and no-self-approval checks remain explicit non-RBAC controls.
 
 ---
 
@@ -313,20 +352,20 @@ current_operator.operations?
 current_operator.admin?
 ```
 
-These helpers should remain legacy compatibility helpers during migration. They must not be redefined as aliases for one broad capability such as `approval.standard`, because a role and a capability are not equivalent.
+These helpers should remain legacy compatibility helpers during migration. They must not be redefined as aliases for one action-specific capability such as `business_date.close`, because a role and a capability are not equivalent.
 
 New control-sensitive checks should use capabilities directly:
 
 ```ruby
-current_operator.has_capability?("approval.standard")
-current_operator.has_capability?("txn.override.fee")
+current_operator.has_capability?("reversal.create")
+current_operator.has_capability?("fee.waive")
 ```
 
 The migration path is:
 
 1. create capability and role tables
-2. seed baseline capabilities and role bundles
-3. backfill role assignments from `operators.role`
+2. create baseline capabilities and role bundles through migration
+3. backfill role assignments from `operators.role` through migration
 4. keep `operators.role` temporarily for compatibility
 5. migrate one control-sensitive check at a time
 6. add regression tests before replacing each legacy role check
@@ -334,38 +373,55 @@ The migration path is:
 
 This avoids a big-bang authorization refactor.
 
+Production deploys must not depend on running seeds to preserve authorization behavior. The initial RBAC migrations must create the baseline capability rows, role rows, role-capability links, and global `operator_role_assignments` derived from existing `operators.role` values before any shipped role check is replaced by a capability check.
+
+Seeds remain useful for development, test, local rebuilds, and idempotent repair, but later role-management or institution-specific configuration must not rely on rerunning seeds. The compatibility backfill should create missing global assignments conservatively and preserve `operators.role` unchanged; it must not delete future assignments or reconcile institution-specific changes.
+
+Response contracts should remain stable during the migration. Existing Teller JSON errors and Branch redirect/flash behavior may continue to use legacy role-oriented wording such as "supervisor role required" while the underlying check moves to capabilities. Capability-neutral wording such as "Not authorized for this action" can be introduced later as a separate UI/API cleanup after compatibility role checks are retired.
+
+Role-management UI is deferred, but admin-managed RBAC must not ship without audit evidence. Future role assignment change records should capture, at minimum, actor, target operator, role, affected assignment, action, old and new active state, old and new `starts_at` / `ends_at`, reason, and timestamp.
+
 ---
 
 ## 8. Baseline Role Bundles
 
 Initial seeded role bundles must preserve existing behavior. The table below is a baseline, not an institution-specific final matrix.
 
-| Capability | Teller | Branch Supervisor | Operations | System Admin |
-| --- | ---: | ---: | ---: | ---: |
-| `txn.cash.deposit` | Yes | Yes | No | No |
-| `txn.cash.withdrawal` | Yes | Yes | No | No |
-| `txn.cash.check_cashing` | Yes | Yes | No | No |
-| `txn.cash.bank_draft.issue` | Yes | Yes | No | No |
-| `txn.transfer.internal` | Yes | Yes | No | No |
-| `teller.session.open` | Yes | Yes | No | No |
-| `teller.session.close` | Yes | Yes | No | No |
-| `teller.cash.manage_drawer` | Yes | Yes | No | No |
-| `txn.override.fee` | No | Yes | No | No |
-| `txn.override.hold` | No | Yes | No | No |
-| `approval.standard` | No | Yes | No | No |
-| `approval.reversal` | No | Yes | No | No |
-| `ops.exception.resolve` | No | No | Yes | No |
-| `ops.reconciliation.perform` | No | No | Yes | No |
-| `ops.batch.process` | No | No | Yes | No |
-| `audit.operational_events.view` | No | Limited | Yes | Yes |
-| `audit.posting.view` | No | No | Yes | Yes |
-| `audit.export` | No | No | Yes | No |
-| `reporting.view` | No | Limited | Yes | Yes |
-| `admin.user.manage` | No | No | No | Yes |
-| `admin.role.manage` | No | No | No | Yes |
-| `admin.system.configure` | No | No | No | Yes |
+| Capability | Teller | Branch Supervisor | CSR | Branch Manager | Operations | Auditor | System Admin |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `deposit.accept` | Yes | Yes | No | No | No | No | No |
+| `withdrawal.post` | Yes | Yes | No | No | No | No | No |
+| `transfer.complete` | Yes | Yes | No | No | No | No | No |
+| `teller_session.open` | Yes | Yes | No | No | No | No | No |
+| `teller_session.close` | Yes | Yes | No | No | No | No | No |
+| `cash_drawer.manage` | Yes | Yes | No | No | No | No | No |
+| `party.create` | Yes | Yes | Yes | Yes | No | No | No |
+| `account.open` | Yes | Yes | Yes | Yes | No | No | No |
+| `account.maintain` | No | Yes | Yes | Yes | No | No | No |
+| `hold.place` | Yes | Yes | Yes | Yes | No | No | No |
+| `fee.waive` | No | Yes | No | Yes | No | No | No |
+| `hold.release` | No | Yes | No | Yes | No | No | No |
+| `business_date.close` | No | Yes | No | No | Yes | No | No |
+| `teller_session_variance.approve` | No | Yes | No | No | Yes | No | No |
+| `reversal.create` | No | Yes | No | Yes | No | No | No |
+| `ops.batch.process` | No | No | No | No | Yes | No | No |
+| `ops.exception.resolve` | No | No | No | No | Yes | No | No |
+| `ops.reconciliation.perform` | No | No | No | No | Yes | No | No |
+| `operational_event.view` | No | Yes | Yes | Yes | Yes | Yes | Yes |
+| `journal_entry.view` | No | No | No | Yes | Yes | Yes | No |
+| `audit.export` | No | No | No | No | Yes | Yes | No |
+| `report.view` | Limited | Yes | Yes | Yes | Yes | Yes | Yes |
+| `user.manage` | No | No | No | No | No | No | Yes |
+| `role.manage` | No | No | No | No | No | No | Yes |
+| `system.configure` | No | No | No | No | No | No | Yes |
 
 System administrators do not receive financial approval capabilities by default. If a bank needs emergency financial authority for technology administrators, that must be modeled as a separate break-glass role with explicit audit and review requirements.
+
+`branch_supervisor` is the compatibility target for existing `operators.role = supervisor` records and should preserve today's migrated supervisor behavior. `csr`, `branch_manager`, and `auditor` are seeded future-facing bundles and existing operators are not backfilled into them unless development or test seed data explicitly creates those users.
+
+`operations` receives `business_date.close` and `teller_session_variance.approve` to preserve the shipped Ops control surfaces while Teller JSON remains supervisor-equivalent for those same actions.
+
+`system_admin` is a technology administration role, not a financial approval role. Support visibility through `operational_event.view` and `report.view` does not imply authority to waive fees, release holds, create reversals, close the business date, or approve teller-session variances.
 
 ---
 
@@ -387,7 +443,7 @@ Capabilities are necessary but not sufficient.
 Example:
 
 ```ruby
-return false unless operator.has_capability?("txn.cash.withdrawal")
+return false unless operator.has_capability?("withdrawal.post")
 return false unless teller_session.open?
 return false unless available_balance_minor_units >= amount_minor_units
 return approval_required if amount_minor_units > threshold_minor_units
@@ -405,19 +461,19 @@ Recommended targets:
 
 1. Standard approval
    - from: `current_operator.supervisor?`
-   - to: `current_operator.has_capability?("approval.standard")`
+   - to: action-specific capabilities such as `current_operator.has_capability?("teller_session_variance.approve")`
 
 2. Reversal approval
    - from: supervisor-only checks
-   - to: `current_operator.has_capability?("approval.reversal")`
+   - to: `current_operator.has_capability?("reversal.create")`
 
 3. Fee waiver
    - from: hardcoded supervisor check
-   - to: `current_operator.has_capability?("txn.override.fee")`
+   - to: `current_operator.has_capability?("fee.waive")`
 
 4. Admin role management, once role-management UI exists
    - from: `current_operator.admin?`
-   - to: `current_operator.has_capability?("admin.role.manage")`
+   - to: `current_operator.has_capability?("role.manage")`
 
 Broad workspace navigation should not be the first migration target. Domain controls are easier to test and carry clearer audit/control value.
 
@@ -468,7 +524,7 @@ Neutral:
 ## 13. Open Questions
 
 1. Should `operators.role` eventually be removed, retained as display-only, or retained as a default role-template hint?
-2. Should the canonical capability registry be database-first, YAML-first, or seed-managed with drift tests?
+2. Should the Ruby capability registry later be supplemented with institution-specific role configuration outside code?
 3. Should institution-specific role bundles be editable in the UI during MVP, or remain seed/config managed?
 4. Which scoped assignment types should be valid after branch/location modeling: `branch`, `location`, `operating_unit`, or something else?
 5. Should workspace navigation become capability-driven immediately, or only after control-sensitive domain gates are migrated?

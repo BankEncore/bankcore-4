@@ -2,7 +2,7 @@
 
 module Teller
   class BusinessDateClosesController < ApplicationController
-    before_action :require_supervisor!
+    before_action :require_business_date_close_capability!
 
     def create
       optional_date = parse_optional_business_date
@@ -24,11 +24,17 @@ module Teller
       render json: body, status: :unprocessable_entity
     rescue Core::BusinessDate::Errors::NotSet => e
       render json: { error: "business_date_not_set", message: e.message }, status: :unprocessable_entity
+    rescue Workspace::Authorization::Forbidden
+      render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
     rescue ArgumentError => e
       render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
     end
 
     private
+
+    def require_business_date_close_capability!
+      require_capability!(Workspace::Authorization::CapabilityRegistry::BUSINESS_DATE_CLOSE)
+    end
 
     def parse_optional_business_date
       raw = params[:business_date].presence || params.dig(:business_date_close, :business_date).presence

@@ -45,15 +45,33 @@ module Internal
     end
 
     def branch_access?
-      current_operator&.teller? || current_operator&.supervisor?
+      has_any_capability?(
+        Workspace::Authorization::CapabilityRegistry::DEPOSIT_ACCEPT,
+        Workspace::Authorization::CapabilityRegistry::ACCOUNT_OPEN,
+        Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN,
+        Workspace::Authorization::CapabilityRegistry::HOLD_PLACE
+      )
     end
 
     def ops_access?
-      current_operator&.operations? || current_operator&.admin?
+      has_any_capability?(
+        Workspace::Authorization::CapabilityRegistry::OPS_BATCH_PROCESS,
+        Workspace::Authorization::CapabilityRegistry::OPS_EXCEPTION_RESOLVE,
+        Workspace::Authorization::CapabilityRegistry::OPS_RECONCILIATION_PERFORM,
+        Workspace::Authorization::CapabilityRegistry::SYSTEM_CONFIGURE
+      )
     end
 
     def admin_access?
-      current_operator&.admin?
+      has_any_capability?(
+        Workspace::Authorization::CapabilityRegistry::USER_MANAGE,
+        Workspace::Authorization::CapabilityRegistry::ROLE_MANAGE,
+        Workspace::Authorization::CapabilityRegistry::SYSTEM_CONFIGURE
+      )
+    end
+
+    def has_any_capability?(*capability_codes)
+      capability_codes.any? { |code| current_operator&.has_capability?(code) }
     end
   end
 end

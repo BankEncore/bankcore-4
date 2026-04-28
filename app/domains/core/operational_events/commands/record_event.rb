@@ -31,6 +31,7 @@ module Core
             INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED ]
         ).freeze
         CHANNELS = %w[teller branch api batch system].freeze
+        STAFF_CHANNELS = %w[teller branch].freeze
         TELLER_CASH_EVENT_TYPES = %w[deposit.accepted withdrawal.posted].freeze
 
         # @return [Hash] `{ outcome: :created|:replay, event: OperationalEvent }`
@@ -50,6 +51,7 @@ module Core
         )
           validate_channel!(channel)
           validate_event_type!(event_type)
+          authorize_fee_waiver!(event_type, channel, actor_id)
           validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
           validate_source_account!(event_type, source_account_id)
           validate_destination_account!(event_type, destination_account_id)
@@ -315,6 +317,17 @@ module Core
           end
         end
         private_class_method :validate_fee_waived!
+
+        def self.authorize_fee_waiver!(event_type, channel, actor_id)
+          return unless event_type.to_s == "fee.waived"
+          return unless STAFF_CHANNELS.include?(channel.to_s)
+
+          Workspace::Authorization::Authorizer.require_capability!(
+            actor_id: actor_id,
+            capability_code: Workspace::Authorization::CapabilityRegistry::FEE_WAIVE
+          )
+        end
+        private_class_method :authorize_fee_waiver!
 
         def self.validate_ach_credit_received!(event_type, channel, reference_id)
           return unless event_type.to_s == "ach.credit.received"

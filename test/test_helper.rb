@@ -2,6 +2,7 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require_relative "../lib/bank_core/seeds/gl_coa"
 require_relative "../lib/bank_core/seeds/deposit_products"
+require_relative "../lib/bank_core/seeds/rbac"
 require "rails/test_help"
 
 module ActiveSupport
@@ -9,12 +10,14 @@ module ActiveSupport
     # `parallelize_setup` runs in forked workers only; below the parallelization threshold the suite
     # runs in the parent process, so seed here too (structure.sql has empty `deposit_products`).
     BankCore::Seeds::DepositProducts.seed!
+    BankCore::Seeds::Rbac.seed! if ActiveRecord::Base.connection.table_exists?(:capabilities)
 
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors)
 
     parallelize_setup do |_worker|
       BankCore::Seeds::DepositProducts.seed!
+      BankCore::Seeds::Rbac.seed! if ActiveRecord::Base.connection.table_exists?(:capabilities)
     end
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
@@ -35,6 +38,7 @@ class ActionDispatch::IntegrationTest
   def create_workspace_operators!
     teller = Workspace::Models::Operator.create!(role: "teller", display_name: "Test Teller", active: true)
     supervisor = Workspace::Models::Operator.create!(role: "supervisor", display_name: "Test Supervisor", active: true)
+    BankCore::Seeds::Rbac.seed!
     [ teller, supervisor ]
   end
 
@@ -49,6 +53,7 @@ class ActionDispatch::IntegrationTest
       password: password,
       password_changed_at: Time.current
     )
+    BankCore::Seeds::Rbac.seed!
     operator
   end
 

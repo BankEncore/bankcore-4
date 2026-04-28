@@ -32,24 +32,30 @@ module Branch
       redirect_to branch_path, alert: "Supervisor role required"
     end
 
+    def require_branch_capability!(capability_code, alert: "Supervisor role required")
+      return if current_operator&.has_capability?(capability_code)
+
+      redirect_to branch_path, alert: alert
+    end
+
     def can_place_servicing_hold?
       current_operator&.teller? || current_operator&.supervisor?
     end
 
     def can_release_servicing_hold?
-      current_operator&.supervisor?
+      current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::HOLD_RELEASE)
     end
 
     def can_waive_fee?
-      current_operator&.supervisor?
+      current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::FEE_WAIVE)
     end
 
     def can_reverse_event?
-      current_operator&.supervisor?
+      current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::REVERSAL_CREATE)
     end
 
     def can_manage_authorized_signers?
-      current_operator&.supervisor?
+      current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN)
     end
   end
 end
