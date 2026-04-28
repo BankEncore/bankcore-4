@@ -20,7 +20,8 @@ module Teller
           currency: "USD",
           source_account_id: nil,
           teller_session_id: session.id,
-          actor_id: actor_id
+          actor_id: actor_id,
+          operating_unit_id: session.operating_unit_id
         )
         ev = r[:event]
         return if ev.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED

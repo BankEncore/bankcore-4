@@ -7,6 +7,7 @@ module Teller
     def create
       attrs = params.require(:override).permit(:event_type, :channel, :idempotency_key, :reference_id, :business_date).to_h.symbolize_keys
       attrs[:actor_id] = current_operator.id
+      attrs[:operating_unit_id] = current_operating_unit&.id
       if attrs[:business_date].present?
         attrs[:business_date] = Date.iso8601(attrs[:business_date].to_s)
       else

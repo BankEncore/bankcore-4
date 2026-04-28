@@ -22,6 +22,7 @@ module Accounts
         business_date: nil,
         teller_session_id: nil,
         actor_id: nil,
+        operating_unit_id: nil,
         reference_id: nil
       )
         type = event_type.to_s
@@ -43,6 +44,7 @@ module Accounts
             business_date: on_date,
             teller_session_id: teller_session_id,
             actor_id: actor_id,
+            operating_unit_id: operating_unit_id,
             reference_id: reference_id
           )
         rescue Core::OperationalEvents::Commands::RecordEvent::InvalidRequest => e
@@ -58,7 +60,8 @@ module Accounts
             source_account_id: source_account_id,
             destination_account_id: destination_account_id,
             business_date: on_date,
-            actor_id: actor_id
+            actor_id: actor_id,
+            operating_unit_id: operating_unit_id
           )
         end
       end
@@ -73,7 +76,8 @@ module Accounts
         source_account_id:,
         destination_account_id:,
         business_date:,
-        actor_id:
+        actor_id:,
+        operating_unit_id:
       )
         source = Accounts::Models::DepositAccount.find_by(id: source_account_id)
         raise original_error if source.nil?
@@ -91,6 +95,7 @@ module Accounts
           reference_id: "attempt:#{event_type}",
           actor_id: actor_id,
           business_date: business_date,
+          operating_unit_id: operating_unit_id,
           amount_minor_units: amount_minor_units,
           currency: currency,
           source_account_id: source_account_id,
@@ -134,6 +139,7 @@ module Accounts
             source_account_id: denial_event.source_account_id,
             business_date: business_date,
             reference_id: nsf_fee_reference_id(denial_event),
+            operating_unit_id: denial_event.operating_unit_id,
             force_nsf_fee: true
           )
           Core::Posting::Commands::PostEvent.call(operational_event_id: record[:event].id)

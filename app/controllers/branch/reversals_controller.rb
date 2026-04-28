@@ -14,7 +14,8 @@ module Branch
         original_operational_event_id: @reversal[:original_operational_event_id].to_i,
         channel: branch_channel,
         idempotency_key: @reversal[:idempotency_key],
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       @event = result[:event]
       @outcome = result[:outcome]

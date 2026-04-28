@@ -38,7 +38,7 @@ module Teller
     def create
       attrs = params.require(:operational_event).permit(
         :event_type, :channel, :idempotency_key, :amount_minor_units, :currency, :source_account_id,
-        :destination_account_id, :teller_session_id, :business_date, :reference_id
+        :destination_account_id, :teller_session_id, :business_date, :reference_id, :operating_unit_id
       ).to_h.symbolize_keys
       attrs[:amount_minor_units] = attrs[:amount_minor_units].to_i
       if attrs[:source_account_id].present?
@@ -62,6 +62,11 @@ module Teller
         attrs.delete(:business_date)
       end
       attrs[:reference_id] = attrs[:reference_id].presence
+      if attrs[:operating_unit_id].present?
+        attrs[:operating_unit_id] = attrs[:operating_unit_id].to_i
+      else
+        attrs[:operating_unit_id] = current_operating_unit&.id
+      end
 
       result = record_operational_event(attrs)
       if result[:outcome].in?([ Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED, Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED_REPLAY ])
@@ -129,6 +134,7 @@ module Teller
         destination_account_id: event.destination_account_id,
         teller_session_id: event.teller_session_id,
         actor_id: event.actor_id,
+        operating_unit_id: event.operating_unit_id,
         reversal_of_event_id: event.reversal_of_event_id,
         reversed_by_event_id: event.reversed_by_event_id,
         reference_id: event.reference_id,

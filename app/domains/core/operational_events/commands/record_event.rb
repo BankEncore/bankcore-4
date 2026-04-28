@@ -46,12 +46,15 @@ module Core
           business_date: nil,
           teller_session_id: nil,
           actor_id: nil,
+          operating_unit_id: nil,
           reference_id: nil,
           force_nsf_fee: false
         )
           validate_channel!(channel)
           validate_event_type!(event_type)
-          authorize_fee_waiver!(event_type, channel, actor_id)
+          resolved_operating_unit = resolve_operating_unit(channel, actor_id, teller_session_id, operating_unit_id)
+
+          authorize_fee_waiver!(event_type, channel, actor_id, resolved_operating_unit)
           validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
           validate_source_account!(event_type, source_account_id)
           validate_destination_account!(event_type, destination_account_id)
@@ -81,6 +84,7 @@ module Core
             source_account_id: source_account_id,
             destination_account_id: destination_account_id,
             teller_session_id: teller_session_id,
+            operating_unit_id: resolved_operating_unit&.id,
             reference_id: reference_id
           )
 
@@ -123,6 +127,7 @@ module Core
                 destination_account_id: destination_account_id,
                 teller_session_id: teller_session_id,
                 actor_id: actor_id,
+                operating_unit: resolved_operating_unit,
                 reference_id: reference_id.presence
               )
               { outcome: :created, event: event }
@@ -134,7 +139,7 @@ module Core
         end
 
         def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
-                                destination_account_id: nil, teller_session_id: nil, reference_id: nil)
+                                destination_account_id: nil, teller_session_id: nil, operating_unit_id: nil, reference_id: nil)
           if event_type.to_s == DRAWER_VARIANCE_POSTED
             payload = {
               event_type: event_type.to_s,
@@ -142,7 +147,8 @@ module Core
               idempotency_key: idempotency_key.to_s,
               amount_minor_units: amount_minor_units.to_i,
               currency: currency.to_s,
-              teller_session_id: teller_session_id.to_i
+              teller_session_id: teller_session_id.to_i,
+              operating_unit_id: operating_unit_id&.to_i
             }
             return Digest::SHA256.hexdigest(payload.to_json)
           end
@@ -153,7 +159,8 @@ module Core
             idempotency_key: idempotency_key.to_s,
             amount_minor_units: amount_minor_units.to_i,
             currency: currency.to_s,
-            source_account_id: source_account_id.to_i
+            source_account_id: source_account_id.to_i,
+            operating_unit_id: operating_unit_id&.to_i
           }
           if event_type.to_s == "transfer.completed"
             payload[:destination_account_id] = destination_account_id.to_i
@@ -318,16 +325,39 @@ module Core
         end
         private_class_method :validate_fee_waived!
 
-        def self.authorize_fee_waiver!(event_type, channel, actor_id)
+        def self.authorize_fee_waiver!(event_type, channel, actor_id, operating_unit)
           return unless event_type.to_s == "fee.waived"
           return unless STAFF_CHANNELS.include?(channel.to_s)
 
           Workspace::Authorization::Authorizer.require_capability!(
             actor_id: actor_id,
-            capability_code: Workspace::Authorization::CapabilityRegistry::FEE_WAIVE
+            capability_code: Workspace::Authorization::CapabilityRegistry::FEE_WAIVE,
+            scope: operating_unit
           )
         end
         private_class_method :authorize_fee_waiver!
+
+        def self.resolve_operating_unit(channel, actor_id, teller_session_id, operating_unit_id)
+          return explicit_operating_unit(operating_unit_id) if operating_unit_id.present? && !STAFF_CHANNELS.include?(channel.to_s)
+          return nil unless STAFF_CHANNELS.include?(channel.to_s)
+
+          actor = Workspace::Models::Operator.find_by(id: actor_id) if actor_id.present?
+          Organization::Services::ResolveOperatingUnit.call(
+            operator: actor,
+            teller_session_id: teller_session_id,
+            operating_unit_id: operating_unit_id
+          )
+        rescue Organization::Services::ResolveOperatingUnit::Error,
+          Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+          Organization::Services::DefaultOperatingUnit::NotFound => e
+          raise InvalidRequest, e.message
+        end
+        private_class_method :resolve_operating_unit
+
+        def self.explicit_operating_unit(operating_unit_id)
+          Organization::Models::OperatingUnit.find_by(id: operating_unit_id.to_i)
+        end
+        private_class_method :explicit_operating_unit
 
         def self.validate_ach_credit_received!(event_type, channel, reference_id)
           return unless event_type.to_s == "ach.credit.received"
@@ -402,6 +432,7 @@ module Core
             source_account_id: existing.source_account_id,
             destination_account_id: existing.destination_account_id,
             teller_session_id: existing.teller_session_id,
+            operating_unit_id: existing.operating_unit_id,
             reference_id: existing.reference_id
           )
           raise MismatchedIdempotency.new(incoming_fp) if existing_fp != incoming_fp

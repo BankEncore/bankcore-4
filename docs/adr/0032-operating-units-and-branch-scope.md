@@ -86,22 +86,31 @@ The first implementation should seed one institution-level operating unit and on
 
 ## 5. Domain Ownership
 
-### 5.1 `Workspace`
+### 5.1 `Organization`
 
-`Workspace` owns internal staff identity, session context, and operating-unit scope resolution.
+`Organization` owns the operating-unit reference model and hierarchy.
 
 It should own:
 
 - `operating_units`
-- operator home or default operating-unit references
-- scoped operator role assignments when ADR-0029 is implemented
-- current internal authorization context resolution
+- operating-unit status and hierarchy validation
+- operating-unit lookup and tree queries
+- default seeded institution and branch records
 
 Representative services:
 
-- `Workspace::OperatingUnits::ResolveCurrentOperatingUnit`
+- `Organization::Models::OperatingUnit`
+- `Organization::Queries::OperatingUnitTree`
+- `Organization::Services::DefaultOperatingUnit`
+
+`Workspace` continues to own staff identity, operator defaults, authorization context, and RBAC persistence. It consumes `Organization` operating units for scoped authorization but does not own the organizational reference data.
+
+It should own:
+
+- operator home or default operating-unit references
+- scoped operator role assignments from ADR-0029
+- current internal authorization context resolution
 - `Workspace::Authorization::CapabilityResolver`
-- `Workspace::Queries::OperatingUnitTree`
 
 ### 5.2 `Teller`
 
@@ -135,7 +144,7 @@ Cash commands must keep custody scope separate from GL ownership. Internal movem
 
 ### 5.4 Core domains
 
-`Core::OperationalEvents` should preserve actor, channel, business date, and, where applicable, operating-unit context for audit and support.
+`Core::OperationalEvents` should preserve actor, channel, business date, and operating-unit context for staff-originated internal events where scope can be resolved.
 
 `Core::Posting`, `Core::Ledger`, and `Core::BusinessDate` remain centralized in this ADR. They must not infer branch-level books or branch-level business dates from operating-unit records.
 
@@ -184,8 +193,10 @@ Rules:
 - `code` is unique and stable enough for operator-facing configuration and seeded references.
 - `unit_type` is an operating model classification, not an authorization role.
 - `parent_operating_unit_id` supports a simple hierarchy such as institution -> region -> branch.
+- `parent_operating_unit_id` must not reference the same operating unit.
 - `time_zone` is operational metadata and does not create a separate business date.
 - `closed_on` prevents new routine assignment or location creation after closure, but historical records remain linked.
+- first-slice scoped authorization is exact-match only; region, department, or parent-unit inheritance requires a future ADR.
 
 ### 6.2 Operator references
 
@@ -213,12 +224,12 @@ Global assignments remain represented by `scope_type: nil` and `scope_id: nil`.
 First-slice records that should carry operating-unit context:
 
 - `teller_sessions.operating_unit_id`
+- `operational_events.operating_unit_id` for staff-originated internal events where scope can be resolved
 - `cash_locations.operating_unit_id` once Cash is implemented
 - `cash_movements` via source and destination cash locations
 
 Future records that may carry operating-unit context directly:
 
-- `operational_events.operating_unit_id`
 - approval requests and approval decisions
 - reporting extracts or materialized branch dashboards
 
@@ -325,6 +336,7 @@ The first implementation slice should include:
 - `operating_units` with seeded institution and branch records
 - `operators.default_operating_unit_id` or equivalent session-default support
 - `teller_sessions.operating_unit_id`
+- `operational_events.operating_unit_id` for staff-originated internal events where scope can be resolved
 - operating-unit scope object support for ADR-0029 capability resolution
 - Branch UI/session defaults that make the current branch explicit
 - tests proving existing single-branch teller and Branch CSR behavior remains unchanged
@@ -393,8 +405,8 @@ Neutral:
 
 ## 12. Open Questions
 
-1. Should `operating_units` live physically under a `Workspace` namespace, or should BankCORE introduce a small `Organization` domain later if the model grows beyond internal staff scope?
-2. Should `operational_events` carry `operating_unit_id` directly in the first slice, or derive it from teller session, cash location, and actor context until branch-aware event search is implemented?
+1. Should parent operating-unit authorization inheritance be introduced for region and department scopes, or should all scoped authorization remain exact-match until an explicit workflow needs inherited authority?
+2. How should operating-unit reassignment of active operators be audited once Admin role and operator management screens ship?
 3. Should account opening record an account home operating unit, or should customer/account home-branch ownership remain deferred?
 4. What compatibility behavior should teller JSON APIs use before clients send explicit operating-unit context?
 5. Should inactive and closed operating units remain selectable for historical reporting but blocked for new sessions, locations, and role assignments?

@@ -150,7 +150,7 @@ external_counterparty
 Location attributes should include:
 
 - location type
-- branch or operating-unit reference when available
+- operating-unit reference (`cash_locations.operating_unit_id`) using the `Organization` domain from ADR-0032
 - responsible operator when applicable
 - active/inactive state
 - currency

@@ -17,7 +17,8 @@ module Branch
         channel: branch_channel,
         idempotency_key: @hold[:idempotency_key],
         placed_for_operational_event_id: parse_optional_integer(@hold[:placed_for_operational_event_id]),
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       @event = result[:event]
       @hold_record = result[:hold]
@@ -38,7 +39,8 @@ module Branch
         hold_id: @hold_release[:hold_id].to_i,
         channel: branch_channel,
         idempotency_key: @hold_release[:idempotency_key],
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       @event = result[:event]
       @hold_record = result[:hold]

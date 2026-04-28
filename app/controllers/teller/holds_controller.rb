@@ -18,7 +18,7 @@ module Teller
         attrs.delete(:business_date)
       end
 
-      result = Accounts::Commands::PlaceHold.call(**attrs, actor_id: current_operator.id)
+      result = Accounts::Commands::PlaceHold.call(**attrs, actor_id: current_operator.id, operating_unit_id: current_operating_unit&.id)
       status = result[:outcome] == :created ? :created : :ok
       render json: { hold_id: result[:hold].id, operational_event_id: result[:event].id, outcome: result[:outcome] }, status: status
     rescue Accounts::Commands::PlaceHold::InvalidRequest => e
@@ -34,7 +34,7 @@ module Teller
         attrs.delete(:business_date)
       end
 
-      result = Accounts::Commands::ReleaseHold.call(**attrs, actor_id: current_operator.id)
+      result = Accounts::Commands::ReleaseHold.call(**attrs, actor_id: current_operator.id, operating_unit_id: current_operating_unit&.id)
       status = result[:outcome] == :created ? :created : :ok
       render json: { operational_event_id: result[:event].id, outcome: result[:outcome] }, status: status
     rescue Accounts::Commands::ReleaseHold::InvalidRequest => e

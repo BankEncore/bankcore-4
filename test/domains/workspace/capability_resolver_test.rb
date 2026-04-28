@@ -6,6 +6,7 @@ module Workspace
   module Authorization
     class CapabilityResolverTest < ActiveSupport::TestCase
       setup do
+        BankCore::Seeds::OperatingUnits.seed!
         BankCore::Seeds::Rbac.seed!
       end
 
@@ -76,24 +77,51 @@ module Workspace
         assert_not operator.has_capability?(CapabilityRegistry::REVERSAL_CREATE)
       end
 
-      test "scope argument still resolves global capabilities only" do
+      test "scope argument includes global capabilities" do
         operator = Models::Operator.create!(role: "teller", display_name: "Scoped Teller", active: true)
+        operating_unit = Organization::Services::DefaultOperatingUnit.branch!
 
-        assert operator.has_capability?(CapabilityRegistry::DEPOSIT_ACCEPT, scope: { branch_id: 1 })
+        assert operator.has_capability?(CapabilityRegistry::DEPOSIT_ACCEPT, scope: operating_unit)
       end
 
-      test "scoped assignment rows grant nothing until scoped RBAC exists" do
+      test "operating unit scoped assignments grant capabilities in exact scope" do
         operator = Models::Operator.create!(role: "teller", display_name: "Scoped Assignment Teller", active: true)
         auditor = Models::Role.find_by!(code: CapabilityRegistry::AUDITOR)
+        operating_unit = Organization::Services::DefaultOperatingUnit.branch!
         Models::OperatorRoleAssignment.create!(
           operator: operator,
           role: auditor,
-          scope_type: "branch",
-          scope_id: 1,
+          scope_type: "operating_unit",
+          scope_id: operating_unit.id,
           active: true
         )
 
-        assert_not operator.has_capability?(CapabilityRegistry::JOURNAL_ENTRY_VIEW, scope: { branch_id: 1 })
+        assert operator.has_capability?(CapabilityRegistry::JOURNAL_ENTRY_VIEW, scope: operating_unit)
+        assert_not operator.has_capability?(CapabilityRegistry::JOURNAL_ENTRY_VIEW)
+      end
+
+      test "operating unit scoped assignments do not inherit to another unit" do
+        operator = Models::Operator.create!(role: "teller", display_name: "Scoped Exact Teller", active: true)
+        auditor = Models::Role.find_by!(code: CapabilityRegistry::AUDITOR)
+        branch = Organization::Services::DefaultOperatingUnit.branch!
+        other_branch = Organization::Models::OperatingUnit.create!(
+          code: "OTHER-#{SecureRandom.hex(4)}",
+          name: "Other Branch",
+          unit_type: "branch",
+          parent_operating_unit: Organization::Services::DefaultOperatingUnit.institution,
+          status: "active",
+          time_zone: "Eastern Time (US & Canada)",
+          opened_on: Date.current
+        )
+        Models::OperatorRoleAssignment.create!(
+          operator: operator,
+          role: auditor,
+          scope_type: "operating_unit",
+          scope_id: branch.id,
+          active: true
+        )
+
+        assert_not operator.has_capability?(CapabilityRegistry::JOURNAL_ENTRY_VIEW, scope: other_branch)
       end
 
       test "unknown capability fails closed" do

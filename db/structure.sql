@@ -695,6 +695,50 @@ ALTER SEQUENCE public.journal_lines_id_seq OWNED BY public.journal_lines.id;
 
 
 --
+-- Name: operating_units; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.operating_units (
+    id bigint NOT NULL,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    unit_type character varying NOT NULL,
+    parent_operating_unit_id bigint,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    time_zone character varying DEFAULT 'Eastern Time (US & Canada)'::character varying NOT NULL,
+    opened_on date,
+    closed_on date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT operating_units_closed_on_required_check CHECK ((((status)::text <> 'closed'::text) OR (closed_on IS NOT NULL))),
+    CONSTRAINT operating_units_code_present_check CHECK ((btrim((code)::text) <> ''::text)),
+    CONSTRAINT operating_units_name_present_check CHECK ((btrim((name)::text) <> ''::text)),
+    CONSTRAINT operating_units_parent_not_self_check CHECK (((parent_operating_unit_id IS NULL) OR (parent_operating_unit_id <> id))),
+    CONSTRAINT operating_units_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'closed'::character varying])::text[]))),
+    CONSTRAINT operating_units_unit_type_check CHECK (((unit_type)::text = ANY ((ARRAY['institution'::character varying, 'branch'::character varying, 'operations'::character varying, 'department'::character varying, 'region'::character varying])::text[])))
+);
+
+
+--
+-- Name: operating_units_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.operating_units_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: operating_units_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.operating_units_id_seq OWNED BY public.operating_units.id;
+
+
+--
 -- Name: operational_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -715,7 +759,8 @@ CREATE TABLE public.operational_events (
     reversed_by_event_id bigint,
     teller_session_id bigint,
     reference_id character varying,
-    actor_id bigint
+    actor_id bigint,
+    operating_unit_id bigint
 );
 
 
@@ -793,6 +838,7 @@ CREATE TABLE public.operator_role_assignments (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT operator_role_assignments_scope_pair_check CHECK ((((scope_type IS NULL) AND (scope_id IS NULL)) OR ((scope_type IS NOT NULL) AND (scope_id IS NOT NULL)))),
+    CONSTRAINT operator_role_assignments_scope_type_check CHECK (((scope_type IS NULL) OR ((scope_type)::text = 'operating_unit'::text))),
     CONSTRAINT operator_role_assignments_time_window_check CHECK (((starts_at IS NULL) OR (ends_at IS NULL) OR (starts_at < ends_at)))
 );
 
@@ -827,6 +873,7 @@ CREATE TABLE public.operators (
     active boolean DEFAULT true NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    default_operating_unit_id bigint,
     CONSTRAINT operators_role_check CHECK (((role)::text = ANY ((ARRAY['teller'::character varying, 'supervisor'::character varying, 'operations'::character varying, 'admin'::character varying])::text[])))
 );
 
@@ -1049,6 +1096,7 @@ CREATE TABLE public.teller_sessions (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     supervisor_operator_id bigint,
+    operating_unit_id bigint NOT NULL,
     CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY ((ARRAY['open'::character varying, 'closed'::character varying, 'pending_supervisor'::character varying])::text[])))
 );
 
@@ -1175,6 +1223,13 @@ ALTER TABLE ONLY public.journal_entries ALTER COLUMN id SET DEFAULT nextval('pub
 --
 
 ALTER TABLE ONLY public.journal_lines ALTER COLUMN id SET DEFAULT nextval('public.journal_lines_id_seq'::regclass);
+
+
+--
+-- Name: operating_units id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operating_units ALTER COLUMN id SET DEFAULT nextval('public.operating_units_id_seq'::regclass);
 
 
 --
@@ -1373,6 +1428,14 @@ ALTER TABLE ONLY public.journal_entries
 
 ALTER TABLE ONLY public.journal_lines
     ADD CONSTRAINT journal_lines_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: operating_units operating_units_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operating_units
+    ADD CONSTRAINT operating_units_pkey PRIMARY KEY (id);
 
 
 --
@@ -1793,6 +1856,20 @@ CREATE UNIQUE INDEX index_journal_lines_on_journal_entry_id_and_sequence_no ON p
 
 
 --
+-- Name: index_operating_units_on_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_operating_units_on_code ON public.operating_units USING btree (code);
+
+
+--
+-- Name: index_operating_units_on_parent_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operating_units_on_parent_operating_unit_id ON public.operating_units USING btree (parent_operating_unit_id);
+
+
+--
 -- Name: index_operational_events_on_channel_and_idempotency_key; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1804,6 +1881,13 @@ CREATE UNIQUE INDEX index_operational_events_on_channel_and_idempotency_key ON p
 --
 
 CREATE INDEX index_operational_events_on_destination_account_id ON public.operational_events USING btree (destination_account_id);
+
+
+--
+-- Name: index_operational_events_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operational_events_on_operating_unit_id ON public.operational_events USING btree (operating_unit_id);
 
 
 --
@@ -1870,6 +1954,13 @@ CREATE UNIQUE INDEX index_operator_role_assignments_on_scoped_role ON public.ope
 
 
 --
+-- Name: index_operators_on_default_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_operators_on_default_operating_unit_id ON public.operators USING btree (default_operating_unit_id);
+
+
+--
 -- Name: index_party_individual_profiles_on_party_record_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1912,6 +2003,13 @@ CREATE UNIQUE INDEX index_roles_on_code ON public.roles USING btree (code);
 
 
 --
+-- Name: index_teller_sessions_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_teller_sessions_on_operating_unit_id ON public.teller_sessions USING btree (operating_unit_id);
+
+
+--
 -- Name: index_teller_sessions_on_supervisor_operator_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1937,6 +2035,14 @@ CREATE CONSTRAINT TRIGGER journal_lines_balance_check AFTER INSERT OR DELETE OR 
 --
 
 CREATE TRIGGER journal_lines_immutability_check BEFORE DELETE OR UPDATE ON public.journal_lines FOR EACH ROW EXECUTE FUNCTION public.ledger_journal_lines_reject_mutations();
+
+
+--
+-- Name: operators fk_rails_003f73e909; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operators
+    ADD CONSTRAINT fk_rails_003f73e909 FOREIGN KEY (default_operating_unit_id) REFERENCES public.operating_units(id);
 
 
 --
@@ -2140,6 +2246,14 @@ ALTER TABLE ONLY public.teller_sessions
 
 
 --
+-- Name: teller_sessions fk_rails_896b8b6be7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.teller_sessions
+    ADD CONSTRAINT fk_rails_896b8b6be7 FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
 -- Name: operational_events fk_rails_8cf89c2939; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2196,6 +2310,14 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 
 --
+-- Name: operating_units fk_rails_cd3fabf476; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operating_units
+    ADD CONSTRAINT fk_rails_cd3fabf476 FOREIGN KEY (parent_operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
 -- Name: journal_entries fk_rails_d329a9d82b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2225,6 +2347,14 @@ ALTER TABLE ONLY public.operational_events
 
 ALTER TABLE ONLY public.journal_entries
     ADD CONSTRAINT fk_rails_e2ae198c7f FOREIGN KEY (reverses_journal_entry_id) REFERENCES public.journal_entries(id);
+
+
+--
+-- Name: operational_events fk_rails_e664629e17; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.operational_events
+    ADD CONSTRAINT fk_rails_e664629e17 FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
 
 
 --
@@ -2258,6 +2388,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424120017'),
 ('20260424120016'),
 ('20260424120015'),
 ('20260424120014'),

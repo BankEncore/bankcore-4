@@ -9,12 +9,13 @@ module Accounts
       STAFF_CHANNELS = %w[teller branch].freeze
 
       # Releases an active hold; creates a posted `hold.released` operational event (no GL).
-      def self.call(hold_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
+      def self.call(hold_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil, operating_unit_id: nil)
         ch = channel.to_s
         unless Core::OperationalEvents::Commands::RecordEvent::CHANNELS.include?(ch)
           raise InvalidRequest, "channel must be one of: #{Core::OperationalEvents::Commands::RecordEvent::CHANNELS.join(", ")}"
         end
-        authorize_staff_release!(ch, actor_id)
+        resolved_operating_unit = resolve_operating_unit(ch, actor_id, operating_unit_id)
+        authorize_staff_release!(ch, actor_id, resolved_operating_unit)
 
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
         begin
@@ -29,6 +30,7 @@ module Accounts
             raise InvalidRequest, "idempotency replay type mismatch" unless existing.event_type == "hold.released"
             hold = Accounts::Models::Hold.find(hold_id)
             raise InvalidRequest, "idempotency replay mismatch" unless existing.source_account_id == hold.deposit_account_id
+            raise InvalidRequest, "idempotency replay mismatch" unless existing.operating_unit_id == resolved_operating_unit&.id
 
             return { outcome: :replay, event: existing, hold: hold.reload }
           end
@@ -47,7 +49,8 @@ module Accounts
             currency: hold.currency,
             source_account_id: hold.deposit_account_id,
             reference_id: hold.id.to_s,
-            actor_id: actor_id
+            actor_id: actor_id,
+            operating_unit: resolved_operating_unit
           )
 
           hold.update!(
@@ -63,12 +66,25 @@ module Accounts
         { outcome: :replay, event: existing, hold: hold.reload }
       end
 
-      def self.authorize_staff_release!(channel, actor_id)
+      def self.resolve_operating_unit(channel, actor_id, operating_unit_id)
+        return nil unless STAFF_CHANNELS.include?(channel)
+
+        actor = Workspace::Models::Operator.find_by(id: actor_id) if actor_id.present?
+        Organization::Services::ResolveOperatingUnit.call(operator: actor, operating_unit_id: operating_unit_id)
+      rescue Organization::Services::ResolveOperatingUnit::Error,
+        Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+        Organization::Services::DefaultOperatingUnit::NotFound => e
+        raise InvalidRequest, e.message
+      end
+      private_class_method :resolve_operating_unit
+
+      def self.authorize_staff_release!(channel, actor_id, operating_unit)
         return unless STAFF_CHANNELS.include?(channel)
 
         Workspace::Authorization::Authorizer.require_capability!(
           actor_id: actor_id,
-          capability_code: Workspace::Authorization::CapabilityRegistry::HOLD_RELEASE
+          capability_code: Workspace::Authorization::CapabilityRegistry::HOLD_RELEASE,
+          scope: operating_unit
         )
       end
       private_class_method :authorize_staff_release!

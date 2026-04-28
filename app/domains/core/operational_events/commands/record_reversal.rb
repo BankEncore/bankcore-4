@@ -24,9 +24,11 @@ module Core
         REVERSIBLE_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed interest.accrued interest.posted].freeze
         STAFF_CHANNELS = %w[teller branch].freeze
 
-        def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil)
+        def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil,
+                      operating_unit_id: nil)
           RecordEvent.validate_channel!(channel)
-          authorize_staff_reversal!(channel, actor_id)
+          resolved_operating_unit = resolve_operating_unit(channel, actor_id, operating_unit_id)
+          authorize_staff_reversal!(channel, actor_id, resolved_operating_unit)
 
           original = Models::OperationalEvent.find_by(id: original_operational_event_id)
           raise NotFound, "original_operational_event_id=#{original_operational_event_id}" if original.nil?
@@ -62,7 +64,7 @@ module Core
             raise InvalidRequest, e.message
           end
           incoming_fp = fingerprint(original_operational_event_id: original_operational_event_id, channel: channel,
-                                    idempotency_key: idempotency_key)
+                                    idempotency_key: idempotency_key, operating_unit_id: resolved_operating_unit&.id)
 
           begin
             Models::OperationalEvent.transaction(requires_new: true) do
@@ -82,7 +84,8 @@ module Core
                 source_account_id: original.source_account_id,
                 destination_account_id: original.destination_account_id,
                 reversal_of_event_id: original.id,
-                actor_id: actor_id
+                actor_id: actor_id,
+                operating_unit: resolved_operating_unit
               )
               { outcome: :created, event: event }
             end
@@ -92,12 +95,13 @@ module Core
           end
         end
 
-        def self.fingerprint(original_operational_event_id:, channel:, idempotency_key:)
+        def self.fingerprint(original_operational_event_id:, channel:, idempotency_key:, operating_unit_id: nil)
           payload = {
             event_type: "posting.reversal",
             channel: channel.to_s,
             idempotency_key: idempotency_key.to_s,
-            original_operational_event_id: original_operational_event_id.to_i
+            original_operational_event_id: original_operational_event_id.to_i,
+            operating_unit_id: operating_unit_id&.to_i
           }
           Digest::SHA256.hexdigest(payload.to_json)
         end
@@ -109,7 +113,8 @@ module Core
           existing_fp = fingerprint(
             original_operational_event_id: existing.reversal_of_event_id,
             channel: existing.channel,
-            idempotency_key: existing.idempotency_key
+            idempotency_key: existing.idempotency_key,
+            operating_unit_id: existing.operating_unit_id
           )
           raise MismatchedIdempotency.new(incoming_fp) if existing_fp != incoming_fp
           raise PostedReplay if existing.status == Models::OperationalEvent::STATUS_POSTED
@@ -118,12 +123,25 @@ module Core
         end
         private_class_method :handle_existing
 
-        def self.authorize_staff_reversal!(channel, actor_id)
+        def self.resolve_operating_unit(channel, actor_id, operating_unit_id)
+          return nil unless STAFF_CHANNELS.include?(channel.to_s)
+
+          actor = Workspace::Models::Operator.find_by(id: actor_id) if actor_id.present?
+          Organization::Services::ResolveOperatingUnit.call(operator: actor, operating_unit_id: operating_unit_id)
+        rescue Organization::Services::ResolveOperatingUnit::Error,
+          Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+          Organization::Services::DefaultOperatingUnit::NotFound => e
+          raise InvalidRequest, e.message
+        end
+        private_class_method :resolve_operating_unit
+
+        def self.authorize_staff_reversal!(channel, actor_id, operating_unit)
           return unless STAFF_CHANNELS.include?(channel.to_s)
 
           Workspace::Authorization::Authorizer.require_capability!(
             actor_id: actor_id,
-            capability_code: Workspace::Authorization::CapabilityRegistry::REVERSAL_CREATE
+            capability_code: Workspace::Authorization::CapabilityRegistry::REVERSAL_CREATE,
+            scope: operating_unit
           )
         end
         private_class_method :authorize_staff_reversal!

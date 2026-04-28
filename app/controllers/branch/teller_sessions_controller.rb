@@ -8,9 +8,17 @@ module Branch
 
     def create
       @teller_session = teller_session_params
-      session = Teller::Commands::OpenSession.call(drawer_code: @teller_session[:drawer_code].presence)
+      session = Teller::Commands::OpenSession.call(
+        drawer_code: @teller_session[:drawer_code].presence,
+        operator_id: current_operator.id
+      )
       redirect_to branch_path, notice: "Opened teller session ##{session.id}."
     rescue Teller::Commands::OpenSession::SessionAlreadyOpen => e
+      @error_message = e.message
+      render :new, status: :unprocessable_entity
+    rescue Organization::Services::ResolveOperatingUnit::Error,
+      Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+      Organization::Services::DefaultOperatingUnit::NotFound => e
       @error_message = e.message
       render :new, status: :unprocessable_entity
     end

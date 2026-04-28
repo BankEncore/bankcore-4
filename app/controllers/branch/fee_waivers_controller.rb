@@ -21,7 +21,8 @@ module Branch
         currency: @fee_event.currency,
         source_account_id: @account.id,
         reference_id: @fee_event.id.to_s,
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       @event = result[:event]
       @outcome = result[:outcome]

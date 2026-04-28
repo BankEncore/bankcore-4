@@ -65,6 +65,7 @@ These domains apply product behavior and account servicing rules.
 * `Deposits`
 * `Loans`
 * `Limits`
+* `Organization`
 
 ### 3.4 Operational domains
 
@@ -109,6 +110,7 @@ bankcore/
 │  │  ├─ deposits/
 │  │  ├─ loans/
 │  │  ├─ limits/
+│  │  ├─ organization/
 │  │  ├─ teller/
 │  │  ├─ cash/
 │  │  ├─ workflow/
@@ -530,7 +532,31 @@ Examples:
 
 ---
 
-### 6.11 `Teller`
+### 6.11 `Organization`
+
+**Purpose:** organizational operating-unit scope for internal operations.
+
+**Owns:**
+
+* operating units
+* operating-unit hierarchy metadata
+* operating-unit status and lifecycle metadata
+
+**Typical contents:**
+
+* `OperatingUnit`
+* `OperatingUnitTree`
+* `DefaultOperatingUnit`
+
+**Rules:**
+
+* operating units are operational scope, not separate ledgers
+* operating units do not create branch-scoped business dates
+* scoped authorization uses exact operating-unit matches until an ADR defines hierarchy inheritance
+
+---
+
+### 6.12 `Teller`
 
 **Purpose:** workstation-facing transactional flows.
 
@@ -561,7 +587,7 @@ Examples:
 
 ---
 
-### 6.12 `Cash`
+### 6.13 `Cash`
 
 **Purpose:** cash location and cash-movement control.
 
@@ -586,7 +612,7 @@ Examples:
 
 ---
 
-### 6.13 `Workflow`
+### 6.14 `Workflow`
 
 **Purpose:** approvals and maker-checker controls.
 
@@ -610,7 +636,7 @@ Examples:
 
 ---
 
-### 6.14 `Compliance`
+### 6.15 `Compliance`
 
 **Purpose:** compliance evidence and case-link support.
 
@@ -632,7 +658,7 @@ Examples:
 
 ---
 
-### 6.15 `Documents`
+### 6.16 `Documents`
 
 **Purpose:** document metadata and retention-oriented document handling.
 
@@ -654,7 +680,7 @@ Examples:
 
 ---
 
-### 6.16 `Reporting`
+### 6.17 `Reporting`
 
 **Purpose:** read-optimized projections and extracts.
 
@@ -681,7 +707,7 @@ Examples:
 
 ---
 
-### 6.17 `Integration`
+### 6.18 `Integration`
 
 **Purpose:** inbound/outbound adapter layer.
 
@@ -856,6 +882,7 @@ Each table family should have **one owning domain** even if all tables live in o
 | `holds`                                                      | `Accounts`                |
 | `deposit_statements`                                         | `Deposits`                |
 | `authorization_decisions`                                    | `Limits`                  |
+| `operating_units`                                            | `Organization`            |
 | `operators`, `operator_credentials`, `capabilities`, `roles`, `role_capabilities`, `operator_role_assignments`, future `operator_role_assignment_audits` | `Workspace`               |
 | `teller_sessions`, `teller_transactions`                     | `Teller`                  |
 | `cash_locations`, `vault_transfers`, `cash_counts`           | `Cash`                    |

@@ -15,6 +15,8 @@ module Workspace
       }, if: :global_scope?
 
       validate :scope_pair_is_complete
+      validate :scope_type_is_supported
+      validate :operating_unit_scope_exists
       validate :ends_after_starts
 
       def global_scope?
@@ -27,6 +29,19 @@ module Workspace
         return if scope_type.present? == scope_id.present?
 
         errors.add(:scope_id, "must be present with scope_type")
+      end
+
+      def scope_type_is_supported
+        return if scope_type.blank? || scope_type == "operating_unit"
+
+        errors.add(:scope_type, "must be operating_unit")
+      end
+
+      def operating_unit_scope_exists
+        return unless scope_type == "operating_unit"
+        return if Organization::Models::OperatingUnit.exists?(id: scope_id)
+
+        errors.add(:scope_id, "must reference an operating unit")
       end
 
       def ends_after_starts

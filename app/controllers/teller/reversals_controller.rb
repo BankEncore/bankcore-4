@@ -12,6 +12,7 @@ module Teller
       else
         attrs.delete(:business_date)
       end
+      attrs[:operating_unit_id] = current_operating_unit&.id
 
       result = Core::OperationalEvents::Commands::RecordReversal.call(**attrs, actor_id: current_operator.id)
       status = result[:outcome] == :created ? :created : :ok

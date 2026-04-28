@@ -34,13 +34,21 @@ module Teller
 
     def require_capability!(capability_code, message: "supervisor role required")
       return if performed?
-      return if current_operator&.has_capability?(capability_code)
+      return if current_operator&.has_capability?(capability_code, scope: current_operating_unit)
 
       render json: { error: "forbidden", message: message }, status: :forbidden
     end
 
     def current_operator
       @current_operator
+    end
+
+    def current_operating_unit
+      @current_operating_unit ||= Organization::Services::ResolveOperatingUnit.call(operator: current_operator)
+    rescue Organization::Services::ResolveOperatingUnit::Error,
+      Organization::Services::DefaultOperatingUnit::AmbiguousDefault,
+      Organization::Services::DefaultOperatingUnit::NotFound
+      nil
     end
   end
 end

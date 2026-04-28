@@ -84,6 +84,8 @@ class TellerSessionCashPolicyTest < ActionDispatch::IntegrationTest
       }.to_json,
       headers: @auth
     assert_response :created
+    event = Core::OperationalEvents::Models::OperationalEvent.find(response.parsed_body["operational_event_id"])
+    assert_equal Teller::Models::TellerSession.find(@open_sid).operating_unit_id, event.operating_unit_id
   end
 
   test "teller deposit without session succeeds when gate off" do
@@ -101,6 +103,8 @@ class TellerSessionCashPolicyTest < ActionDispatch::IntegrationTest
       }.to_json,
       headers: @auth
     assert_response :created
+    event = Core::OperationalEvents::Models::OperationalEvent.find(response.parsed_body["operational_event_id"])
+    assert_equal @teller_operator.default_operating_unit_id, event.operating_unit_id
   end
 
   test "transfer completed teller channel without teller_session_id succeeds when gate on" do
@@ -141,6 +145,7 @@ class TellerSessionCashPolicyTest < ActionDispatch::IntegrationTest
       params: { drawer_code: "cash-policy-#{SecureRandom.hex(6)}" }.to_json,
       headers: @auth
     assert_response :created
+    assert_equal @teller_operator.default_operating_unit_id, Teller::Models::TellerSession.find(response.parsed_body["id"]).operating_unit_id
     response.parsed_body["id"]
   end
 end

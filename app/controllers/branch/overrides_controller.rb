@@ -15,7 +15,8 @@ module Branch
         channel: "teller",
         idempotency_key: @override[:idempotency_key],
         reference_id: @override[:reference_id],
-        actor_id: current_operator.id
+        actor_id: current_operator.id,
+        operating_unit_id: current_operating_unit&.id
       )
       @event = result[:event]
       @outcome = result[:outcome]

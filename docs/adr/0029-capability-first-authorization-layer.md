@@ -240,11 +240,11 @@ updated_at
 Scope rules for this ADR:
 
 - `scope_type` and `scope_id` are nullable.
-- null scope means institution-wide assignment for the current narrow implementation.
-- future ADRs may define scoped values such as `branch`, `location`, or `operating_unit`.
-- until those scope models exist, implementation must not invent branch resolution rules.
-- until ADR-0032 scope resolution is implemented, scoped assignment rows grant no capabilities.
-- `scope: nil` and `scope: <non-nil>` resolver calls both evaluate active global assignments only.
+- null scope means institution-wide assignment.
+- ADR-0032 introduces the first concrete scoped value: `scope_type = "operating_unit"` and `scope_id = operating_units.id`.
+- `Workspace::Authorization::CapabilityResolver` evaluates active global assignments plus exact-match active operating-unit assignments when an operating-unit scope is supplied.
+- scoped authorization is exact-match only in this slice; parent, region, department, or branch hierarchy inheritance requires a future ADR.
+- scope values other than `operating_unit` are invalid until another accepted ADR defines them.
 
 Temporal rules:
 
@@ -310,9 +310,10 @@ Initial behavior:
 If scope is nil:
   return capabilities assigned through active, unexpired, globally scoped operator role assignments.
 
-If scope is present:
+If operating-unit scope is present:
   return capabilities assigned through active, unexpired, globally scoped operator role assignments.
-  Ignore scoped assignment rows until ADR-0032 defines valid scope resolution.
+  Also return active, unexpired assignments where scope_type = "operating_unit"
+  and scope_id exactly matches the supplied operating unit.
 ```
 
 Operators may expose a convenience method:
