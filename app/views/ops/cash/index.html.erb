@@ -1,0 +1,33 @@
+<% content_for :title, "Cash Approvals - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Cash approvals</h1>
+    <p class="mt-2 text-slate-600">Review pending vault movements and Cash-domain variances.</p>
+  </div>
+  <%= link_to "Reconciliation", ops_cash_reconciliation_path, class: "rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700" %>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="font-semibold">Pending movements</h2>
+  <div class="mt-3 space-y-3 text-sm">
+    <% @approvals.fetch(:movements).each do |movement| %>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+        <span>#<%= movement.id %> <%= movement.movement_type %> <%= number_to_currency(movement.amount_minor_units / 100.0) %></span>
+        <%= button_to "Approve", ops_approve_cash_movement_path(movement), class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="font-semibold">Pending variances</h2>
+  <div class="mt-3 space-y-3 text-sm">
+    <% @approvals.fetch(:variances).each do |variance| %>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
+        <span>#<%= variance.id %> <%= variance.cash_location.name %> <%= number_to_currency(variance.amount_minor_units / 100.0) %></span>
+        <%= button_to "Approve and post", ops_approve_cash_variance_path(variance), class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
+      </div>
+    <% end %>
+  </div>
+</section>

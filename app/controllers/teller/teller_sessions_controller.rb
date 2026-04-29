@@ -15,7 +15,8 @@ module Teller
         id: session.id,
         status: session.status,
         opened_at: session.opened_at,
-        operating_unit_id: session.operating_unit_id
+        operating_unit_id: session.operating_unit_id,
+        cash_location_id: session.cash_location_id
       }, status: :created
     rescue Teller::Commands::OpenSession::SessionAlreadyOpen => e
       render json: { error: "session_already_open", message: e.message }, status: :unprocessable_entity

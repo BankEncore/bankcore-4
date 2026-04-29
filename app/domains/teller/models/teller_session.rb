@@ -11,6 +11,7 @@ module Teller
 
       belongs_to :supervisor_operator, class_name: "Workspace::Models::Operator", optional: true
       belongs_to :operating_unit, class_name: "Organization::Models::OperatingUnit"
+      belongs_to :cash_location, class_name: "Cash::Models::CashLocation", optional: true
 
       has_many :operational_events, class_name: "Core::OperationalEvents::Models::OperationalEvent",
                                     inverse_of: :teller_session,

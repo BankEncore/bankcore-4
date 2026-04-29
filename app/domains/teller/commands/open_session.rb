@@ -22,11 +22,19 @@ module Teller
           scope = scope.where(drawer_code: drawer_code) if drawer_code.present?
           raise SessionAlreadyOpen, "open session exists for drawer" if scope.exists?
 
+          drawer_location = Cash::Commands::CreateLocation.call(
+            location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+            drawer_code: drawer_code,
+            actor_id: operator_id,
+            operating_unit: operating_unit
+          )
+
           Teller::Models::TellerSession.create!(
             status: Teller::Models::TellerSession::STATUS_OPEN,
             opened_at: Time.current,
             drawer_code: drawer_code,
-            operating_unit: operating_unit
+            operating_unit: operating_unit,
+            cash_location: drawer_location
           )
         end
       end

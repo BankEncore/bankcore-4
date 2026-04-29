@@ -1,7 +1,7 @@
 # BankCORE branch operations roadmap
 
 **Status:** Draft  
-**Last reviewed:** 2026-04-28  
+**Last reviewed:** 2026-04-29  
 
 This roadmap sequences branch-operations work for BankCORE. It does **not** redefine scope: MVP boundaries stay in [docs/concepts/01-mvp-vs-core.md](concepts/01-mvp-vs-core.md), ownership stays in [docs/architecture/bankcore-module-catalog.md](architecture/bankcore-module-catalog.md), and durable design decisions stay in the ADRs under [docs/adr/](adr/).
 
@@ -38,23 +38,25 @@ This roadmap keeps that goal separate from broader full-core capabilities such a
 
 ## 3. Module Ownership
 
-| Area | Primary owner |
-| --- | --- |
-| Customer records and identity | `Party` |
-| Deposit account contract/state, account parties, holds, restrictions | `Accounts` |
-| Product configuration and behavior templates | `Products` |
-| Deposit servicing behavior: interest, fees, statements, overdraft, maturity | `Deposits` |
-| Teller sessions and workstation flows | `Teller` |
-| Cash locations, custody movement, counts, balances, variances | `Cash` |
-| Staff identity, capabilities, role assignments | `Workspace` |
-| Branch/department/operations scope | `Organization` |
-| Approval requests and maker-checker workflows | `Workflow` |
-| Operational intent and audit facts | `Core::OperationalEvents` |
-| Event-to-journal conversion | `Core::Posting` |
-| Journal and GL truth | `Core::Ledger` |
-| Business-date governance and close orchestration | `Core::BusinessDate` |
-| External rail adapters and ingestion/origination | `Integration` |
-| Evidence, reports, extracts, and oversight | `Documents`, `Reporting`, `Compliance` |
+
+| Area                                                                        | Primary owner                          |
+| --------------------------------------------------------------------------- | -------------------------------------- |
+| Customer records and identity                                               | `Party`                                |
+| Deposit account contract/state, account parties, holds, restrictions        | `Accounts`                             |
+| Product configuration and behavior templates                                | `Products`                             |
+| Deposit servicing behavior: interest, fees, statements, overdraft, maturity | `Deposits`                             |
+| Teller sessions and workstation flows                                       | `Teller`                               |
+| Cash locations, custody movement, counts, balances, variances               | `Cash`                                 |
+| Staff identity, capabilities, role assignments                              | `Workspace`                            |
+| Branch/department/operations scope                                          | `Organization`                         |
+| Approval requests and maker-checker workflows                               | `Workflow`                             |
+| Operational intent and audit facts                                          | `Core::OperationalEvents`              |
+| Event-to-journal conversion                                                 | `Core::Posting`                        |
+| Journal and GL truth                                                        | `Core::Ledger`                         |
+| Business-date governance and close orchestration                            | `Core::BusinessDate`                   |
+| External rail adapters and ingestion/origination                            | `Integration`                          |
+| Evidence, reports, extracts, and oversight                                  | `Documents`, `Reporting`, `Compliance` |
+
 
 ---
 
@@ -92,19 +94,31 @@ This is a planning/catalog pass only. It must not introduce new money movement s
 
 **Goal:** a branch can open accounts, move money safely, balance teller work, and prove the books.
 
-### Current / Shipped Foundation
+### Current / Shipped Foundation — Confirmed
 
-- Party and basic deposit account creation.
+Phase 1 is implemented on this branch. The shipped foundation includes:
+
+- Party and basic deposit account creation through Teller and Branch workflows.
 - Deposit account product FK and cached product code.
-- Teller cash deposit, withdrawal, and transfer flows.
+- Teller and Branch cash deposit, withdrawal, and transfer flows.
 - Operational events for core money movements.
 - Posting through `Core::Posting` into balanced journal entries.
 - Holds and available-balance checks.
 - Fee assessment and fee waiver paths.
 - Reversals as explicit compensating events.
-- Teller sessions, close, variance, and supervisor approval.
+- Teller sessions, close, variance, and supervisor/capability approval.
 - Trial balance and EOD readiness reads.
 - Staff operators, capability-based authorization, and operating-unit scope.
+
+Implementation evidence:
+
+- Party/account creation and Branch transaction forms: `[test/integration/branch_transaction_forms_test.rb](../test/integration/branch_transaction_forms_test.rb)`.
+- Teller session cash policy and operating-unit attribution: `[test/integration/teller/teller_session_cash_policy_test.rb](../test/integration/teller/teller_session_cash_policy_test.rb)`.
+- RBAC tables and role/capability backfill: `[db/migrate/20260424120016_create_rbac_tables.rb](../db/migrate/20260424120016_create_rbac_tables.rb)` and `[test/domains/workspace/capability_resolver_test.rb](../test/domains/workspace/capability_resolver_test.rb)`.
+- Operating-unit reference model and scope references: `[db/migrate/20260424120017_create_operating_units_and_scope_refs.rb](../db/migrate/20260424120017_create_operating_units_and_scope_refs.rb)` and `[test/domains/organization/operating_unit_test.rb](../test/domains/organization/operating_unit_test.rb)`.
+- Branch servicing holds, fee waivers, and reversals: `[test/integration/branch_customer_servicing_test.rb](../test/integration/branch_customer_servicing_test.rb)`.
+
+Phase 1 has teller-session cash control only. Institutional vault/drawer custody, branch cash positions, and cash-location reconciliation remain Phase 2.
 
 ### Owners
 
@@ -137,22 +151,9 @@ This is a planning/catalog pass only. It must not introduce new money movement s
 
 **Goal:** move from teller-session cash control to true branch cash custody.
 
-### Scope
+Phase 2 is the first implementation slice of [ADR-0031](adr/0031-cash-inventory-and-management.md), using operating-unit scope from [ADR-0032](adr/0032-operating-units-and-branch-scope.md) and capability gates from [ADR-0029](adr/0029-capability-first-authorization-layer.md). It should be implemented as reviewable sub-phases rather than one broad cash rewrite.
 
-- `cash_locations` for branch vaults, teller drawers, and internal transit.
-- `cash_movements` for vault-to-drawer, drawer-to-vault, and internal custody movement.
-- `cash_counts`, `cash_variances`, and rebuildable `cash_balances`.
-- Dual-control hooks for vault movements.
-- Cash position and reconciliation queries.
-- EOD readiness hooks for unresolved cash exceptions.
-
-### Candidate Event Families
-
-- `cash.movement.completed`
-- `cash.count.recorded`
-- `cash.variance.posted`
-
-### Owners
+### Owners and Boundaries
 
 - `Cash`: locations, movements, counts, custody balances, reconciliation.
 - `Teller`: session lifecycle only.
@@ -168,13 +169,201 @@ Cash location = institutional custody control
 Ledger = financial accounting truth
 ```
 
+### Phase 2A: Cash Reference Foundation
+
+Add Cash-owned location reference data.
+
+Tables:
+
+- `cash_locations`
+
+Initial fields:
+
+- `operating_unit_id`
+- `location_type`
+- `code`
+- `name`
+- `currency`
+- `status`
+- `responsible_operator_id`
+- `parent_cash_location_id`
+- `requires_balancing`
+- timestamps
+
+Initial location types:
+
+- `branch_vault`
+- `teller_drawer`
+- `internal_transit`
+
+Initial commands/models:
+
+- `Cash::Models::CashLocation`
+- `Cash::Commands::CreateLocation`
+
+Rules:
+
+- `operating_unit_id` must reference an active operating unit.
+- `code` must be stable and unique.
+- `currency` must be explicit.
+- Closed or inactive locations must remain visible for history but blocked for new routine movements.
+- Seed/configure one Main Branch vault and one teller drawer only if it matches the current seed style for development/test setup.
+
+### Phase 2B: Teller Drawer Linkage
+
+Connect teller sessions to drawer custody without moving session ownership out of `Teller`.
+
+Table changes:
+
+- Add `teller_sessions.cash_location_id`.
+
+Command changes:
+
+- Update `Teller::Commands::OpenSession` to accept or resolve a drawer `cash_location_id`.
+- Preserve current behavior when no drawer location is supplied during migration.
+
+Rules:
+
+- The linked location must be active.
+- The linked location must have `location_type: teller_drawer`.
+- The linked location must belong to the same operating unit as the session.
+- Only one open teller session may use the same drawer location at a time.
+- Teller cash deposits and withdrawals still record customer financial activity through `Core::OperationalEvents` and `Core::Posting`; drawer linkage is custody context, not posting logic.
+
+### Phase 2C: Internal Custody Movements
+
+Add append-oriented internal cash movement and rebuildable balance projections.
+
+Tables:
+
+- `cash_movements`
+- `cash_balances`
+
+Initial command:
+
+- `Cash::Commands::TransferCash`
+
+Supported first-slice movements:
+
+- branch vault to teller drawer
+- teller drawer to branch vault
+- branch vault or drawer to internal transit
+- internal transit back to a vault or drawer
+
+Movement fields should include:
+
+- source cash location
+- destination cash location
+- amount in minor units
+- currency
+- business date
+- initiating actor
+- approving actor when required
+- status
+- reason code or movement type
+- idempotency key
+- related operational event when applicable
+
+Initial movement statuses:
+
+- `pending_approval`
+- `approved`
+- `completed`
+- `cancelled`
+- `rejected`
+
+Rules:
+
+- Internal custody movement stays within institutional cash and must not post a journal entry.
+- Completed internal movements may record no-GL `cash.movement.completed` operational events.
+- Balance projections must update in the same database transaction as completion.
+- `cash_balances` are projections only; they must be rebuildable from movement/count history.
+- Vault-involved movements require approval according to Cash command policy.
+- No-self-approval belongs in Cash/Workflow command logic, not in RBAC capability strings.
+
+### Phase 2D: Counts and Variances
+
+Add physical count evidence and variance tracking.
+
+Tables:
+
+- `cash_counts`
+- `cash_variances`
+
+Initial command:
+
+- `Cash::Commands::RecordCashCount`
+
+Rules:
+
+- Counts must record cash location, counted amount, expected amount, currency, business date, actor, and timestamps.
+- Counts are append-oriented; do not silently edit prior count history.
+- A non-zero difference creates a cash variance record.
+- Variances above configured policy require approval.
+- Variance approval must enforce no-self-approval outside RBAC.
+- `cash.count.recorded` is a no-GL operational event candidate.
+
+Open decision:
+
+- Defer GL variance posting or implement it as a separate explicit follow-up. ADR-0031 still leaves open whether teller-session variance should keep using `teller.drawer.variance.posted` or whether Cash should introduce a broader `cash.variance.posted`.
+
+### Phase 2E: Read Models and EOD Hooks
+
+Add Cash read APIs and EOD readiness composition after command behavior is tested.
+
+Queries:
+
+- `Cash::Queries::CashPosition`
+- `Cash::Queries::LocationActivity`
+- `Cash::Queries::ReconciliationSummary`
+- `Cash::Queries::PendingCashApprovals`
+
+Read surfaces:
+
+- Branch workspace cash position and location activity.
+- Ops workspace exception/reconciliation views if the slice needs oversight beyond Branch.
+
+EOD readiness hooks:
+
+- unresolved `pending_approval` cash movements
+- unresolved cash variances
+- stale or missing required counts, once count policy is enabled
+- cash projection drift detected by reconciliation queries
+
+EOD policy should start as read-only evidence or warning unless the selected slice explicitly decides that cash exceptions block close.
+
+### Candidate Event Families
+
+- `cash.movement.completed` — no GL for internal transfers within institutional custody.
+- `cash.count.recorded` — no GL by default.
+- `cash.variance.posted` — optional GL follow-up only after the variance-event decision is made.
+
+Internal vault/drawer movement must stay within GL `1110` and create no journal entry. Any external cash shipment or settlement event requires a separate COA/posting decision before implementation.
+
+### Phase 2 Test Plan
+
+Add focused tests before adding workspace polish:
+
+- Cash location model constraints: valid types, active operating unit, unique code, closed/inactive behavior.
+- Teller session drawer linkage: active drawer, same operating unit, one open session per drawer.
+- Internal cash transfer command: idempotency, status transitions, no balance movement before approval/completion, no-self-approval, and sufficient source custody balance.
+- Cash balance projection: completed movements update projections and can be rebuilt from movement history.
+- No-GL proof: internal custody movement records no journal entry.
+- Cash count command: creates count evidence and variance records when counted amount differs from expected amount.
+- EOD readiness hooks: unresolved movements/variances surface in readiness output once enabled.
+- Existing Phase 1 integration tests continue to pass.
+
 ### Deferred
 
 - Fed/correspondent cash shipments.
 - ATM cash.
 - Denomination tracking.
+- Strap, bundle, roll, and coin tracking.
 - External cash settlement accounting.
 - Branch-level GL.
+- Branch-scoped business dates.
+- External cash settlement accounts or COA changes.
+- Generalized `Workflow` tables unless a cash approval slice explicitly requires them.
 
 ---
 
@@ -231,19 +420,21 @@ Exact event taxonomy should be decided per slice. Some servicing changes may be 
 
 ### Fee Split
 
-| Fee capability | Phase |
-| --- | --- |
-| Simple/manual fee posting | Phase 1 |
-| Fee waiver with audit | Phase 1 / Phase 3 |
-| Product-configured fee rules | Phase 4 |
-| Automated fee assessment cycles | Phase 4+ |
+
+| Fee capability                  | Phase             |
+| ------------------------------- | ----------------- |
+| Simple/manual fee posting       | Phase 1           |
+| Fee waiver with audit           | Phase 1 / Phase 3 |
+| Product-configured fee rules    | Phase 4           |
+| Automated fee assessment cycles | Phase 4+          |
+
 
 ### Owners
 
 - `Products`: product configuration.
 - `Deposits`: product-driven servicing decisions.
 - `Accounts`: account state.
-- `Core::*`: posting, ledger, and business-date invariants remain unchanged.
+- `Core::`*: posting, ledger, and business-date invariants remain unchanged.
 
 ### Deferred
 
@@ -409,3 +600,4 @@ Create or update an ADR before implementing any slice that:
 - [ADR-0030: Deposit account product engine](adr/0030-deposit-account-product-engine.md)
 - [ADR-0031: Cash inventory and management](adr/0031-cash-inventory-and-management.md)
 - [ADR-0032: Operating units and branch scope](adr/0032-operating-units-and-branch-scope.md)
+

@@ -16,6 +16,7 @@
     <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Record withdrawal", new_branch_withdrawal_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Transfer", new_branch_transfer_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <%= link_to "Cash position", branch_cash_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Place hold", new_branch_hold_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
   </nav>
@@ -39,6 +40,7 @@
     <div class="mt-4 flex flex-wrap gap-2 text-sm">
       <%= link_to "Open session", new_branch_teller_session_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
       <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
+      <%= link_to "Cash position", branch_cash_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
       <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
     </div>
   </div>

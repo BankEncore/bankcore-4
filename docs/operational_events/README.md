@@ -67,6 +67,9 @@ Catalog metadata fields:
 | [interest-accrued.md](interest-accrued.md) | `interest.accrued` | Yes | `RecordEvent` | `pending_to_posted` | `system` | No | No |
 | [interest-posted.md](interest-posted.md) | `interest.posted` | Yes | `RecordEvent` | `pending_to_posted` | `system` | Yes | Yes |
 | [teller-drawer-variance-posted.md](teller-drawer-variance-posted.md) | `teller.drawer.variance.posted` | Yes (optional flag) | `RecordEvent` | `pending_to_posted` | `system` | No | No |
+| [cash-variance-posted.md](cash-variance-posted.md) | `cash.variance.posted` | Yes (optional GL) | `RecordEvent` | `pending_to_posted` | `system` | No | No |
+| [cash-movement-completed.md](cash-movement-completed.md) | `cash.movement.completed` | No | `Cash::Commands::TransferCash` | `posted_immediately` | `teller`, `branch`, `system` | No | No |
+| [cash-count-recorded.md](cash-count-recorded.md) | `cash.count.recorded` | No | `Cash::Commands::RecordCashCount` | `posted_immediately` | `teller`, `branch`, `system` | No | No |
 
 **Teller JSON routes (workspace):** `POST /teller/operational_events`, `POST /teller/operational_events/:id/post`, `POST /teller/reversals`, `POST /teller/holds` (optional **`placed_for_operational_event_id`** on `hold` per [hold-placed.md](hold-placed.md) / [ADR-0013](../adr/0013-holds-available-and-servicing-events.md) §3), `POST /teller/holds/release`, `POST /teller/teller_sessions`, `POST /teller/teller_sessions/close`, `POST /teller/teller_sessions/approve_variance`, `POST /teller/overrides`, **`GET /teller/event_types`** ([ADR-0019](../adr/0019-event-catalog-and-fee-events.md)), **`GET /teller/operational_events`** ([ADR-0017](../adr/0017-deposit-products-fk-narrow-scope.md) §2.5), **`GET /teller/reports/trial_balance`**, **`GET /teller/reports/eod_readiness`** ([ADR-0016](../adr/0016-trial-balance-and-eod-readiness.md)) — see [config/routes.rb](../../config/routes.rb).
 

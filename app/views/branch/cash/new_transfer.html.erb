@@ -1,0 +1,24 @@
+<% content_for :title, "Transfer Cash - BankCORE" %>
+
+<h1 class="text-3xl font-semibold">Transfer cash</h1>
+<%= render "branch/shared/form_error", error_message: @error_message if @error_message.present? %>
+
+<%= form_with url: branch_cash_transfers_path, scope: :cash_transfer, class: "mt-6 max-w-xl space-y-4 rounded border border-slate-200 bg-white p-5 shadow-sm" do |form| %>
+  <div>
+    <%= form.label :source_cash_location_id, "Source location", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.collection_select :source_cash_location_id, @locations, :id, :name, {}, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <div>
+    <%= form.label :destination_cash_location_id, "Destination location", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.collection_select :destination_cash_location_id, @locations, :id, :name, {}, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <div>
+    <%= form.label :amount_minor_units, "Amount in cents", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.number_field :amount_minor_units, min: 1, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <div>
+    <%= form.label :reason_code, "Reason", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.text_field :reason_code, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <%= form.submit "Record transfer", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+<% end %>

@@ -1,0 +1,18 @@
+<% content_for :title, "Cash Reconciliation - BankCORE" %>
+
+<h1 class="text-3xl font-semibold">Cash reconciliation</h1>
+
+<section class="mt-6 grid gap-4 md:grid-cols-3">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Cash subledger</p>
+    <p class="mt-2 text-2xl font-semibold"><%= number_to_currency(@summary.fetch(:cash_subledger_amount_minor_units) / 100.0) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">GL 1110</p>
+    <p class="mt-2 text-2xl font-semibold"><%= number_to_currency(@summary.fetch(:gl_1110_amount_minor_units) / 100.0) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Difference</p>
+    <p class="mt-2 text-2xl font-semibold"><%= number_to_currency(@summary.fetch(:difference_minor_units) / 100.0) %></p>
+  </div>
+</section>

@@ -24,11 +24,12 @@ module Core
         end
 
         DRAWER_VARIANCE_POSTED = "teller.drawer.variance.posted"
+        CASH_VARIANCE_POSTED = "cash.variance.posted"
         INTEREST_EVENT_TYPES = %w[interest.accrued interest.posted].freeze
 
         FINANCIAL_EVENT_TYPES = (
           %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived ach.credit.received] +
-            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED ]
+            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ]
         ).freeze
         CHANNELS = %w[teller branch api batch system].freeze
         STAFF_CHANNELS = %w[teller branch].freeze
@@ -68,6 +69,7 @@ module Core
           validate_interest_posted!(event_type, source_account_id, amount_minor_units, currency, reference_id)
           validate_teller_cash_session!(channel, event_type, teller_session_id)
           validate_drawer_variance!(event_type, channel, amount_minor_units, teller_session_id)
+          validate_cash_variance!(event_type, channel, amount_minor_units, currency, reference_id)
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
           begin
@@ -115,6 +117,12 @@ module Core
                 end
               end
 
+              if event_type.to_s == CASH_VARIANCE_POSTED && reference_id.present?
+                if Models::OperationalEvent.exists?(event_type: CASH_VARIANCE_POSTED, reference_id: reference_id.to_s)
+                  raise InvalidRequest, "cash variance already recorded"
+                end
+              end
+
               event = Models::OperationalEvent.create!(
                 event_type: event_type,
                 status: Models::OperationalEvent::STATUS_PENDING,
@@ -140,7 +148,7 @@ module Core
 
         def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
                                 destination_account_id: nil, teller_session_id: nil, operating_unit_id: nil, reference_id: nil)
-          if event_type.to_s == DRAWER_VARIANCE_POSTED
+          if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ].include?(event_type.to_s)
             payload = {
               event_type: event_type.to_s,
               channel: channel.to_s,
@@ -148,7 +156,8 @@ module Core
               amount_minor_units: amount_minor_units.to_i,
               currency: currency.to_s,
               teller_session_id: teller_session_id.to_i,
-              operating_unit_id: operating_unit_id&.to_i
+              operating_unit_id: operating_unit_id&.to_i,
+              reference_id: reference_id.to_s
             }
             return Digest::SHA256.hexdigest(payload.to_json)
           end
@@ -196,9 +205,9 @@ module Core
         end
 
         def self.validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
-          if event_type.to_s == DRAWER_VARIANCE_POSTED
+          if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ].include?(event_type.to_s)
             if amount_minor_units.nil? || amount_minor_units.to_i == 0
-              raise InvalidRequest, "amount_minor_units must be non-zero for teller.drawer.variance.posted"
+              raise InvalidRequest, "amount_minor_units must be non-zero for #{event_type}"
             end
             raise InvalidRequest, "currency is required" if currency.blank?
             raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
@@ -217,7 +226,7 @@ module Core
         end
 
         def self.validate_source_account!(event_type, source_account_id)
-          return if event_type.to_s == DRAWER_VARIANCE_POSTED && source_account_id.blank?
+          return if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ].include?(event_type.to_s) && source_account_id.blank?
 
           acc = Accounts::Models::DepositAccount.find_by(id: source_account_id)
           raise InvalidRequest, "source_account_id not found" if acc.nil?
@@ -257,6 +266,27 @@ module Core
           end
         end
         private_class_method :validate_drawer_variance!
+
+        def self.validate_cash_variance!(event_type, channel, amount_minor_units, currency, reference_id)
+          return unless event_type.to_s == CASH_VARIANCE_POSTED
+
+          raise InvalidRequest, "cash.variance.posted may only use channel system" unless channel.to_s == "system"
+          raise InvalidRequest, "reference_id is required for cash.variance.posted" if reference_id.blank?
+          raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
+
+          unless reference_id.to_s.match?(/\A\d+\z/)
+            raise InvalidRequest, "reference_id must be the numeric id of a cash_variance"
+          end
+          variance = Cash::Models::CashVariance.find_by(id: reference_id.to_i)
+          raise InvalidRequest, "referenced cash variance not found" if variance.nil?
+          unless variance.approved_or_posted?
+            raise InvalidRequest, "cash variance must be approved before posting"
+          end
+          unless variance.amount_minor_units.to_i == amount_minor_units.to_i
+            raise InvalidRequest, "amount_minor_units must match cash_variances.amount_minor_units"
+          end
+        end
+        private_class_method :validate_cash_variance!
 
         def self.validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
           return unless event_type.to_s == "withdrawal.posted"
