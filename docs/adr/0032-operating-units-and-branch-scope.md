@@ -1,6 +1,6 @@
 # ADR-0032: Operating units and branch scope
 
-**Status:** Proposed  
+**Status:** Accepted - first slice implemented  
 **Date:** 2026-04-27  
 **Decision Type:** Workspace / branch operating model architecture  
 **Aligns with:** [ADR-0018](0018-business-date-close-and-posting-invariant.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0029](0029-capability-first-authorization-layer.md), [ADR-0031](0031-cash-inventory-and-management.md), [module catalog](../architecture/bankcore-module-catalog.md)
@@ -331,7 +331,7 @@ Cash subledger:
 
 ### First operating-unit slice
 
-The first implementation slice should include:
+The first implementation slice is implemented with:
 
 - `operating_units` with seeded institution and branch records
 - `operators.default_operating_unit_id` or equivalent session-default support
@@ -341,12 +341,13 @@ The first implementation slice should include:
 - Branch UI/session defaults that make the current branch explicit
 - tests proving existing single-branch teller and Branch CSR behavior remains unchanged
 
+Implementation caveat: branch/cash workflows must continue to authorize against the resolved operating unit that owns the session, cash location, movement, or variance. Global role assignments remain valid, but operating-unit-scoped assignments are exact-match only.
+
 ### Follow-up slices
 
 Likely follow-up work:
 
-- `cash_locations.operating_unit_id` with ADR-0031 Cash implementation
-- scoped role assignment backfill and enforcement
+- broader scoped role assignment backfill and administration screens
 - branch-aware operational event search filters
 - branch cash position and reconciliation reports
 - branch dashboards for open sessions, pending approvals, and cash exceptions

@@ -84,6 +84,21 @@ module Workspace
         assert operator.has_capability?(CapabilityRegistry::DEPOSIT_ACCEPT, scope: operating_unit)
       end
 
+      test "global assignments authorize in any operating unit scope" do
+        operator = Models::Operator.create!(role: "supervisor", display_name: "Global Supervisor", active: true)
+        other_branch = Organization::Models::OperatingUnit.create!(
+          code: "GLOBAL-#{SecureRandom.hex(4)}",
+          name: "Global Test Branch",
+          unit_type: "branch",
+          parent_operating_unit: Organization::Services::DefaultOperatingUnit.institution,
+          status: "active",
+          time_zone: "Eastern Time (US & Canada)",
+          opened_on: Date.current
+        )
+
+        assert operator.has_capability?(CapabilityRegistry::CASH_MOVEMENT_APPROVE, scope: other_branch)
+      end
+
       test "operating unit scoped assignments grant capabilities in exact scope" do
         operator = Models::Operator.create!(role: "teller", display_name: "Scoped Assignment Teller", active: true)
         auditor = Models::Role.find_by!(code: CapabilityRegistry::AUDITOR)
