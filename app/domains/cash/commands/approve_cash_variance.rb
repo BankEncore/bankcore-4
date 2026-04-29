@@ -8,15 +8,15 @@ module Cash
       class InvalidState < Error; end
 
       def self.call(cash_variance_id:, approving_actor_id:)
-        Workspace::Authorization::Authorizer.require_capability!(
-          actor_id: approving_actor_id,
-          capability_code: Workspace::Authorization::CapabilityRegistry::CASH_VARIANCE_APPROVE,
-          scope: nil
-        )
-
         Cash::Models::CashVariance.transaction do
           variance = Cash::Models::CashVariance.lock.find_by(id: cash_variance_id)
           raise NotFound, "cash_variance_id=#{cash_variance_id}" if variance.nil?
+          Workspace::Authorization::Authorizer.require_capability!(
+            actor_id: approving_actor_id,
+            capability_code: Workspace::Authorization::CapabilityRegistry::CASH_VARIANCE_APPROVE,
+            scope: variance.operating_unit
+          )
+
           return variance if variance.status == Cash::Models::CashVariance::STATUS_POSTED
           unless variance.status == Cash::Models::CashVariance::STATUS_PENDING_APPROVAL ||
               variance.status == Cash::Models::CashVariance::STATUS_APPROVED

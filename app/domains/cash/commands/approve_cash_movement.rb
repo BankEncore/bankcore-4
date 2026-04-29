@@ -8,15 +8,15 @@ module Cash
       class InvalidState < Error; end
 
       def self.call(cash_movement_id:, approving_actor_id:, channel: "branch")
-        Workspace::Authorization::Authorizer.require_capability!(
-          actor_id: approving_actor_id,
-          capability_code: Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_APPROVE,
-          scope: nil
-        )
-
         Cash::Models::CashMovement.transaction do
           movement = Cash::Models::CashMovement.lock.find_by(id: cash_movement_id)
           raise NotFound, "cash_movement_id=#{cash_movement_id}" if movement.nil?
+          Workspace::Authorization::Authorizer.require_capability!(
+            actor_id: approving_actor_id,
+            capability_code: Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_APPROVE,
+            scope: movement.operating_unit
+          )
+
           return movement if movement.completed?
           unless movement.pending_approval?
             raise InvalidState, "movement must be pending_approval, was #{movement.status.inspect}"

@@ -52,6 +52,12 @@ module Internal
       render plain: "Forbidden", status: :forbidden
     end
 
+    def require_current_operating_unit!
+      return if current_operating_unit.present?
+
+      render plain: "Operating unit required", status: :forbidden
+    end
+
     def branch_access?
       has_any_capability?(
         Workspace::Authorization::CapabilityRegistry::DEPOSIT_ACCEPT,
@@ -79,6 +85,8 @@ module Internal
     end
 
     def has_any_capability?(*capability_codes)
+      return false if current_operating_unit.blank?
+
       capability_codes.any? { |code| current_operator&.has_capability?(code, scope: current_operating_unit) }
     end
   end
