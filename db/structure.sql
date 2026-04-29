@@ -249,8 +249,8 @@ CREATE TABLE public.cash_locations (
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT cash_locations_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
     CONSTRAINT cash_locations_parent_not_self_check CHECK (((parent_cash_location_id IS NULL) OR (parent_cash_location_id <> id))),
-    CONSTRAINT cash_locations_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[]))),
-    CONSTRAINT cash_locations_type_check CHECK (((location_type)::text = ANY ((ARRAY['branch_vault'::character varying, 'teller_drawer'::character varying, 'internal_transit'::character varying])::text[])))
+    CONSTRAINT cash_locations_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text]))),
+    CONSTRAINT cash_locations_type_check CHECK (((location_type)::text = ANY (ARRAY[('branch_vault'::character varying)::text, ('teller_drawer'::character varying)::text, ('internal_transit'::character varying)::text])))
 );
 
 
@@ -302,8 +302,8 @@ CREATE TABLE public.cash_movements (
     CONSTRAINT cash_movements_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
     CONSTRAINT cash_movements_location_present_check CHECK (((source_cash_location_id IS NOT NULL) OR (destination_cash_location_id IS NOT NULL))),
     CONSTRAINT cash_movements_positive_amount_check CHECK ((amount_minor_units > 0)),
-    CONSTRAINT cash_movements_status_check CHECK (((status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'rejected'::character varying])::text[]))),
-    CONSTRAINT cash_movements_type_check CHECK (((movement_type)::text = ANY ((ARRAY['vault_to_drawer'::character varying, 'drawer_to_vault'::character varying, 'internal_transfer'::character varying, 'adjustment'::character varying])::text[])))
+    CONSTRAINT cash_movements_status_check CHECK (((status)::text = ANY (ARRAY[('pending_approval'::character varying)::text, ('approved'::character varying)::text, ('completed'::character varying)::text, ('cancelled'::character varying)::text, ('rejected'::character varying)::text]))),
+    CONSTRAINT cash_movements_type_check CHECK (((movement_type)::text = ANY (ARRAY[('vault_to_drawer'::character varying)::text, ('drawer_to_vault'::character varying)::text, ('internal_transfer'::character varying)::text, ('adjustment'::character varying)::text])))
 );
 
 
@@ -348,7 +348,7 @@ CREATE TABLE public.cash_variances (
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT cash_variances_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
     CONSTRAINT cash_variances_nonzero_amount_check CHECK ((amount_minor_units <> 0)),
-    CONSTRAINT cash_variances_status_check CHECK (((status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'posted'::character varying])::text[])))
+    CONSTRAINT cash_variances_status_check CHECK (((status)::text = ANY (ARRAY[('pending_approval'::character varying)::text, ('approved'::character varying)::text, ('posted'::character varying)::text])))
 );
 
 
@@ -490,7 +490,7 @@ CREATE TABLE public.deposit_account_party_maintenance_audits (
     ended_on date,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    CONSTRAINT dap_maintenance_audits_action_check CHECK (((action)::text = ANY ((ARRAY['authorized_signer.added'::character varying, 'authorized_signer.ended'::character varying])::text[]))),
+    CONSTRAINT dap_maintenance_audits_action_check CHECK (((action)::text = ANY (ARRAY[('authorized_signer.added'::character varying)::text, ('authorized_signer.ended'::character varying)::text]))),
     CONSTRAINT dap_maintenance_audits_channel_check CHECK (((channel)::text = 'branch'::text)),
     CONSTRAINT dap_maintenance_audits_role_check CHECK (((role)::text = 'authorized_signer'::text))
 );
@@ -568,7 +568,7 @@ CREATE TABLE public.deposit_product_fee_rules (
     updated_at timestamp(6) without time zone NOT NULL,
     CONSTRAINT deposit_product_fee_rules_amount_positive CHECK ((amount_minor_units > 0)),
     CONSTRAINT deposit_product_fee_rules_ended_on_after_effective_on CHECK (((ended_on IS NULL) OR (ended_on >= effective_on))),
-    CONSTRAINT deposit_product_fee_rules_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+    CONSTRAINT deposit_product_fee_rules_status_enum CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))
 );
 
 
@@ -610,7 +610,7 @@ CREATE TABLE public.deposit_product_overdraft_policies (
     CONSTRAINT deposit_product_od_policies_ended_on_after_effective_on CHECK (((ended_on IS NULL) OR (ended_on >= effective_on))),
     CONSTRAINT deposit_product_od_policies_mode_enum CHECK (((mode)::text = 'deny_nsf'::text)),
     CONSTRAINT deposit_product_od_policies_nsf_fee_positive CHECK ((nsf_fee_minor_units > 0)),
-    CONSTRAINT deposit_product_od_policies_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+    CONSTRAINT deposit_product_od_policies_status_enum CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))
 );
 
 
@@ -652,7 +652,7 @@ CREATE TABLE public.deposit_product_statement_profiles (
     CONSTRAINT deposit_product_statement_profiles_cycle_day_range CHECK (((cycle_day >= 1) AND (cycle_day <= 31))),
     CONSTRAINT deposit_product_statement_profiles_ended_on_after_effective_on CHECK (((ended_on IS NULL) OR (ended_on >= effective_on))),
     CONSTRAINT deposit_product_statement_profiles_frequency_enum CHECK (((frequency)::text = 'monthly'::text)),
-    CONSTRAINT deposit_product_statement_profiles_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+    CONSTRAINT deposit_product_statement_profiles_status_enum CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))
 );
 
 
@@ -814,9 +814,9 @@ CREATE TABLE public.holds (
     expires_on date,
     expired_by_operational_event_id bigint,
     CONSTRAINT holds_amount_positive CHECK ((amount_minor_units > 0)),
-    CONSTRAINT holds_hold_type_enum CHECK (((hold_type)::text = ANY ((ARRAY['administrative'::character varying, 'deposit'::character varying, 'legal'::character varying, 'channel_authorization'::character varying])::text[]))),
-    CONSTRAINT holds_reason_code_enum CHECK (((reason_code)::text = ANY ((ARRAY['deposit_availability'::character varying, 'customer_request'::character varying, 'fraud_review'::character varying, 'legal_order'::character varying, 'manual_review'::character varying, 'other'::character varying])::text[]))),
-    CONSTRAINT holds_status_enum CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'released'::character varying, 'expired'::character varying])::text[])))
+    CONSTRAINT holds_hold_type_enum CHECK (((hold_type)::text = ANY (ARRAY[('administrative'::character varying)::text, ('deposit'::character varying)::text, ('legal'::character varying)::text, ('channel_authorization'::character varying)::text]))),
+    CONSTRAINT holds_reason_code_enum CHECK (((reason_code)::text = ANY (ARRAY[('deposit_availability'::character varying)::text, ('customer_request'::character varying)::text, ('fraud_review'::character varying)::text, ('legal_order'::character varying)::text, ('manual_review'::character varying)::text, ('other'::character varying)::text]))),
+    CONSTRAINT holds_status_enum CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('released'::character varying)::text, ('expired'::character varying)::text])))
 );
 
 
@@ -894,7 +894,7 @@ CREATE TABLE public.journal_lines (
     updated_at timestamp(6) without time zone NOT NULL,
     deposit_account_id bigint,
     CONSTRAINT journal_lines_amount_non_negative CHECK ((amount_minor_units >= 0)),
-    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY ((ARRAY['debit'::character varying, 'credit'::character varying])::text[])))
+    CONSTRAINT journal_lines_side_enum CHECK (((side)::text = ANY (ARRAY[('debit'::character varying)::text, ('credit'::character varying)::text])))
 );
 
 
@@ -937,8 +937,8 @@ CREATE TABLE public.operating_units (
     CONSTRAINT operating_units_code_present_check CHECK ((btrim((code)::text) <> ''::text)),
     CONSTRAINT operating_units_name_present_check CHECK ((btrim((name)::text) <> ''::text)),
     CONSTRAINT operating_units_parent_not_self_check CHECK (((parent_operating_unit_id IS NULL) OR (parent_operating_unit_id <> id))),
-    CONSTRAINT operating_units_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'closed'::character varying])::text[]))),
-    CONSTRAINT operating_units_unit_type_check CHECK (((unit_type)::text = ANY ((ARRAY['institution'::character varying, 'branch'::character varying, 'operations'::character varying, 'department'::character varying, 'region'::character varying])::text[])))
+    CONSTRAINT operating_units_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text, ('closed'::character varying)::text]))),
+    CONSTRAINT operating_units_unit_type_check CHECK (((unit_type)::text = ANY (ARRAY[('institution'::character varying)::text, ('branch'::character varying)::text, ('operations'::character varying)::text, ('department'::character varying)::text, ('region'::character varying)::text])))
 );
 
 
@@ -1097,7 +1097,7 @@ CREATE TABLE public.operators (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     default_operating_unit_id bigint,
-    CONSTRAINT operators_role_check CHECK (((role)::text = ANY ((ARRAY['teller'::character varying, 'supervisor'::character varying, 'operations'::character varying, 'admin'::character varying])::text[])))
+    CONSTRAINT operators_role_check CHECK (((role)::text = ANY (ARRAY[('teller'::character varying)::text, ('supervisor'::character varying)::text, ('operations'::character varying)::text, ('admin'::character varying)::text])))
 );
 
 
@@ -1321,7 +1321,7 @@ CREATE TABLE public.teller_sessions (
     supervisor_operator_id bigint,
     operating_unit_id bigint NOT NULL,
     cash_location_id bigint,
-    CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY ((ARRAY['open'::character varying, 'closed'::character varying, 'pending_supervisor'::character varying])::text[])))
+    CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY (ARRAY[('open'::character varying)::text, ('closed'::character varying)::text, ('pending_supervisor'::character varying)::text])))
 );
 
 
