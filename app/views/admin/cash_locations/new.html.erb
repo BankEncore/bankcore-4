@@ -1,0 +1,13 @@
+<% content_for :title, "New Cash Location - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">New cash location</h1>
+    <p class="mt-2 text-slate-600">Create a vault, teller drawer, or internal transit location.</p>
+  </div>
+  <%= link_to "All cash locations", admin_cash_locations_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8">
+  <%= render "form" %>
+</section>

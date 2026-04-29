@@ -1,0 +1,40 @@
+<% content_for :title, "Roles - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Roles</h1>
+    <p class="mt-2 text-slate-600">Runtime RBAC roles and capability mappings.</p>
+  </div>
+  <div class="flex gap-2">
+    <%= link_to "Admin dashboard", admin_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <%= link_to "New role", new_admin_role_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  </div>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Role</th>
+          <th class="px-5 py-3">Type</th>
+          <th class="px-5 py-3">Status</th>
+          <th class="px-5 py-3 text-right">Capabilities</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% @roles.each do |role| %>
+          <tr>
+            <td class="px-5 py-4">
+              <%= link_to role.code, admin_role_path(role), class: "font-medium text-slate-950 underline" %>
+              <div class="text-xs text-slate-500"><%= role.name %></div>
+            </td>
+            <td class="px-5 py-4"><%= role.system_role? ? "System" : "Custom" %></td>
+            <td class="px-5 py-4"><%= admin_status_badge(role.active? ? "active" : "inactive") %></td>
+            <td class="px-5 py-4 text-right"><%= role.capabilities.size %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

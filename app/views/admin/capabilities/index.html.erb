@@ -1,0 +1,43 @@
+<% content_for :title, "Capabilities - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Capabilities</h1>
+    <p class="mt-2 text-slate-600">Database capability catalog used by runtime authorization.</p>
+  </div>
+  <div class="flex gap-2">
+    <%= link_to "Admin dashboard", admin_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <%= link_to "New capability", new_admin_capability_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  </div>
+</section>
+
+<% @capabilities.each do |category, capabilities| %>
+  <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold"><%= category.to_s.humanize %></h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Capability</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3 text-right">Roles</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% capabilities.each do |capability| %>
+            <tr>
+              <td class="px-5 py-4">
+                <%= link_to capability.code, admin_capability_path(capability), class: "font-medium text-slate-950 underline" %>
+                <div class="text-xs text-slate-500"><%= capability.name %></div>
+              </td>
+              <td class="px-5 py-4"><%= admin_status_badge(capability.active? ? "active" : "inactive") %></td>
+              <td class="px-5 py-4 text-right"><%= capability.roles.size %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<% end %>

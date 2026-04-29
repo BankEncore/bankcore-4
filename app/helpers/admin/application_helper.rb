@@ -14,6 +14,12 @@ module Admin
       value.iso8601
     end
 
+    def admin_datetime(value)
+      return "Not recorded" if value.blank?
+
+      value.in_time_zone.strftime("%Y-%m-%d %H:%M")
+    end
+
     def admin_status_badge(value)
       classes = case value.to_s
       when "active"
@@ -30,6 +36,25 @@ module Admin
       return "Unknown product" if product.nil?
 
       "#{product.product_code} - #{product.name}"
+    end
+
+    def admin_operating_unit_label(unit)
+      return "Global" if unit.nil?
+
+      "#{unit.code} - #{unit.name}"
+    end
+
+    def admin_cash_location_label(location)
+      return "No cash location" if location.nil?
+
+      [ location.name, location.drawer_code.presence ].compact.join(" - ")
+    end
+
+    def admin_assignment_scope_label(assignment)
+      return "Global" if assignment.global_scope?
+
+      unit = Organization::Models::OperatingUnit.find_by(id: assignment.scope_id)
+      admin_operating_unit_label(unit)
     end
 
     def admin_rule_type(row)

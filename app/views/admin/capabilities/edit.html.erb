@@ -1,0 +1,13 @@
+<% content_for :title, "Edit Capability - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Edit capability</h1>
+    <p class="mt-2 text-slate-600"><%= @capability.code %></p>
+  </div>
+  <%= link_to "Capability detail", admin_capability_path(@capability), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8">
+  <%= render "form" %>
+</section>

@@ -1,0 +1,13 @@
+<% content_for :title, "New Operating Unit - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">New operating unit</h1>
+    <p class="mt-2 text-slate-600">Create an organizational scope record.</p>
+  </div>
+  <%= link_to "All operating units", admin_operating_units_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8">
+  <%= render "form" %>
+</section>
