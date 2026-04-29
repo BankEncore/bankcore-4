@@ -1,0 +1,58 @@
+<% if @error_message.present? %>
+  <div class="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><%= @error_message %></div>
+<% end %>
+
+<%= form_with model: @role,
+  scope: :role,
+  url: @role.persisted? ? admin_role_path(@role) : admin_roles_path,
+  method: @role.persisted? ? :patch : :post,
+  local: true,
+  class: "rounded border border-slate-200 bg-white p-5 shadow-sm" do |form| %>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :code, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :code, disabled: @role.persisted?, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2 disabled:bg-slate-100" %>
+    </div>
+    <div>
+      <%= form.label :name, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :name, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="md:col-span-2">
+      <%= form.label :description, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_area :description, rows: 3, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="flex items-center gap-2">
+      <%= form.check_box :active, checked: @role.active.nil? ? true : @role.active %>
+      <%= form.label :active, "Active", class: "text-sm font-medium text-slate-700" %>
+    </div>
+  </div>
+
+  <% if @role.new_record? %>
+    <div class="mt-6 border-t border-slate-200 pt-5">
+      <h2 class="font-semibold">Initial capabilities</h2>
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <% @capabilities.each do |category, capabilities| %>
+          <div>
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500"><%= category %></h3>
+            <div class="mt-2 grid gap-2">
+              <% capabilities.each do |capability| %>
+                <label class="flex items-start gap-2 text-sm">
+                  <%= check_box_tag "capability_ids[]", capability.id, false %>
+                  <span>
+                    <span class="font-medium"><%= capability.code %></span>
+                    <span class="block text-slate-500"><%= capability.name %></span>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="mt-6 flex gap-2">
+    <%= form.submit class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <%= link_to "Cancel", @role.persisted? ? admin_role_path(@role) : admin_roles_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  </div>
+<% end %>

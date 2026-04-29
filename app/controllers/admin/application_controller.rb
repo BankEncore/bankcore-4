@@ -6,6 +6,13 @@ module Admin
 
     private
 
+    def require_admin_capability!(capability_code)
+      return if current_operating_unit.present? &&
+        current_operator&.has_capability?(capability_code, scope: current_operating_unit)
+
+      render plain: "Forbidden", status: :forbidden
+    end
+
     def parse_optional_date_param(name)
       raw = params[name].presence
       return nil if raw.blank?

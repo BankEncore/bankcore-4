@@ -3,11 +3,26 @@
 <section>
   <h1 class="text-3xl font-semibold">Admin workspace</h1>
   <p class="mt-2 text-slate-600">
-    Review deposit products and active product configuration.
+    Maintain internal operators, authorization, deposit products, and active product configuration.
   </p>
 </section>
 
 <section class="mt-8 grid gap-4 md:grid-cols-2">
+  <%= link_to admin_operators_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Operators</h2>
+    <p class="mt-2 text-sm text-slate-600">Create operators, reset credentials, and manage active status.</p>
+  <% end %>
+
+  <%= link_to admin_roles_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Roles and assignments</h2>
+    <p class="mt-2 text-sm text-slate-600">Review roles, capability mappings, and operating-unit scoped access.</p>
+  <% end %>
+
+  <%= link_to admin_capabilities_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+    <h2 class="font-semibold">Capabilities</h2>
+    <p class="mt-2 text-sm text-slate-600">Maintain the database capability catalog used by runtime authorization.</p>
+  <% end %>
+
   <%= link_to admin_deposit_products_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
     <h2 class="font-semibold">Deposit products</h2>
     <p class="mt-2 text-sm text-slate-600">Browse products and related fee, overdraft, and statement configuration.</p>

@@ -76,6 +76,20 @@ Rails.application.routes.draw do
   end
   get "admin", to: "admin/dashboard#index", as: :admin
   scope path: "admin", module: :admin, as: :admin do
+    resources :operators do
+      post :deactivate, on: :member
+      post :reset_credential, on: :member
+      resources :operator_role_assignments, only: [ :new, :create, :edit, :update ] do
+        post :deactivate, on: :member
+      end
+    end
+    resources :roles do
+      patch :capabilities, on: :member, action: :update_capabilities
+      post :deactivate, on: :member
+    end
+    resources :capabilities do
+      post :deactivate, on: :member
+    end
     resources :deposit_products, only: [ :index, :show ]
     get "deposit_products/:id/readiness", to: "deposit_products#readiness", as: :deposit_product_readiness
     resources :deposit_product_fee_rules, only: [ :index ]

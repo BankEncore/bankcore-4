@@ -1,0 +1,64 @@
+<% content_for :title, "Operators - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Operators</h1>
+    <p class="mt-2 text-slate-600">Internal users, credentials, and effective role assignments.</p>
+  </div>
+  <div class="flex gap-2">
+    <%= link_to "Admin dashboard", admin_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <%= link_to "New operator", new_admin_operator_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  </div>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-4 shadow-sm">
+  <%= form_with url: admin_operators_path, method: :get, local: true, class: "grid gap-3 md:grid-cols-3" do |form| %>
+    <div>
+      <%= form.label :search, "Search", class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :search, value: @search, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :status, "Status", class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :status, options_for_select([["All", ""], ["Active", "active"], ["Inactive", "inactive"]], @status), {}, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="flex items-end">
+      <%= form.submit "Filter", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <% if @operators.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Operator</th>
+            <th class="px-5 py-3">Username</th>
+            <th class="px-5 py-3">Legacy role</th>
+            <th class="px-5 py-3">Default OU</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3 text-right">Assignments</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @operators.each do |operator| %>
+            <tr>
+              <td class="px-5 py-4">
+                <%= link_to operator.display_name, admin_operator_path(operator), class: "font-medium text-slate-950 underline" %>
+                <div class="text-xs text-slate-500">#<%= operator.id %></div>
+              </td>
+              <td class="px-5 py-4"><%= operator.credential&.username || "No credential" %></td>
+              <td class="px-5 py-4"><%= operator.role.humanize %></td>
+              <td class="px-5 py-4"><%= admin_operating_unit_label(operator.default_operating_unit) %></td>
+              <td class="px-5 py-4"><%= admin_status_badge(operator.active? ? "active" : "inactive") %></td>
+              <td class="px-5 py-4 text-right"><%= operator.operator_role_assignments.size %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No operators match the current filters.</div>
+  <% end %>
+</section>

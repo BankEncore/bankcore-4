@@ -1,0 +1,63 @@
+<% content_for :title, "#{@capability.code} - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold"><%= @capability.code %></h1>
+    <p class="mt-2 text-slate-600"><%= @capability.name %></p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <%= link_to "All capabilities", admin_capabilities_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <%= link_to "Edit", edit_admin_capability_path(@capability), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  </div>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Status</p>
+    <div class="mt-3"><%= admin_status_badge(@capability.active? ? "active" : "inactive") %></div>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Category</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @capability.category %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Roles</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @capability.roles.size %></p>
+  </div>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="text-xl font-semibold">Description</h2>
+  <p class="mt-2 text-sm text-slate-600"><%= @capability.description.presence || "No description recorded." %></p>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Roles using this capability</h2>
+  </div>
+  <% if @capability.roles.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <tbody class="divide-y divide-slate-100">
+          <% @capability.roles.order(:code).each do |role| %>
+            <tr>
+              <td class="px-5 py-4"><%= link_to role.code, admin_role_path(role), class: "font-medium underline" %></td>
+              <td class="px-5 py-4"><%= role.name %></td>
+              <td class="px-5 py-4 text-right"><%= admin_status_badge(role.active? ? "active" : "inactive") %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No roles currently include this capability.</div>
+  <% end %>
+</section>
+
+<% if @capability.active? %>
+  <section class="mt-8 rounded border border-amber-200 bg-amber-50 p-5">
+    <h2 class="font-semibold text-amber-950">Deactivate capability</h2>
+    <p class="mt-2 text-sm text-amber-900">Deactivation removes this capability from runtime authorization without deleting historical mappings.</p>
+    <%= button_to "Deactivate #{@capability.code}", deactivate_admin_capability_path(@capability), method: :post, class: "mt-4 rounded border border-amber-300 px-4 py-2 font-medium text-amber-950" %>
+  </section>
+<% end %>
