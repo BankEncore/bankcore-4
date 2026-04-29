@@ -82,6 +82,8 @@ Recommended artifact:
 docs/architecture/branch-operations-capability-map.md
 ```
 
+See [branch operations capability map](architecture/branch-operations-capability-map.md).
+
 This is a planning/catalog pass only. It must not introduce new money movement semantics by itself.
 
 ---
