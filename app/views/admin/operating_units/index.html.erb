@@ -1,0 +1,64 @@
+<% content_for :title, "Operating Units - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Operating units</h1>
+    <p class="mt-2 text-slate-600">Organization scope records for branches, departments, regions, operations, and institution units.</p>
+  </div>
+  <div class="flex gap-2">
+    <%= link_to "Admin dashboard", admin_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <%= link_to "New operating unit", new_admin_operating_unit_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  </div>
+</section>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-4 shadow-sm">
+  <%= form_with url: admin_operating_units_path, method: :get, local: true, class: "grid gap-3 md:grid-cols-3" do |form| %>
+    <div>
+      <%= form.label :unit_type, "Type", class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :unit_type, options_for_select([["All", ""]] + Organization::Models::OperatingUnit::UNIT_TYPES.map { |type| [type.humanize, type] }, @unit_type), {}, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :status, class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :status, options_for_select([["All", ""]] + Organization::Models::OperatingUnit::STATUSES.map { |status| [status.humanize, status] }, @status), {}, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div class="flex items-end">
+      <%= form.submit "Filter", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    </div>
+  <% end %>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <% if @operating_units.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Operating unit</th>
+            <th class="px-5 py-3">Type</th>
+            <th class="px-5 py-3">Parent</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3 text-right">Children</th>
+            <th class="px-5 py-3 text-right">Cash locations</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @operating_units.each do |unit| %>
+            <tr>
+              <td class="px-5 py-4">
+                <%= link_to unit.code, admin_operating_unit_path(unit), class: "font-medium text-slate-950 underline" %>
+                <div class="text-xs text-slate-500"><%= unit.name %></div>
+              </td>
+              <td class="px-5 py-4"><%= unit.unit_type.humanize %></td>
+              <td class="px-5 py-4"><%= admin_operating_unit_label(unit.parent_operating_unit) %></td>
+              <td class="px-5 py-4"><%= admin_status_badge(unit.status) %></td>
+              <td class="px-5 py-4 text-right"><%= @child_counts.fetch(unit.id, 0) %></td>
+              <td class="px-5 py-4 text-right"><%= @cash_location_counts.fetch(unit.id, 0) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No operating units match the current filters.</div>
+  <% end %>
+</section>

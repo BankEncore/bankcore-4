@@ -1,0 +1,60 @@
+<% if @error_message.present? %>
+  <div class="mb-4 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><%= @error_message %></div>
+<% end %>
+
+<%= form_with model: @cash_location,
+  scope: :cash_location,
+  url: @cash_location.persisted? ? admin_cash_location_path(@cash_location) : admin_cash_locations_path,
+  method: @cash_location.persisted? ? :patch : :post,
+  local: true,
+  class: "rounded border border-slate-200 bg-white p-5 shadow-sm" do |form| %>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :name, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :name, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :location_type, "Type", class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :location_type, options_for_select(@location_types.map { |type| [type.humanize, type] }, @cash_location.location_type), {}, disabled: @cash_location.persisted?, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2 disabled:bg-slate-100" %>
+    </div>
+    <div>
+      <%= form.label :operating_unit_id, "Operating unit", class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :operating_unit_id, options_from_collection_for_select(@operating_units, :id, :code, @cash_location.operating_unit_id), {}, disabled: @cash_location.persisted?, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2 disabled:bg-slate-100" %>
+    </div>
+    <div>
+      <%= form.label :status, class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :status, options_for_select(@statuses.map { |status| [status.humanize, status] }, @cash_location.status), {}, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :drawer_code, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :drawer_code, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :responsible_operator_id, "Responsible operator", class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :responsible_operator_id, options_from_collection_for_select(@operators, :id, :display_name, @cash_location.responsible_operator_id), { include_blank: "Unassigned" }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :parent_cash_location_id, "Parent cash location", class: "text-sm font-medium text-slate-700" %>
+      <%= form.select :parent_cash_location_id,
+        options_from_collection_for_select(@parent_cash_locations.reject { |location| location.id == @cash_location.id }, :id, :name, @cash_location.parent_cash_location_id),
+        { include_blank: "None" },
+        class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :currency, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :currency, value: @cash_location.currency || "USD", readonly: true, class: "mt-1 w-full rounded border border-slate-300 bg-slate-100 px-3 py-2" %>
+    </div>
+    <div class="flex items-center gap-2 pt-6">
+      <%= form.check_box :balancing_required, checked: @cash_location.balancing_required.nil? ? true : @cash_location.balancing_required %>
+      <%= form.label :balancing_required, "Balancing required", class: "text-sm font-medium text-slate-700" %>
+    </div>
+    <div>
+      <%= form.label :external_reference, class: "text-sm font-medium text-slate-700" %>
+      <%= form.text_field :external_reference, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+  </div>
+  <div class="mt-6 flex gap-2">
+    <%= form.submit class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <%= link_to "Cancel", @cash_location.persisted? ? admin_cash_location_path(@cash_location) : admin_cash_locations_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  </div>
+<% end %>

@@ -90,6 +90,12 @@ Rails.application.routes.draw do
     resources :capabilities do
       post :deactivate, on: :member
     end
+    resources :operating_units do
+      post :close, on: :member
+    end
+    resources :cash_locations do
+      post :deactivate, on: :member
+    end
     resources :deposit_products, only: [ :index, :show ]
     get "deposit_products/:id/readiness", to: "deposit_products#readiness", as: :deposit_product_readiness
     resources :deposit_product_fee_rules, only: [ :index ]

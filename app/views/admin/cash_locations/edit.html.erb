@@ -1,0 +1,13 @@
+<% content_for :title, "Edit Cash Location - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Edit cash location</h1>
+    <p class="mt-2 text-slate-600"><%= @cash_location.name %></p>
+  </div>
+  <%= link_to "Cash location detail", admin_cash_location_path(@cash_location), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8">
+  <%= render "form" %>
+</section>

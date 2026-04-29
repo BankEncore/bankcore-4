@@ -44,6 +44,12 @@ module Admin
       "#{unit.code} - #{unit.name}"
     end
 
+    def admin_cash_location_label(location)
+      return "No cash location" if location.nil?
+
+      [ location.name, location.drawer_code.presence ].compact.join(" - ")
+    end
+
     def admin_assignment_scope_label(assignment)
       return "Global" if assignment.global_scope?
 

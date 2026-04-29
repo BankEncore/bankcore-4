@@ -1,0 +1,118 @@
+<% content_for :title, "#{@operating_unit.code} - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold"><%= @operating_unit.code %></h1>
+    <p class="mt-2 text-slate-600"><%= @operating_unit.name %></p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <%= link_to "All operating units", admin_operating_units_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <%= link_to "Edit", edit_admin_operating_unit_path(@operating_unit), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  </div>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-4">
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Status</p>
+    <div class="mt-3"><%= admin_status_badge(@operating_unit.status) %></div>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Type</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @operating_unit.unit_type.humanize %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Parent</p>
+    <p class="mt-2 text-lg font-semibold"><%= admin_operating_unit_label(@operating_unit.parent_operating_unit) %></p>
+  </div>
+  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">Time zone</p>
+    <p class="mt-2 text-lg font-semibold"><%= @operating_unit.time_zone %></p>
+  </div>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-2">
+  <div class="rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Child units</h2>
+    </div>
+    <% if @child_units.any? %>
+      <div class="divide-y divide-slate-100">
+        <% @child_units.each do |unit| %>
+          <div class="px-5 py-4 text-sm">
+            <%= link_to unit.code, admin_operating_unit_path(unit), class: "font-medium underline" %>
+            <span class="text-slate-500"><%= unit.name %></span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No child operating units.</div>
+    <% end %>
+  </div>
+
+  <div class="rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Cash locations</h2>
+    </div>
+    <% if @cash_locations.any? %>
+      <div class="divide-y divide-slate-100">
+        <% @cash_locations.each do |location| %>
+          <div class="px-5 py-4 text-sm">
+            <%= link_to admin_cash_location_label(location), admin_cash_location_path(location), class: "font-medium underline" %>
+            <span class="text-slate-500"><%= location.location_type.humanize %></span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No cash locations in this operating unit.</div>
+    <% end %>
+  </div>
+</section>
+
+<section class="mt-8 grid gap-4 md:grid-cols-2">
+  <div class="rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Defaulting operators</h2>
+    </div>
+    <% if @defaulting_operators.any? %>
+      <div class="divide-y divide-slate-100">
+        <% @defaulting_operators.each do |operator| %>
+          <div class="px-5 py-4 text-sm"><%= link_to operator.display_name, admin_operator_path(operator), class: "font-medium underline" %></div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No operators default to this unit.</div>
+    <% end %>
+  </div>
+
+  <div class="rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Scoped role assignments</h2>
+    </div>
+    <% if @scoped_assignments.any? %>
+      <div class="divide-y divide-slate-100">
+        <% @scoped_assignments.each do |assignment| %>
+          <div class="px-5 py-4 text-sm">
+            <%= link_to assignment.operator.display_name, admin_operator_path(assignment.operator), class: "font-medium underline" %>
+            <span class="text-slate-500"><%= assignment.role.code %></span>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="px-5 py-8 text-sm text-slate-600">No scoped role assignments for this unit.</div>
+    <% end %>
+  </div>
+</section>
+
+<% unless @operating_unit.status == Organization::Models::OperatingUnit::STATUS_CLOSED %>
+  <section class="mt-8 rounded border border-amber-200 bg-amber-50 p-5">
+    <h2 class="font-semibold text-amber-950">Close operating unit</h2>
+    <p class="mt-2 text-sm text-amber-900">Closing is blocked while active child units or active cash locations remain.</p>
+    <%= form_with url: close_admin_operating_unit_path(@operating_unit), scope: :operating_unit, method: :post, local: true, class: "mt-4 flex flex-col gap-3 md:flex-row md:items-end" do |form| %>
+      <div>
+        <%= form.label :closed_on, class: "text-sm font-medium text-amber-950" %>
+        <%= form.date_field :closed_on, value: Date.current, class: "mt-1 rounded border border-amber-300 px-3 py-2" %>
+      </div>
+      <%= form.submit "Close operating unit", class: "rounded border border-amber-300 px-4 py-2 font-medium text-amber-950" %>
+    <% end %>
+  </section>
+<% end %>
