@@ -33,6 +33,12 @@ Rails.application.routes.draw do
     resources :teller_sessions, only: [ :new, :create ] do
       post :close, on: :member
     end
+    get "cash", to: "cash#index", as: :cash
+    get "cash/transfers/new", to: "cash#new_transfer", as: :new_cash_transfer
+    post "cash/transfers", to: "cash#create_transfer", as: :cash_transfers
+    get "cash/counts/new", to: "cash#new_count", as: :new_cash_count
+    post "cash/counts", to: "cash#create_count", as: :cash_counts
+    get "cash/locations/:id", to: "cash#show_location", as: :cash_location
     resources :deposits, only: [ :new, :create ]
     resources :withdrawals, only: [ :new, :create ]
     resources :transfers, only: [ :new, :create ]
@@ -62,6 +68,10 @@ Rails.application.routes.draw do
     resources :teller_variances, only: [ :index ] do
       post :approve, on: :member, action: :create
     end
+    get "cash", to: "cash#index", as: :cash
+    post "cash/movements/:id/approve", to: "cash#approve_movement", as: :approve_cash_movement
+    post "cash/variances/:id/approve", to: "cash#approve_variance", as: :approve_cash_variance
+    get "cash/reconciliation", to: "cash#reconciliation", as: :cash_reconciliation
     resources :operational_events, only: [ :index, :show ]
   end
   get "admin", to: "admin/dashboard#index", as: :admin
@@ -93,6 +103,16 @@ Rails.application.routes.draw do
     post "teller_sessions", to: "teller_sessions#create"
     post "teller_sessions/close", to: "teller_sessions#close"
     post "teller_sessions/approve_variance", to: "teller_sessions#approve_variance"
+    get "cash/locations", to: "cash#locations"
+    post "cash/locations", to: "cash#create_location"
+    post "cash/transfers", to: "cash#create_transfer"
+    post "cash/transfers/approve", to: "cash#approve_transfer"
+    post "cash/counts", to: "cash#create_count"
+    post "cash/variances/approve", to: "cash#approve_variance"
+    get "cash/position", to: "cash#position"
+    get "cash/activity", to: "cash#activity"
+    get "cash/approvals", to: "cash#approvals"
+    get "cash/reconciliation", to: "cash#reconciliation"
     post "overrides", to: "overrides#create"
     get "reports/trial_balance", to: "reports#trial_balance"
     get "reports/eod_readiness", to: "reports#eod_readiness"

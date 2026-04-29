@@ -9,6 +9,12 @@ module Workspace
       TELLER_SESSION_OPEN = "teller_session.open"
       TELLER_SESSION_CLOSE = "teller_session.close"
       CASH_DRAWER_MANAGE = "cash_drawer.manage"
+      CASH_LOCATION_MANAGE = "cash.location.manage"
+      CASH_MOVEMENT_CREATE = "cash.movement.create"
+      CASH_MOVEMENT_APPROVE = "cash.movement.approve"
+      CASH_COUNT_RECORD = "cash.count.record"
+      CASH_VARIANCE_APPROVE = "cash.variance.approve"
+      CASH_POSITION_VIEW = "cash.position.view"
       PARTY_CREATE = "party.create"
       ACCOUNT_OPEN = "account.open"
       ACCOUNT_MAINTAIN = "account.maintain"
@@ -50,6 +56,18 @@ module Workspace
           description: "May close a teller drawer/session." },
         { code: CASH_DRAWER_MANAGE, name: "Manage cash drawer", category: "cash",
           description: "May perform teller cash drawer operations." },
+        { code: CASH_LOCATION_MANAGE, name: "Manage cash locations", category: "cash",
+          description: "May create and maintain Cash-domain custody locations." },
+        { code: CASH_MOVEMENT_CREATE, name: "Create cash movement", category: "cash",
+          description: "May request or complete Cash-domain custody movements." },
+        { code: CASH_MOVEMENT_APPROVE, name: "Approve cash movement", category: "cash",
+          description: "May approve vault-involved Cash-domain movements." },
+        { code: CASH_COUNT_RECORD, name: "Record cash count", category: "cash",
+          description: "May record Cash-domain custody counts." },
+        { code: CASH_VARIANCE_APPROVE, name: "Approve cash variance", category: "cash",
+          description: "May approve Cash-domain variances and related GL posting." },
+        { code: CASH_POSITION_VIEW, name: "View cash position", category: "cash",
+          description: "May view Cash-domain positions and reconciliation summaries." },
         { code: PARTY_CREATE, name: "Create party", category: "party",
           description: "May create party records." },
         { code: ACCOUNT_OPEN, name: "Open account", category: "account",
@@ -103,11 +121,14 @@ module Workspace
       ROLE_CAPABILITIES = {
         TELLER => [
           DEPOSIT_ACCEPT, WITHDRAWAL_POST, TRANSFER_COMPLETE, TELLER_SESSION_OPEN, TELLER_SESSION_CLOSE,
-          CASH_DRAWER_MANAGE, PARTY_CREATE, ACCOUNT_OPEN, HOLD_PLACE, REPORT_VIEW
+          CASH_DRAWER_MANAGE, CASH_MOVEMENT_CREATE, CASH_COUNT_RECORD, CASH_POSITION_VIEW,
+          PARTY_CREATE, ACCOUNT_OPEN, HOLD_PLACE, REPORT_VIEW
         ],
         BRANCH_SUPERVISOR => [
           DEPOSIT_ACCEPT, WITHDRAWAL_POST, TRANSFER_COMPLETE, TELLER_SESSION_OPEN, TELLER_SESSION_CLOSE,
-          CASH_DRAWER_MANAGE, PARTY_CREATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE,
+          CASH_DRAWER_MANAGE, CASH_LOCATION_MANAGE, CASH_MOVEMENT_CREATE, CASH_MOVEMENT_APPROVE,
+          CASH_COUNT_RECORD, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW,
+          PARTY_CREATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE,
           BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE, REVERSAL_CREATE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
         ],
         CSR => [
@@ -119,7 +140,8 @@ module Workspace
         ],
         OPERATIONS => [
           OPS_BATCH_PROCESS, OPS_EXCEPTION_RESOLVE, OPS_RECONCILIATION_PERFORM, OPERATIONAL_EVENT_VIEW,
-          JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW, BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE
+          JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW, BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE,
+          CASH_MOVEMENT_APPROVE, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW
         ],
         AUDITOR => [
           OPERATIONAL_EVENT_VIEW, JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW

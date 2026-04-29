@@ -1,0 +1,20 @@
+<% content_for :title, "Record Cash Count - BankCORE" %>
+
+<h1 class="text-3xl font-semibold">Record cash count</h1>
+<%= render "branch/shared/form_error", error_message: @error_message if @error_message.present? %>
+
+<%= form_with url: branch_cash_counts_path, scope: :cash_count, class: "mt-6 max-w-xl space-y-4 rounded border border-slate-200 bg-white p-5 shadow-sm" do |form| %>
+  <div>
+    <%= form.label :cash_location_id, "Location", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.collection_select :cash_location_id, @locations, :id, :name, {}, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <div>
+    <%= form.label :counted_amount_minor_units, "Counted amount in cents", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.number_field :counted_amount_minor_units, min: 0, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <div>
+    <%= form.label :expected_amount_minor_units, "Expected amount in cents (optional)", class: "block text-sm font-medium text-slate-700" %>
+    <%= form.number_field :expected_amount_minor_units, min: 0, class: "mt-1 w-full rounded border-slate-300" %>
+  </div>
+  <%= form.submit "Record count", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+<% end %>

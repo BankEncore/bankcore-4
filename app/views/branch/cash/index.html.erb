@@ -1,0 +1,35 @@
+<% content_for :title, "Cash Position - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Cash position</h1>
+    <p class="mt-2 text-slate-600">Branch vault and teller drawer custody balances.</p>
+  </div>
+  <nav class="flex gap-2 text-sm">
+    <%= link_to "Transfer cash", branch_new_cash_transfer_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
+    <%= link_to "Record count", branch_new_cash_count_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
+  </nav>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <table class="min-w-full divide-y divide-slate-200 text-sm">
+    <thead class="bg-slate-50 text-left text-slate-600">
+      <tr>
+        <th class="px-4 py-3">Location</th>
+        <th class="px-4 py-3">Type</th>
+        <th class="px-4 py-3">Drawer</th>
+        <th class="px-4 py-3 text-right">Balance</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      <% @positions.each do |position| %>
+        <tr>
+          <td class="px-4 py-3"><%= link_to position.fetch(:name), branch_cash_location_path(position.fetch(:id)), class: "font-medium text-slate-900 underline" %></td>
+          <td class="px-4 py-3"><%= position.fetch(:location_type) %></td>
+          <td class="px-4 py-3"><%= position.fetch(:drawer_code).presence || "-" %></td>
+          <td class="px-4 py-3 text-right"><%= number_to_currency(position.fetch(:amount_minor_units) / 100.0) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>

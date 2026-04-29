@@ -14,7 +14,8 @@ module Core
           "ach.credit.received" => AchCreditReceived,
           "interest.accrued" => InterestAccrued,
           "interest.posted" => InterestPosted,
-          "teller.drawer.variance.posted" => TellerDrawerVariancePosted
+          "teller.drawer.variance.posted" => TellerDrawerVariancePosted,
+          "cash.variance.posted" => CashVariancePosted
         }.freeze
 
         def self.legs_for(event)

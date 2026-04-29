@@ -149,6 +149,229 @@ ALTER SEQUENCE public.capabilities_id_seq OWNED BY public.capabilities.id;
 
 
 --
+-- Name: cash_balances; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_balances (
+    id bigint NOT NULL,
+    cash_location_id bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    amount_minor_units bigint DEFAULT 0 NOT NULL,
+    last_cash_movement_id bigint,
+    last_cash_count_id bigint,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT cash_balances_currency_usd_check CHECK (((currency)::text = 'USD'::text))
+);
+
+
+--
+-- Name: cash_balances_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cash_balances_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cash_balances_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cash_balances_id_seq OWNED BY public.cash_balances.id;
+
+
+--
+-- Name: cash_counts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_counts (
+    id bigint NOT NULL,
+    cash_location_id bigint NOT NULL,
+    operating_unit_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    operational_event_id bigint,
+    counted_amount_minor_units bigint NOT NULL,
+    expected_amount_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    business_date date NOT NULL,
+    status character varying DEFAULT 'recorded'::character varying NOT NULL,
+    idempotency_key character varying NOT NULL,
+    request_fingerprint character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT cash_counts_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
+    CONSTRAINT cash_counts_nonnegative_counted_check CHECK ((counted_amount_minor_units >= 0)),
+    CONSTRAINT cash_counts_nonnegative_expected_check CHECK ((expected_amount_minor_units >= 0)),
+    CONSTRAINT cash_counts_status_check CHECK (((status)::text = 'recorded'::text))
+);
+
+
+--
+-- Name: cash_counts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cash_counts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cash_counts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cash_counts_id_seq OWNED BY public.cash_counts.id;
+
+
+--
+-- Name: cash_locations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_locations (
+    id bigint NOT NULL,
+    location_type character varying NOT NULL,
+    operating_unit_id bigint NOT NULL,
+    responsible_operator_id bigint,
+    parent_cash_location_id bigint,
+    drawer_code character varying,
+    name character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    balancing_required boolean DEFAULT true NOT NULL,
+    external_reference character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT cash_locations_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
+    CONSTRAINT cash_locations_parent_not_self_check CHECK (((parent_cash_location_id IS NULL) OR (parent_cash_location_id <> id))),
+    CONSTRAINT cash_locations_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[]))),
+    CONSTRAINT cash_locations_type_check CHECK (((location_type)::text = ANY ((ARRAY['branch_vault'::character varying, 'teller_drawer'::character varying, 'internal_transit'::character varying])::text[])))
+);
+
+
+--
+-- Name: cash_locations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cash_locations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cash_locations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cash_locations_id_seq OWNED BY public.cash_locations.id;
+
+
+--
+-- Name: cash_movements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_movements (
+    id bigint NOT NULL,
+    source_cash_location_id bigint,
+    destination_cash_location_id bigint,
+    operating_unit_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    approving_actor_id bigint,
+    operational_event_id bigint,
+    amount_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    business_date date NOT NULL,
+    status character varying DEFAULT 'completed'::character varying NOT NULL,
+    movement_type character varying NOT NULL,
+    reason_code character varying,
+    idempotency_key character varying NOT NULL,
+    request_fingerprint character varying NOT NULL,
+    approved_at timestamp(6) without time zone,
+    completed_at timestamp(6) without time zone,
+    cancelled_at timestamp(6) without time zone,
+    rejected_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT cash_movements_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
+    CONSTRAINT cash_movements_location_present_check CHECK (((source_cash_location_id IS NOT NULL) OR (destination_cash_location_id IS NOT NULL))),
+    CONSTRAINT cash_movements_positive_amount_check CHECK ((amount_minor_units > 0)),
+    CONSTRAINT cash_movements_status_check CHECK (((status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'completed'::character varying, 'cancelled'::character varying, 'rejected'::character varying])::text[]))),
+    CONSTRAINT cash_movements_type_check CHECK (((movement_type)::text = ANY ((ARRAY['vault_to_drawer'::character varying, 'drawer_to_vault'::character varying, 'internal_transfer'::character varying, 'adjustment'::character varying])::text[])))
+);
+
+
+--
+-- Name: cash_movements_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cash_movements_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cash_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cash_movements_id_seq OWNED BY public.cash_movements.id;
+
+
+--
+-- Name: cash_variances; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_variances (
+    id bigint NOT NULL,
+    cash_location_id bigint NOT NULL,
+    cash_count_id bigint NOT NULL,
+    operating_unit_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    approving_actor_id bigint,
+    cash_variance_posted_event_id bigint,
+    amount_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    business_date date NOT NULL,
+    status character varying DEFAULT 'pending_approval'::character varying NOT NULL,
+    approved_at timestamp(6) without time zone,
+    posted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT cash_variances_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
+    CONSTRAINT cash_variances_nonzero_amount_check CHECK ((amount_minor_units <> 0)),
+    CONSTRAINT cash_variances_status_check CHECK (((status)::text = ANY ((ARRAY['pending_approval'::character varying, 'approved'::character varying, 'posted'::character varying])::text[])))
+);
+
+
+--
+-- Name: cash_variances_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cash_variances_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cash_variances_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cash_variances_id_seq OWNED BY public.cash_variances.id;
+
+
+--
 -- Name: core_business_date_close_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1097,6 +1320,7 @@ CREATE TABLE public.teller_sessions (
     updated_at timestamp(6) without time zone NOT NULL,
     supervisor_operator_id bigint,
     operating_unit_id bigint NOT NULL,
+    cash_location_id bigint,
     CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY ((ARRAY['open'::character varying, 'closed'::character varying, 'pending_supervisor'::character varying])::text[])))
 );
 
@@ -1125,6 +1349,41 @@ ALTER SEQUENCE public.teller_sessions_id_seq OWNED BY public.teller_sessions.id;
 --
 
 ALTER TABLE ONLY public.capabilities ALTER COLUMN id SET DEFAULT nextval('public.capabilities_id_seq'::regclass);
+
+
+--
+-- Name: cash_balances id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_balances ALTER COLUMN id SET DEFAULT nextval('public.cash_balances_id_seq'::regclass);
+
+
+--
+-- Name: cash_counts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_counts ALTER COLUMN id SET DEFAULT nextval('public.cash_counts_id_seq'::regclass);
+
+
+--
+-- Name: cash_locations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_locations ALTER COLUMN id SET DEFAULT nextval('public.cash_locations_id_seq'::regclass);
+
+
+--
+-- Name: cash_movements id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements ALTER COLUMN id SET DEFAULT nextval('public.cash_movements_id_seq'::regclass);
+
+
+--
+-- Name: cash_variances id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances ALTER COLUMN id SET DEFAULT nextval('public.cash_variances_id_seq'::regclass);
 
 
 --
@@ -1316,6 +1575,46 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 ALTER TABLE ONLY public.capabilities
     ADD CONSTRAINT capabilities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cash_balances cash_balances_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_balances
+    ADD CONSTRAINT cash_balances_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cash_counts cash_counts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_counts
+    ADD CONSTRAINT cash_counts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cash_locations cash_locations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_locations
+    ADD CONSTRAINT cash_locations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cash_movements cash_movements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT cash_movements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cash_variances cash_variances_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT cash_variances_pkey PRIMARY KEY (id);
 
 
 --
@@ -1527,6 +1826,20 @@ ALTER TABLE ONLY public.teller_sessions
 
 
 --
+-- Name: idx_active_branch_vault_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_active_branch_vault_identity ON public.cash_locations USING btree (operating_unit_id, location_type) WHERE (((status)::text = 'active'::text) AND ((location_type)::text = 'branch_vault'::text));
+
+
+--
+-- Name: idx_active_cash_drawer_identity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_active_cash_drawer_identity ON public.cash_locations USING btree (operating_unit_id, location_type, drawer_code) WHERE (((status)::text = 'active'::text) AND ((location_type)::text = 'teller_drawer'::text));
+
+
+--
 -- Name: idx_dap_maintenance_audits_idempotency; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1643,6 +1956,188 @@ CREATE INDEX idx_on_party_record_id_91aa95b618 ON public.deposit_account_party_m
 --
 
 CREATE UNIQUE INDEX index_capabilities_on_code ON public.capabilities USING btree (code);
+
+
+--
+-- Name: index_cash_balances_on_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_balances_on_cash_location_id ON public.cash_balances USING btree (cash_location_id);
+
+
+--
+-- Name: index_cash_balances_on_cash_location_id_and_currency; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cash_balances_on_cash_location_id_and_currency ON public.cash_balances USING btree (cash_location_id, currency);
+
+
+--
+-- Name: index_cash_balances_on_last_cash_movement_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_balances_on_last_cash_movement_id ON public.cash_balances USING btree (last_cash_movement_id);
+
+
+--
+-- Name: index_cash_counts_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_counts_on_actor_id ON public.cash_counts USING btree (actor_id);
+
+
+--
+-- Name: index_cash_counts_on_business_date_and_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_counts_on_business_date_and_id ON public.cash_counts USING btree (business_date, id);
+
+
+--
+-- Name: index_cash_counts_on_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_counts_on_cash_location_id ON public.cash_counts USING btree (cash_location_id);
+
+
+--
+-- Name: index_cash_counts_on_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cash_counts_on_idempotency_key ON public.cash_counts USING btree (idempotency_key);
+
+
+--
+-- Name: index_cash_counts_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_counts_on_operating_unit_id ON public.cash_counts USING btree (operating_unit_id);
+
+
+--
+-- Name: index_cash_counts_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_counts_on_operational_event_id ON public.cash_counts USING btree (operational_event_id);
+
+
+--
+-- Name: index_cash_locations_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_locations_on_operating_unit_id ON public.cash_locations USING btree (operating_unit_id);
+
+
+--
+-- Name: index_cash_locations_on_parent_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_locations_on_parent_cash_location_id ON public.cash_locations USING btree (parent_cash_location_id);
+
+
+--
+-- Name: index_cash_locations_on_responsible_operator_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_locations_on_responsible_operator_id ON public.cash_locations USING btree (responsible_operator_id);
+
+
+--
+-- Name: index_cash_movements_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_actor_id ON public.cash_movements USING btree (actor_id);
+
+
+--
+-- Name: index_cash_movements_on_approving_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_approving_actor_id ON public.cash_movements USING btree (approving_actor_id);
+
+
+--
+-- Name: index_cash_movements_on_business_date_and_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_business_date_and_id ON public.cash_movements USING btree (business_date, id);
+
+
+--
+-- Name: index_cash_movements_on_destination_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_destination_cash_location_id ON public.cash_movements USING btree (destination_cash_location_id);
+
+
+--
+-- Name: index_cash_movements_on_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cash_movements_on_idempotency_key ON public.cash_movements USING btree (idempotency_key);
+
+
+--
+-- Name: index_cash_movements_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_operating_unit_id ON public.cash_movements USING btree (operating_unit_id);
+
+
+--
+-- Name: index_cash_movements_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_operational_event_id ON public.cash_movements USING btree (operational_event_id);
+
+
+--
+-- Name: index_cash_movements_on_source_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_source_cash_location_id ON public.cash_movements USING btree (source_cash_location_id);
+
+
+--
+-- Name: index_cash_variances_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_variances_on_actor_id ON public.cash_variances USING btree (actor_id);
+
+
+--
+-- Name: index_cash_variances_on_approving_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_variances_on_approving_actor_id ON public.cash_variances USING btree (approving_actor_id);
+
+
+--
+-- Name: index_cash_variances_on_cash_count_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cash_variances_on_cash_count_id ON public.cash_variances USING btree (cash_count_id);
+
+
+--
+-- Name: index_cash_variances_on_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_variances_on_cash_location_id ON public.cash_variances USING btree (cash_location_id);
+
+
+--
+-- Name: index_cash_variances_on_cash_variance_posted_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cash_variances_on_cash_variance_posted_event_id ON public.cash_variances USING btree (cash_variance_posted_event_id);
+
+
+--
+-- Name: index_cash_variances_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_variances_on_operating_unit_id ON public.cash_variances USING btree (operating_unit_id);
 
 
 --
@@ -2003,6 +2498,13 @@ CREATE UNIQUE INDEX index_roles_on_code ON public.roles USING btree (code);
 
 
 --
+-- Name: index_teller_sessions_on_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_teller_sessions_on_cash_location_id ON public.teller_sessions USING btree (cash_location_id);
+
+
+--
 -- Name: index_teller_sessions_on_operating_unit_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2054,6 +2556,22 @@ ALTER TABLE ONLY public.deposit_account_parties
 
 
 --
+-- Name: cash_movements fk_rails_04ebb9c7e5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_04ebb9c7e5 FOREIGN KEY (source_cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
+-- Name: cash_balances fk_rails_0587c1eee8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_balances
+    ADD CONSTRAINT fk_rails_0587c1eee8 FOREIGN KEY (last_cash_movement_id) REFERENCES public.cash_movements(id);
+
+
+--
 -- Name: deposit_account_party_maintenance_audits fk_rails_07cbf95209; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2078,6 +2596,22 @@ ALTER TABLE ONLY public.core_business_date_close_events
 
 
 --
+-- Name: cash_movements fk_rails_0c29c4f257; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_0c29c4f257 FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
+-- Name: cash_balances fk_rails_0ef5ce88e4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_balances
+    ADD CONSTRAINT fk_rails_0ef5ce88e4 FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
 -- Name: operational_events fk_rails_0f986cd613; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2091,6 +2625,14 @@ ALTER TABLE ONLY public.operational_events
 
 ALTER TABLE ONLY public.posting_batches
     ADD CONSTRAINT fk_rails_1a3b38f450 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: cash_locations fk_rails_1aa4b9af7f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_locations
+    ADD CONSTRAINT fk_rails_1aa4b9af7f FOREIGN KEY (parent_cash_location_id) REFERENCES public.cash_locations(id);
 
 
 --
@@ -2134,6 +2676,14 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: cash_movements fk_rails_2d6379f064; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_2d6379f064 FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
 -- Name: journal_entries fk_rails_3417d84ffc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2166,11 +2716,27 @@ ALTER TABLE ONLY public.holds
 
 
 --
+-- Name: cash_counts fk_rails_502e641448; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_counts
+    ADD CONSTRAINT fk_rails_502e641448 FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: operator_role_assignments fk_rails_54957937ed; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.operator_role_assignments
     ADD CONSTRAINT fk_rails_54957937ed FOREIGN KEY (operator_id) REFERENCES public.operators(id);
+
+
+--
+-- Name: cash_movements fk_rails_54d48cd81d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_54d48cd81d FOREIGN KEY (approving_actor_id) REFERENCES public.operators(id);
 
 
 --
@@ -2182,6 +2748,14 @@ ALTER TABLE ONLY public.operator_credentials
 
 
 --
+-- Name: cash_counts fk_rails_58a51bad41; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_counts
+    ADD CONSTRAINT fk_rails_58a51bad41 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
 -- Name: role_capabilities fk_rails_5a0544a242; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2190,11 +2764,27 @@ ALTER TABLE ONLY public.role_capabilities
 
 
 --
+-- Name: cash_variances fk_rails_5b15082de1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT fk_rails_5b15082de1 FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: deposit_product_overdraft_policies fk_rails_5d1e409444; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.deposit_product_overdraft_policies
     ADD CONSTRAINT fk_rails_5d1e409444 FOREIGN KEY (deposit_product_id) REFERENCES public.deposit_products(id);
+
+
+--
+-- Name: cash_counts fk_rails_65f53ad445; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_counts
+    ADD CONSTRAINT fk_rails_65f53ad445 FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
 
 
 --
@@ -2219,6 +2809,22 @@ ALTER TABLE ONLY public.holds
 
 ALTER TABLE ONLY public.deposit_statements
     ADD CONSTRAINT fk_rails_761e21222b FOREIGN KEY (deposit_product_statement_profile_id) REFERENCES public.deposit_product_statement_profiles(id);
+
+
+--
+-- Name: cash_variances fk_rails_7ae7898fcc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT fk_rails_7ae7898fcc FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
+-- Name: cash_balances fk_rails_7b3ae9d75e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_balances
+    ADD CONSTRAINT fk_rails_7b3ae9d75e FOREIGN KEY (last_cash_count_id) REFERENCES public.cash_counts(id);
 
 
 --
@@ -2262,6 +2868,14 @@ ALTER TABLE ONLY public.operational_events
 
 
 --
+-- Name: cash_counts fk_rails_8eedd510c6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_counts
+    ADD CONSTRAINT fk_rails_8eedd510c6 FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
 -- Name: deposit_statements fk_rails_916915f3bb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2270,11 +2884,27 @@ ALTER TABLE ONLY public.deposit_statements
 
 
 --
+-- Name: cash_variances fk_rails_92e09fc2fe; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT fk_rails_92e09fc2fe FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
 -- Name: journal_lines fk_rails_92eda40cad; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.journal_lines
     ADD CONSTRAINT fk_rails_92eda40cad FOREIGN KEY (journal_entry_id) REFERENCES public.journal_entries(id);
+
+
+--
+-- Name: cash_variances fk_rails_95110d8d04; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT fk_rails_95110d8d04 FOREIGN KEY (cash_variance_posted_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -2302,11 +2932,59 @@ ALTER TABLE ONLY public.role_capabilities
 
 
 --
+-- Name: cash_locations fk_rails_a92a9737fe; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_locations
+    ADD CONSTRAINT fk_rails_a92a9737fe FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
+-- Name: cash_movements fk_rails_accd708689; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_accd708689 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: cash_variances fk_rails_bcd59f239e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT fk_rails_bcd59f239e FOREIGN KEY (cash_count_id) REFERENCES public.cash_counts(id);
+
+
+--
 -- Name: deposit_account_parties fk_rails_bf2b31365a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.deposit_account_parties
     ADD CONSTRAINT fk_rails_bf2b31365a FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
+-- Name: cash_locations fk_rails_c294207840; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_locations
+    ADD CONSTRAINT fk_rails_c294207840 FOREIGN KEY (responsible_operator_id) REFERENCES public.operators(id);
+
+
+--
+-- Name: cash_movements fk_rails_c2e5b0cf6a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_c2e5b0cf6a FOREIGN KEY (destination_cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
+-- Name: cash_variances fk_rails_c8210a0cc2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_variances
+    ADD CONSTRAINT fk_rails_c8210a0cc2 FOREIGN KEY (approving_actor_id) REFERENCES public.operators(id);
 
 
 --
@@ -2374,6 +3052,14 @@ ALTER TABLE ONLY public.holds
 
 
 --
+-- Name: teller_sessions fk_rails_f16ba359ec; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.teller_sessions
+    ADD CONSTRAINT fk_rails_f16ba359ec FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
 -- Name: operational_events fk_rails_f4a7a6dc52; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2388,6 +3074,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429190000'),
 ('20260424120017'),
 ('20260424120016'),
 ('20260424120015'),
