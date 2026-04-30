@@ -11,6 +11,7 @@ class CashInventoryTest < ActiveSupport::TestCase
     @operating_unit = Organization::Services::DefaultOperatingUnit.branch
     @teller = operator!("teller", "Cash Teller")
     @supervisor = operator!("supervisor", "Cash Supervisor")
+    BankCore::Seeds::Rbac.seed!
   end
 
   test "opening teller session links a drawer cash location" do
@@ -19,6 +20,72 @@ class CashInventoryTest < ActiveSupport::TestCase
     assert_predicate session.cash_location, :present?
     assert_equal "teller_drawer", session.cash_location.location_type
     assert_equal "A1", session.cash_location.drawer_code
+  end
+
+  test "opening teller session rejects a drawer already in use" do
+    Teller::Commands::OpenSession.call(drawer_code: "A2", operator_id: @teller.id)
+
+    assert_raises(Teller::Commands::OpenSession::SessionAlreadyOpen) do
+      Teller::Commands::OpenSession.call(drawer_code: "A2", operator_id: @supervisor.id)
+    end
+  end
+
+  test "cash write commands enforce actor capabilities" do
+    admin = operator!("admin", "Cash Admin")
+    BankCore::Seeds::Rbac.seed!
+
+    location_error = assert_raises(Cash::Commands::CreateLocation::InvalidRequest) do
+      Cash::Commands::CreateLocation.call(
+        location_type: "branch_vault",
+        operating_unit_id: @operating_unit.id,
+        actor_id: @teller.id,
+        name: "Unauthorized vault"
+      )
+    end
+    assert_includes location_error.message, Workspace::Authorization::CapabilityRegistry::CASH_LOCATION_MANAGE
+
+    vault = vault!
+    drawer = drawer!("AUTH")
+
+    count_error = assert_raises(Cash::Commands::RecordCashCount::InvalidRequest) do
+      Cash::Commands::RecordCashCount.call(
+        cash_location_id: vault.id,
+        counted_amount_minor_units: 10_000,
+        expected_amount_minor_units: 0,
+        actor_id: admin.id,
+        idempotency_key: "unauthorized-count"
+      )
+    end
+    assert_includes count_error.message, Workspace::Authorization::CapabilityRegistry::CASH_COUNT_RECORD
+
+    transfer_error = assert_raises(Cash::Commands::TransferCash::InvalidRequest) do
+      Cash::Commands::TransferCash.call(
+        source_cash_location_id: vault.id,
+        destination_cash_location_id: drawer.id,
+        amount_minor_units: 1_000,
+        actor_id: admin.id,
+        idempotency_key: "unauthorized-transfer"
+      )
+    end
+    assert_includes transfer_error.message, Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_CREATE
+  end
+
+  test "inactive locations are blocked for new cash movements" do
+    vault = vault!
+    drawer = drawer!("INACTIVE")
+    Cash::Commands::DeactivateLocation.call(cash_location_id: drawer.id)
+
+    error = assert_raises(Cash::Commands::TransferCash::InvalidRequest) do
+      Cash::Commands::TransferCash.call(
+        source_cash_location_id: vault.id,
+        destination_cash_location_id: drawer.id,
+        amount_minor_units: 1_000,
+        actor_id: @teller.id,
+        idempotency_key: "inactive-drawer-transfer"
+      )
+    end
+
+    assert_equal "cash locations must be active", error.message
   end
 
   test "vault transfer waits for approval and completes without journal entry" do
@@ -239,6 +306,39 @@ class CashInventoryTest < ActiveSupport::TestCase
     end
     assert_equal 25_000, vault.cash_balance.reload.amount_minor_units
     assert_equal 1, first.operational_event.journal_entries.count
+  end
+
+  test "cash count idempotency mismatch is rejected" do
+    drawer = drawer!("COUNT-IDEMP")
+    attrs = {
+      cash_location_id: drawer.id,
+      counted_amount_minor_units: 1_000,
+      expected_amount_minor_units: 0,
+      actor_id: @teller.id,
+      idempotency_key: "count-idempotency-mismatch"
+    }
+    Cash::Commands::RecordCashCount.call(**attrs)
+
+    assert_raises(Cash::Commands::RecordCashCount::MismatchedIdempotency) do
+      Cash::Commands::RecordCashCount.call(**attrs.merge(counted_amount_minor_units: 2_000))
+    end
+  end
+
+  test "external cash shipment receipt idempotency mismatch is rejected" do
+    vault = vault!
+    attrs = {
+      destination_cash_location_id: vault.id,
+      amount_minor_units: 25_000,
+      actor_id: @supervisor.id,
+      idempotency_key: "shipment-idempotency-mismatch",
+      external_source: "Correspondent Bank",
+      shipment_reference: "CORR-MISMATCH"
+    }
+    Cash::Commands::ReceiveExternalCashShipment.call(**attrs)
+
+    assert_raises(Cash::Commands::ReceiveExternalCashShipment::MismatchedIdempotency) do
+      Cash::Commands::ReceiveExternalCashShipment.call(**attrs.merge(amount_minor_units: 30_000))
+    end
   end
 
   test "external cash shipment receipt requires shipment capability and branch vault destination" do

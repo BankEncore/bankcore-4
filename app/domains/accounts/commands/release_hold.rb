@@ -38,6 +38,7 @@ module Accounts
           hold = Accounts::Models::Hold.lock.find_by(id: hold_id)
           raise HoldNotFound, "hold_id=#{hold_id}" if hold.nil?
           raise InvalidRequest, "hold is not active" unless hold.status == Accounts::Models::Hold::STATUS_ACTIVE
+          Services::AccountRestrictionPolicy.assert_routine_servicing_allowed!(deposit_account_id: hold.deposit_account_id)
 
           event = Core::OperationalEvents::Models::OperationalEvent.create!(
             event_type: "hold.released",
@@ -64,6 +65,8 @@ module Accounts
         existing = Core::OperationalEvents::Models::OperationalEvent.find_by!(channel: channel, idempotency_key: idempotency_key)
         hold = Accounts::Models::Hold.find(hold_id)
         { outcome: :replay, event: existing, hold: hold.reload }
+      rescue AccountRestricted => e
+        raise InvalidRequest, e.message
       end
 
       def self.resolve_operating_unit(channel, actor_id, operating_unit_id)

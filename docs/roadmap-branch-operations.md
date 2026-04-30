@@ -153,6 +153,21 @@ Phase 1 has teller-session cash control only. Institutional vault/drawer custody
 
 Phase 2 is the first implementation slice of [ADR-0031](adr/0031-cash-inventory-and-management.md), using operating-unit scope from [ADR-0032](adr/0032-operating-units-and-branch-scope.md) and capability gates from [ADR-0029](adr/0029-capability-first-authorization-layer.md). It should be implemented as reviewable sub-phases rather than one broad cash rewrite.
 
+### Current / Shipped Foundation — Confirmed
+
+Phase 2 is implemented on this branch as a Cash-domain custody foundation. The shipped foundation includes:
+
+- Cash locations for branch vaults, teller drawers, and internal transit.
+- Teller-session linkage to Cash-domain teller drawer locations.
+- Internal custody movements, pending approval for vault-involved transfers, no-self-approval, and no-GL `cash.movement.completed` events.
+- Rebuildable `cash_balances` projections updated by movements and counts.
+- Cash counts, Cash-domain variances, and approved `cash.variance.posted` GL adjustments.
+- Cash position, location activity, pending approval, and reconciliation queries.
+- Teller JSON, Branch, Ops, and Admin cash workspace surfaces.
+- Single-step external cash shipment receipt into a branch vault via [ADR-0035](adr/0035-external-cash-shipments.md).
+
+Remaining Phase 2 work is hardening and documentation alignment: close targeted test gaps, expose Cash exceptions in EOD readiness as read-only warning evidence, and keep broader shipment lifecycle and blocking EOD policy deferred.
+
 ### Owners and Boundaries
 
 - `Cash`: locations, movements, counts, custody balances, reconciliation.
@@ -169,25 +184,26 @@ Cash location = institutional custody control
 Ledger = financial accounting truth
 ```
 
-### Phase 2A: Cash Reference Foundation
+### Phase 2A: Cash Reference Foundation — Shipped
 
-Add Cash-owned location reference data.
+Cash-owned location reference data is shipped.
 
 Tables:
 
 - `cash_locations`
 
-Initial fields:
+Implemented fields:
 
 - `operating_unit_id`
 - `location_type`
-- `code`
+- `drawer_code`
 - `name`
 - `currency`
 - `status`
 - `responsible_operator_id`
 - `parent_cash_location_id`
-- `requires_balancing`
+- `balancing_required`
+- `external_reference`
 - timestamps
 
 Initial location types:
@@ -196,7 +212,7 @@ Initial location types:
 - `teller_drawer`
 - `internal_transit`
 
-Initial commands/models:
+Implemented commands/models:
 
 - `Cash::Models::CashLocation`
 - `Cash::Commands::CreateLocation`
@@ -206,10 +222,10 @@ Rules:
 - `operating_unit_id` must reference an active operating unit.
 - `code` must be stable and unique.
 - `currency` must be explicit.
-- Closed or inactive locations must remain visible for history but blocked for new routine movements.
+- Inactive locations remain visible for history but are blocked for new routine movements.
 - Seed/configure one Main Branch vault and one teller drawer only if it matches the current seed style for development/test setup.
 
-### Phase 2B: Teller Drawer Linkage
+### Phase 2B: Teller Drawer Linkage — Shipped
 
 Connect teller sessions to drawer custody without moving session ownership out of `Teller`.
 
@@ -219,8 +235,8 @@ Table changes:
 
 Command changes:
 
-- Update `Teller::Commands::OpenSession` to accept or resolve a drawer `cash_location_id`.
-- Preserve current behavior when no drawer location is supplied during migration.
+- `Teller::Commands::OpenSession` resolves or creates a drawer Cash location from the session operating unit and `drawer_code`.
+- Existing single-branch behavior is preserved through operating-unit default resolution.
 
 Rules:
 
@@ -230,18 +246,21 @@ Rules:
 - Only one open teller session may use the same drawer location at a time.
 - Teller cash deposits and withdrawals still record customer financial activity through `Core::OperationalEvents` and `Core::Posting`; drawer linkage is custody context, not posting logic.
 
-### Phase 2C: Internal Custody Movements
+### Phase 2C: Internal Custody Movements — Shipped
 
-Add append-oriented internal cash movement and rebuildable balance projections.
+Append-oriented internal cash movement and rebuildable balance projections are shipped.
 
 Tables:
 
 - `cash_movements`
 - `cash_balances`
 
-Initial command:
+Implemented commands/services:
 
 - `Cash::Commands::TransferCash`
+- `Cash::Commands::ApproveCashMovement`
+- `Cash::Commands::RebuildCashBalances`
+- `Cash::Services::BalanceProjector`
 
 Supported first-slice movements:
 
@@ -281,18 +300,19 @@ Rules:
 - Vault-involved movements require approval according to Cash command policy.
 - No-self-approval belongs in Cash/Workflow command logic, not in RBAC capability strings.
 
-### Phase 2D: Counts and Variances
+### Phase 2D: Counts and Variances — Shipped
 
-Add physical count evidence and variance tracking.
+Physical count evidence and variance tracking are shipped.
 
 Tables:
 
 - `cash_counts`
 - `cash_variances`
 
-Initial command:
+Implemented commands:
 
 - `Cash::Commands::RecordCashCount`
+- `Cash::Commands::ApproveCashVariance`
 
 Rules:
 
@@ -303,13 +323,13 @@ Rules:
 - Variance approval must enforce no-self-approval outside RBAC.
 - `cash.count.recorded` is a no-GL operational event candidate.
 
-Open decision:
+Resolved decision:
 
-- Defer GL variance posting or implement it as a separate explicit follow-up. ADR-0031 still leaves open whether teller-session variance should keep using `teller.drawer.variance.posted` or whether Cash should introduce a broader `cash.variance.posted`.
+- Cash-domain count variances use `cash.variance.posted` after approval. Teller-session drawer variance continues to use `teller.drawer.variance.posted` unless a future migration explicitly changes teller-session variance semantics.
 
-### Phase 2E: Read Models and EOD Hooks
+### Phase 2E: Read Models and EOD Hooks — Partially Shipped
 
-Add Cash read APIs and EOD readiness composition after command behavior is tested.
+Cash read APIs are shipped. EOD readiness should expose Cash-domain exceptions as read-only evidence in this Phase 2 hardening pass.
 
 Queries:
 
@@ -330,15 +350,16 @@ EOD readiness hooks:
 - stale or missing required counts, once count policy is enabled
 - cash projection drift detected by reconciliation queries
 
-EOD policy should start as read-only evidence or warning unless the selected slice explicitly decides that cash exceptions block close.
+EOD policy starts as read-only evidence or warning. Cash warnings must not block `eod_ready` or business-date close until a later policy slice explicitly accepts blocking behavior.
 
 ### Candidate Event Families
 
 - `cash.movement.completed` — no GL for internal transfers within institutional custody.
 - `cash.count.recorded` — no GL by default.
-- `cash.variance.posted` — optional GL follow-up only after the variance-event decision is made.
+- `cash.variance.posted` — GL adjustment for approved Cash-domain count variances.
+- `cash.shipment.received` — GL-backed external receipt into a branch vault per ADR-0035.
 
-Internal vault/drawer movement must stay within GL `1110` and create no journal entry. Any external cash shipment or settlement event requires a separate COA/posting decision before implementation.
+Internal vault/drawer movement must stay within GL `1110` and create no journal entry. ADR-0035 accepts single-step external shipment receipt as Dr `1110` / Cr `1130`. Outbound dispatch, shipment lifecycle state, settlement matching, and correction workflows remain deferred.
 
 ### Phase 2 Test Plan
 
@@ -350,20 +371,22 @@ Add focused tests before adding workspace polish:
 - Cash balance projection: completed movements update projections and can be rebuilt from movement history.
 - No-GL proof: internal custody movement records no journal entry.
 - Cash count command: creates count evidence and variance records when counted amount differs from expected amount.
-- EOD readiness hooks: unresolved movements/variances surface in readiness output once enabled.
+- EOD readiness hooks: unresolved movements/variances surface in readiness output as warnings and do not block close in this slice.
 - Existing Phase 1 integration tests continue to pass.
 
 ### Deferred
 
-- Fed/correspondent cash shipments.
+- Outbound Fed/correspondent shipment dispatch.
+- Full shipment lifecycle, settlement matching, partial receipt, and correction workflows.
 - ATM cash.
 - Denomination tracking.
 - Strap, bundle, roll, and coin tracking.
-- External cash settlement accounting.
+- External cash settlement accounting beyond ADR-0035 receipt to `1130`.
 - Branch-level GL.
 - Branch-scoped business dates.
 - External cash settlement accounts or COA changes.
 - Generalized `Workflow` tables unless a cash approval slice explicitly requires them.
+- EOD cash exception blocking policy.
 
 ---
 
@@ -371,10 +394,23 @@ Add focused tests before adding workspace polish:
 
 **Goal:** make branch/platform servicing complete enough for daily account maintenance.
 
+### Current / Shipped Foundation — Confirmed
+
+Phase 3 now has a shipped servicing-depth foundation:
+
+- Account restrictions and freezes via `Accounts::Commands::RestrictAccount` and `Accounts::Commands::UnrestrictAccount`.
+- No-GL `account.restricted` and `account.unrestricted` operational events with `account_restrictions` as Accounts-owned state.
+- Command-layer guards for debit authorization, account close, and routine full-freeze servicing writes.
+- Account close via `Accounts::Commands::CloseAccount`, with `account_lifecycle_events` audit evidence and a no-GL `account.closed` operational event.
+- Party contact maintenance via typed Party tables (`party_emails`, `party_phones`, `party_addresses`) and `party_contact_audits`.
+- Branch account and customer screens showing restriction, lifecycle, contact, and audit evidence.
+
+ADR-0036 governs event vs audit taxonomy, restriction effects, account close preconditions, deferred reopen behavior, Party contact data shape, capability choices, Workflow deferral, and composed timelines.
+
 ### Scope
 
 - Account restrictions, freezes, and status changes.
-- Account close and possible reopen policy.
+- Account close policy; reopen remains deferred.
 - Post-open account-party servicing beyond the shipped authorized-signer slice.
 - Customer profile maintenance.
 - Statement/history review.
@@ -386,10 +422,10 @@ Add focused tests before adding workspace polish:
 - `account.restricted`
 - `account.unrestricted`
 - `account.closed`
-- `party.contact.updated`
+- Party-owned contact audit rows; `party.contact.updated` remains deferred.
 - account-party maintenance audit rows
 
-Exact event taxonomy should be decided per slice. Some servicing changes may be better represented as domain audit rows rather than GL or financial operational events.
+Exact event taxonomy is governed by ADR-0036 for the shipped slice. Account-control changes use no-GL operational events; Party contact maintenance and account-party maintenance use domain audit rows.
 
 ### Owners
 
@@ -404,6 +440,8 @@ Exact event taxonomy should be decided per slice. Some servicing changes may be 
 - Document retention workflows.
 - Customer self-service.
 - Contact-center-specific `CustomerService` workspace, unless a separate operating model emerges.
+- Account reopen commands/events.
+- Generalized Workflow approval tables for maker-checker servicing.
 
 ---
 

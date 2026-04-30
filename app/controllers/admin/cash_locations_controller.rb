@@ -36,6 +36,7 @@ module Admin
       @cash_location = Cash::Commands::CreateLocation.call(
         location_type: attrs[:location_type],
         operating_unit: operating_unit,
+        actor_id: current_operator.id,
         responsible_operator_id: attrs[:responsible_operator_id],
         drawer_code: attrs[:drawer_code],
         name: attrs[:name],

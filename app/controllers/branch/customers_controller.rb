@@ -10,6 +10,7 @@ module Branch
     def show
       @party = Party::Queries::FindParty.by_id(params[:id])
       @account_relationships = Accounts::Queries::DepositAccountPartyTimeline.call(party_record_id: @party.id)
+      @contact_summary = Party::Queries::PartyContactSummary.call(party_record_id: @party.id)
     end
   end
 end

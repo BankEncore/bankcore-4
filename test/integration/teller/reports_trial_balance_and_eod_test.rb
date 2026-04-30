@@ -136,6 +136,43 @@ class ReportsTrialBalanceAndEodTest < ActionDispatch::IntegrationTest
     assert body["eod_ready"]
   end
 
+  test "eod readiness surfaces cash warnings without blocking close readiness" do
+    branch = Organization::Services::DefaultOperatingUnit.branch
+    vault = Cash::Commands::CreateLocation.call(
+      location_type: "branch_vault",
+      operating_unit: branch
+    )
+    drawer = Cash::Commands::CreateLocation.call(
+      location_type: "teller_drawer",
+      drawer_code: "eod-cash-#{SecureRandom.hex(6)}",
+      operating_unit: branch
+    )
+    Cash::Commands::RecordCashCount.call(
+      cash_location_id: vault.id,
+      counted_amount_minor_units: 10_000,
+      expected_amount_minor_units: 0,
+      actor_id: @teller_operator.id,
+      idempotency_key: "eod-cash-count-#{SecureRandom.hex(6)}"
+    )
+    Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: drawer.id,
+      amount_minor_units: 1_000,
+      actor_id: @teller_operator.id,
+      idempotency_key: "eod-cash-transfer-#{SecureRandom.hex(6)}"
+    )
+
+    get "/teller/reports/eod_readiness", headers: @auth
+
+    assert_response :ok
+    body = response.parsed_body
+    assert body["eod_ready"]
+    assert_equal 1, body["pending_cash_movements_count"]
+    assert_equal 1, body["unresolved_cash_variances_count"]
+    assert_equal 0, body["required_cash_counts_missing_count"]
+    assert_equal [ "pending_cash_movements", "unresolved_cash_variances" ], body["cash_eod_warnings"]
+  end
+
   private
 
   def seed_party_account_session!

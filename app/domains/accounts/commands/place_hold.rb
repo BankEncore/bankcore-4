@@ -55,6 +55,7 @@ module Accounts
               deposit_oe = Core::OperationalEvents::Models::OperationalEvent.lock.find_by(id: placed_for_id)
               validate_deposit_link!(deposit_oe, deposit_account_id, amount_minor_units, currency.to_s)
             end
+            Services::AccountRestrictionPolicy.assert_routine_servicing_allowed!(deposit_account_id: deposit_account_id)
 
             event = Core::OperationalEvents::Models::OperationalEvent.create!(
               event_type: "hold.placed",
@@ -99,6 +100,8 @@ module Accounts
             resolved_operating_unit&.id
           )
           { outcome: :replay, event: existing, hold: find_hold_for_event(existing) }
+        rescue AccountRestricted => e
+          raise InvalidRequest, e.message
         end
       end
 

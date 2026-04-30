@@ -12,7 +12,7 @@ Records the GL adjustment for an approved Cash-domain custody variance. It is cr
 | **Category** | `financial` |
 | **Lifecycle** | `pending_to_posted` |
 | **Allowed channels** | `system` |
-| **Financial impact** | `optional_gl` |
+| **Financial impact** | `gl_posting` |
 | **Customer visible** | No |
 | **Statement visible** | No |
 | **Payload schema** | `docs/operational_events/cash-variance-posted.md` |

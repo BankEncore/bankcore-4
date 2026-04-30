@@ -8,6 +8,8 @@ Rails.application.routes.draw do
   scope path: "branch", module: :branch, as: :branch do
     resources :customers, only: [ :index, :show ]
     resources :parties, only: [ :new, :create ]
+    get "customers/:party_record_id/contacts/new", to: "party_contacts#new", as: :new_party_contact
+    post "customers/:party_record_id/contacts", to: "party_contacts#create", as: :party_contacts
     resources :deposit_accounts, only: [ :new, :create ]
     get "deposit_accounts/:id", to: "servicing_deposit_accounts#show", as: :servicing_deposit_account
     get "deposit_accounts/:deposit_account_id/activity", to: "account_activities#show", as: :account_activity
@@ -27,6 +29,20 @@ Rails.application.routes.draw do
     post "deposit_accounts/:deposit_account_id/holds", to: "account_holds#create", as: :account_hold_placements
     get "deposit_accounts/:deposit_account_id/holds/:hold_id/release", to: "account_holds#release", as: :release_account_hold
     post "deposit_accounts/:deposit_account_id/holds/:hold_id/release", to: "account_holds#create_release"
+    get "deposit_accounts/:deposit_account_id/restrictions/new",
+      to: "account_restrictions#new",
+      as: :new_account_restriction
+    post "deposit_accounts/:deposit_account_id/restrictions",
+      to: "account_restrictions#create",
+      as: :account_restrictions
+    post "deposit_accounts/:deposit_account_id/restrictions/:id/release",
+      to: "account_restrictions#release",
+      as: :release_account_restriction
+    get "deposit_accounts/:deposit_account_id/close",
+      to: "account_closes#new",
+      as: :close_account
+    post "deposit_accounts/:deposit_account_id/close",
+      to: "account_closes#create"
     get "deposit_accounts/:deposit_account_id/statements", to: "account_statements#index", as: :account_statements
     get "deposit_accounts/:deposit_account_id/fee_waivers/new", to: "fee_waivers#new", as: :new_fee_waiver
     post "deposit_accounts/:deposit_account_id/fee_waivers", to: "fee_waivers#create", as: :fee_waivers

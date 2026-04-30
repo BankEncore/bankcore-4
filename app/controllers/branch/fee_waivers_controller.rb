@@ -13,6 +13,7 @@ module Branch
     def create
       @fee_waiver = fee_waiver_params
       @fee_event = load_fee_event(@fee_waiver[:fee_assessment_event_id])
+      Accounts::Services::AccountRestrictionPolicy.assert_routine_servicing_allowed!(deposit_account_id: @account.id)
       result = Core::OperationalEvents::Commands::RecordEvent.call(
         event_type: "fee.waived",
         channel: branch_channel,
@@ -32,6 +33,7 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::InvalidRequest,
       Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
+      Accounts::Commands::AccountRestricted,
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message
       render :new, status: :unprocessable_entity

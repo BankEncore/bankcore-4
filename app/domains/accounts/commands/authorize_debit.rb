@@ -33,6 +33,7 @@ module Accounts
         return replay_denial(existing, on_date) if existing&.event_type == "overdraft.nsf_denied"
 
         begin
+          Services::AccountRestrictionPolicy.assert_debit_allowed!(deposit_account_id: source_account_id)
           Core::OperationalEvents::Commands::RecordEvent.call(
             event_type: type,
             channel: channel,
@@ -63,6 +64,8 @@ module Accounts
             actor_id: actor_id,
             operating_unit_id: operating_unit_id
           )
+        rescue AccountRestricted => e
+          raise InvalidRequest, e.message
         end
       end
 
