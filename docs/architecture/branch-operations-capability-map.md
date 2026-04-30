@@ -50,7 +50,7 @@ When a slice changes financial effects, posting rules, reversals, GL ownership, 
 | Trial balance and EOD readiness | MVP | `Teller`, `Core::Ledger`, `Core::BusinessDate` | Read-only | ADR-0016, ADR-0018 |
 | Branch customer/account servicing | Near-term / partially shipped | `Branch` workspace over `Party`, `Accounts`, `Deposits` | Only for financial servicing events | ADR-0025, ADR-0026 |
 | Operating-unit branch scope | Near-term / shipped first slice | `Organization`, `Workspace` | No | ADR-0032 |
-| Cash inventory and vault/drawer custody | Near-term | `Cash` | No GL for internal custody movement | ADR-0031 |
+| Cash inventory and vault/drawer custody | Near-term / shipped foundation | `Cash` | No GL for internal custody movement; GL only for approved variances and ADR-0035 shipment receipts | ADR-0031, ADR-0035 |
 | Product behavior engine | Later / partial resolver shipped | `Products`, `Deposits`, `Accounts` | Indirect through event/posting | ADR-0030 |
 | Negotiable instruments | Later | TBD, likely `Instruments` | Yes for issuance/payment lifecycle | ADR needed |
 | External payments and rails | Later / ACH receipt slice shipped | `Integration` | Yes where settlement posts | ADR-0028, more ADRs needed |
@@ -90,14 +90,15 @@ These capabilities deepen branch operations from teller-session control to insti
 | --- | --- | --- | --- | --- | --- | --- |
 | Create branch vault location | `Cash` | `Cash::Commands::CreateLocation` | Cash location lifecycle audit | None | Cash location list | Active operating unit, location type, currency |
 | Create teller drawer location | `Cash` | `CreateLocation` | Cash location lifecycle audit | None | Cash location list, teller session defaults | Responsible operator, operating unit, active state |
-| Link teller session to drawer | `Teller`, `Cash` | `OpenSession` with `cash_location_id` once implemented | Session row references drawer | None | Branch dashboard | Open drawer, active cash location, one open session per drawer policy |
-| Vault-to-drawer transfer | `Cash` | `Cash::Commands::TransferCash` | `cash.movement.completed` candidate | No GL for internal custody transfer | Cash position, movement activity | Dual control where required, no self-approval, sufficient vault custody balance |
-| Drawer-to-vault transfer | `Cash` | `TransferCash` | `cash.movement.completed` candidate | No GL for internal custody transfer | Cash position, movement activity | Teller/session status, approval policy |
-| Record drawer or vault count | `Cash` | `Cash::Commands::RecordCashCount` | `cash.count.recorded` candidate | None by default | Count history, reconciliation summary | Actor, location, business date, count completeness |
-| Record cash variance | `Cash`, optional `Core::Posting` | `PostCashVariance` when GL-enabled | `cash.variance.posted` candidate | Optional GL 1110 / 5190 | Variance queue, reconciliation summary | Approval threshold, no self-approval, immutable count history |
+| Link teller session to drawer | `Teller`, `Cash` | `OpenSession` resolving a drawer Cash location | Session row references drawer | None | Branch dashboard | Open drawer, active cash location, one open session per drawer policy |
+| Vault-to-drawer transfer | `Cash` | `Cash::Commands::TransferCash`, `Cash::Commands::ApproveCashMovement` | `cash.movement.completed` | No GL for internal custody transfer | Cash position, movement activity | Dual control where required, no self-approval, sufficient vault custody balance |
+| Drawer-to-vault transfer | `Cash` | `TransferCash`, `ApproveCashMovement` | `cash.movement.completed` | No GL for internal custody transfer | Cash position, movement activity | Teller/session status, approval policy |
+| Record drawer or vault count | `Cash` | `Cash::Commands::RecordCashCount` | `cash.count.recorded` | None by default | Count history, reconciliation summary | Actor, location, business date, count completeness |
+| Record cash variance | `Cash`, `Core::Posting` | `Cash::Commands::ApproveCashVariance` | `cash.variance.posted` | Dr/Cr `1110` / `5190` depending shortage or overage | Variance queue, reconciliation summary | Approval threshold, no self-approval, immutable count history |
+| Receive external cash shipment | `Cash`, `Core::Posting` | `Cash::Commands::ReceiveExternalCashShipment` | `cash.shipment.received` | Dr `1110` / Cr `1130` | Movement evidence, journal trace | Branch vault destination, `cash.shipment.receive`, idempotency |
 | Reconcile cash location | `Cash` | `Cash::Commands::ReconcileCashLocation`, `Cash::Queries::ReconciliationSummary` | Reconciliation artifact | None | Reconciliation package | Movements, counts, GL comparison, reviewer evidence |
 
-ADR-0031 is the governing target model. The first implementation should not introduce Fed/correspondent shipments, ATM cash, denomination tracking, or external cash settlement.
+ADR-0031 is the governing target model for internal custody. ADR-0035 accepts the narrow external receipt path into a branch vault. This phase still does not introduce outbound Fed/correspondent shipments, full shipment lifecycle state, ATM cash, denomination tracking, or settlement matching.
 
 ---
 
@@ -111,9 +112,9 @@ These capabilities make branch/platform servicing complete enough for daily acco
 | View customer 360 | `Party`, `Accounts`, `Deposits` | Customer/account profile queries | None | None | Customer 360, account profile | Role/capability, redaction rules |
 | View account activity | `Accounts`, `Core::OperationalEvents`, `Deposits` | Account activity/history queries | None | Read-only | Activity list, statement line context | Internal vs customer-safe view shaping |
 | Maintain authorized signer | `Accounts` | Add/end signer commands | Account-party maintenance audit row | None | Account-party timeline | Supervisor/capability, no owner semantics change |
-| Freeze or restrict account | `Accounts` | Future restrict/freeze command | Candidate account restriction audit/event | None unless financial effect introduced | Account profile, restriction history | Restriction reason, authorized actor, effective dates |
-| Close account | `Accounts`, possibly `Deposits` | Future close account command | Candidate `account.closed` or audit row | Depends on balance payout workflow | Account lifecycle history | Zero-balance or payout rules, holds, pending events |
-| Maintain contact details | `Party` | Future party maintenance commands | Candidate party audit row | None | Customer profile history | Identity/authority, redaction, audit trail |
+| Freeze or restrict account | `Accounts` | `Accounts::Commands::RestrictAccount`, `Accounts::Commands::UnrestrictAccount` | `account.restricted`, `account.unrestricted` no-GL events plus `account_restrictions` | None | Account profile, restriction history, operational event search | `account.maintain`, reason, effective dates, debit/close/full-freeze guards |
+| Close account | `Accounts` | `Accounts::Commands::CloseAccount` | `account_lifecycle_events` row plus `account.closed` no-GL event | None | Account lifecycle history, operational event search | Zero balance, no active holds, no pending events, no close-blocking restrictions, `account.maintain` |
+| Maintain contact details | `Party` | `Party::Commands::UpdateContactPoint` | `party_contact_audits` row; typed `party_emails`, `party_phones`, `party_addresses` | None | Customer contact summary and audit history | `party.contact.update`, append/supersede history, no customer portal semantics |
 | Review servicing exceptions | `Workflow`, `Reporting` | Approval/exception queue queries | Approval request/decision records once implemented | Usually none | Exception queue, decision history | Assignment, no self-approval, reason capture |
 
 This phase should not create a separate `CustomerService` workspace unless a distinct contact-center operating model emerges. Current internal servicing remains under the Branch workspace.
@@ -190,8 +191,8 @@ These capabilities support oversight and production-scale operations.
 
 | Phase | ADR gap |
 | --- | --- |
-| Phase 2 Cash | First implementation ADR or update to ADR-0031 when physical tables, commands, and event names are selected |
-| Phase 3 Servicing | Account restrictions/close lifecycle ADR if restrictions or close semantics affect transaction authorization |
+| Phase 2 Cash | ADR-0031 and ADR-0035 cover the shipped foundation; future ADRs are still needed for EOD cash blocking, full shipment lifecycle, denomination tracking, ATM cash, or branch GL |
+| Phase 3 Servicing | ADR-0036 covers restrictions, close lifecycle, Party contact audit, command guards, Workflow deferral, and composed timelines |
 | Phase 4 Product behavior | ADR-0030 follow-up when snapshots, rules engine traces, product GL mapping, or Reg CC are implemented |
 | Phase 5 Instruments | New ADR for official checks/check cashing ownership, lifecycle, events, posting, and reconciliation |
 | Phase 6 External rails | New or updated ADR per rail and direction: inbound ingestion vs outbound origination |
@@ -216,3 +217,4 @@ These capabilities support oversight and production-scale operations.
 - [ADR-0030: Deposit account product engine](../adr/0030-deposit-account-product-engine.md)
 - [ADR-0031: Cash inventory and management](../adr/0031-cash-inventory-and-management.md)
 - [ADR-0032: Operating units and branch scope](../adr/0032-operating-units-and-branch-scope.md)
+- [ADR-0036: Branch servicing event and audit taxonomy](../adr/0036-branch-servicing-event-audit-taxonomy.md)

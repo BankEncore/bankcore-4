@@ -4,7 +4,7 @@ module Branch
   class ApplicationController < Internal::ApplicationController
     before_action :require_branch_operator!
     helper_method :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?, :can_reverse_event?,
-      :can_manage_authorized_signers?
+      :can_manage_authorized_signers?, :can_maintain_account?, :can_update_party_contact?
 
     private
 
@@ -56,6 +56,14 @@ module Branch
 
     def can_manage_authorized_signers?
       current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN, scope: current_operating_unit)
+    end
+
+    def can_maintain_account?
+      current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN, scope: current_operating_unit)
+    end
+
+    def can_update_party_contact?
+      current_operator&.has_capability?(Workspace::Authorization::CapabilityRegistry::PARTY_CONTACT_UPDATE, scope: current_operating_unit)
     end
   end
 end

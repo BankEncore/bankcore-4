@@ -20,6 +20,7 @@ module Cash
         raise InvalidRequest, "source_cash_location_id not found" if source.nil?
         raise InvalidRequest, "destination_cash_location_id not found" if destination.nil?
         validate_locations!(source, destination, currency)
+        authorize_actor!(actor_id, source.operating_unit)
 
         fp = fingerprint(source.id, destination.id, amount_minor_units, actor_id, approval_actor_id, currency, on_date, reason_code)
 
@@ -31,7 +32,10 @@ module Cash
           status = requires_approval?(source, destination, approval_actor_id) ?
             Cash::Models::CashMovement::STATUS_PENDING_APPROVAL :
             Cash::Models::CashMovement::STATUS_COMPLETED
-          validate_approval!(actor_id, approval_actor_id) if status == Cash::Models::CashMovement::STATUS_COMPLETED && approval_actor_id.present?
+          if status == Cash::Models::CashMovement::STATUS_COMPLETED && approval_actor_id.present?
+            validate_approval!(actor_id, approval_actor_id)
+            authorize_approval!(approval_actor_id, source.operating_unit)
+          end
 
           movement = Cash::Models::CashMovement.create!(
             source_cash_location: source,
@@ -61,6 +65,8 @@ module Cash
         end
       rescue Core::BusinessDate::Errors::InvalidPostingBusinessDate => e
         raise InvalidRequest, e.message
+      rescue Workspace::Authorization::Forbidden => e
+        raise InvalidRequest, e.message
       rescue ActiveRecord::RecordInvalid => e
         raise InvalidRequest, e.record.errors.full_messages.to_sentence
       end
@@ -80,10 +86,28 @@ module Cash
       end
       private_class_method :validate_locations!
 
+      def self.authorize_actor!(actor_id, operating_unit)
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: actor_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_CREATE,
+          scope: operating_unit
+        )
+      end
+      private_class_method :authorize_actor!
+
       def self.validate_approval!(actor_id, approval_actor_id)
         raise InvalidRequest, "approver must not be the initiator" if actor_id.to_i == approval_actor_id.to_i
       end
       private_class_method :validate_approval!
+
+      def self.authorize_approval!(approval_actor_id, operating_unit)
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: approval_actor_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_APPROVE,
+          scope: operating_unit
+        )
+      end
+      private_class_method :authorize_approval!
 
       def self.movement_type(source, destination)
         if source.vault? && destination.teller_drawer?

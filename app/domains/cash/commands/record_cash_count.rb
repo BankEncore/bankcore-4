@@ -18,6 +18,7 @@ module Cash
         raise InvalidRequest, "cash_location_id not found" if location.nil?
         raise InvalidRequest, "cash location must be active" unless location.active?
         raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
+        authorize_actor!(actor_id, location.operating_unit)
 
         expected = expected_amount_minor_units
         expected = Cash::Services::BalanceProjector.balance_for(location).amount_minor_units if expected.nil?
@@ -48,9 +49,20 @@ module Cash
         end
       rescue Core::BusinessDate::Errors::InvalidPostingBusinessDate => e
         raise InvalidRequest, e.message
+      rescue Workspace::Authorization::Forbidden => e
+        raise InvalidRequest, e.message
       rescue ActiveRecord::RecordInvalid => e
         raise InvalidRequest, e.record.errors.full_messages.to_sentence
       end
+
+      def self.authorize_actor!(actor_id, operating_unit)
+        Workspace::Authorization::Authorizer.require_capability!(
+          actor_id: actor_id,
+          capability_code: Workspace::Authorization::CapabilityRegistry::CASH_COUNT_RECORD,
+          scope: operating_unit
+        )
+      end
+      private_class_method :authorize_actor!
 
       def self.record_event!(count, channel)
         Cash::Services::PostOperationalEvent.call(

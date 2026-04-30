@@ -17,6 +17,7 @@ module Workspace
       CASH_POSITION_VIEW = "cash.position.view"
       CASH_SHIPMENT_RECEIVE = "cash.shipment.receive"
       PARTY_CREATE = "party.create"
+      PARTY_CONTACT_UPDATE = "party.contact.update"
       ACCOUNT_OPEN = "account.open"
       ACCOUNT_MAINTAIN = "account.maintain"
       HOLD_PLACE = "hold.place"
@@ -73,6 +74,8 @@ module Workspace
           description: "May record external Fed or correspondent cash shipments into branch vault custody." },
         { code: PARTY_CREATE, name: "Create party", category: "party",
           description: "May create party records." },
+        { code: PARTY_CONTACT_UPDATE, name: "Update party contact", category: "party",
+          description: "May update Party-owned contact points." },
         { code: ACCOUNT_OPEN, name: "Open account", category: "account",
           description: "May open deposit accounts." },
         { code: ACCOUNT_MAINTAIN, name: "Maintain account", category: "account",
@@ -131,14 +134,14 @@ module Workspace
           DEPOSIT_ACCEPT, WITHDRAWAL_POST, TRANSFER_COMPLETE, TELLER_SESSION_OPEN, TELLER_SESSION_CLOSE,
           CASH_DRAWER_MANAGE, CASH_LOCATION_MANAGE, CASH_MOVEMENT_CREATE, CASH_MOVEMENT_APPROVE,
           CASH_COUNT_RECORD, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW, CASH_SHIPMENT_RECEIVE,
-          PARTY_CREATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE,
+          PARTY_CREATE, PARTY_CONTACT_UPDATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE,
           BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE, REVERSAL_CREATE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
         ],
         CSR => [
-          PARTY_CREATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
+          PARTY_CREATE, PARTY_CONTACT_UPDATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
         ],
         BRANCH_MANAGER => [
-          PARTY_CREATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE, REVERSAL_CREATE,
+          PARTY_CREATE, PARTY_CONTACT_UPDATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE, REVERSAL_CREATE,
           OPERATIONAL_EVENT_VIEW, JOURNAL_ENTRY_VIEW, REPORT_VIEW
         ],
         OPERATIONS => [

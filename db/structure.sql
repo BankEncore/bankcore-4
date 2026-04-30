@@ -99,6 +99,97 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: account_lifecycle_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.account_lifecycle_events (
+    id bigint NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    action character varying NOT NULL,
+    channel character varying NOT NULL,
+    idempotency_key character varying NOT NULL,
+    business_date date NOT NULL,
+    actor_id bigint NOT NULL,
+    operational_event_id bigint,
+    reason_code character varying NOT NULL,
+    reason_description text,
+    effective_on date NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT account_lifecycle_events_action_check CHECK (((action)::text = 'closed'::text)),
+    CONSTRAINT account_lifecycle_events_channel_check CHECK (((channel)::text = 'branch'::text))
+);
+
+
+--
+-- Name: account_lifecycle_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.account_lifecycle_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: account_lifecycle_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.account_lifecycle_events_id_seq OWNED BY public.account_lifecycle_events.id;
+
+
+--
+-- Name: account_restrictions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.account_restrictions (
+    id bigint NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    restriction_type character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    channel character varying NOT NULL,
+    idempotency_key character varying NOT NULL,
+    business_date date NOT NULL,
+    actor_id bigint NOT NULL,
+    released_by_actor_id bigint,
+    restricted_operational_event_id bigint,
+    unrestricted_operational_event_id bigint,
+    reason_code character varying NOT NULL,
+    reason_description text,
+    effective_on date NOT NULL,
+    released_on date,
+    release_idempotency_key character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT account_restrictions_channel_check CHECK (((channel)::text = 'branch'::text)),
+    CONSTRAINT account_restrictions_release_fields_check CHECK ((((status)::text <> 'released'::text) OR ((released_on IS NOT NULL) AND (released_by_actor_id IS NOT NULL)))),
+    CONSTRAINT account_restrictions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'released'::character varying])::text[]))),
+    CONSTRAINT account_restrictions_type_check CHECK (((restriction_type)::text = ANY ((ARRAY['debit_block'::character varying, 'full_freeze'::character varying, 'close_block'::character varying, 'watch_only'::character varying])::text[])))
+);
+
+
+--
+-- Name: account_restrictions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.account_restrictions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: account_restrictions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.account_restrictions_id_seq OWNED BY public.account_restrictions.id;
+
+
+--
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1124,6 +1215,130 @@ ALTER SEQUENCE public.operators_id_seq OWNED BY public.operators.id;
 
 
 --
+-- Name: party_addresses; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.party_addresses (
+    id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    line1 character varying NOT NULL,
+    line2 character varying,
+    city character varying NOT NULL,
+    region character varying NOT NULL,
+    postal_code character varying NOT NULL,
+    country character varying DEFAULT 'US'::character varying NOT NULL,
+    purpose character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT party_addresses_purpose_check CHECK (((purpose)::text = ANY ((ARRAY['residential'::character varying, 'mailing'::character varying])::text[]))),
+    CONSTRAINT party_addresses_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+
+--
+-- Name: party_addresses_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.party_addresses_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: party_addresses_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.party_addresses_id_seq OWNED BY public.party_addresses.id;
+
+
+--
+-- Name: party_contact_audits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.party_contact_audits (
+    id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    contact_table character varying NOT NULL,
+    contact_id bigint NOT NULL,
+    action character varying NOT NULL,
+    channel character varying NOT NULL,
+    idempotency_key character varying NOT NULL,
+    business_date date NOT NULL,
+    actor_id bigint NOT NULL,
+    old_summary text,
+    new_summary text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT party_contact_audits_action_check CHECK (((action)::text = ANY ((ARRAY['added'::character varying, 'ended'::character varying, 'superseded'::character varying])::text[]))),
+    CONSTRAINT party_contact_audits_channel_check CHECK (((channel)::text = 'branch'::text)),
+    CONSTRAINT party_contact_audits_contact_table_check CHECK (((contact_table)::text = ANY ((ARRAY['party_emails'::character varying, 'party_phones'::character varying, 'party_addresses'::character varying])::text[])))
+);
+
+
+--
+-- Name: party_contact_audits_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.party_contact_audits_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: party_contact_audits_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.party_contact_audits_id_seq OWNED BY public.party_contact_audits.id;
+
+
+--
+-- Name: party_emails; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.party_emails (
+    id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    email character varying NOT NULL,
+    purpose character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT party_emails_purpose_check CHECK (((purpose)::text = ANY ((ARRAY['primary'::character varying, 'secondary'::character varying])::text[]))),
+    CONSTRAINT party_emails_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+
+--
+-- Name: party_emails_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.party_emails_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: party_emails_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.party_emails_id_seq OWNED BY public.party_emails.id;
+
+
+--
 -- Name: party_individual_profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1161,6 +1376,44 @@ CREATE SEQUENCE public.party_individual_profiles_id_seq
 --
 
 ALTER SEQUENCE public.party_individual_profiles_id_seq OWNED BY public.party_individual_profiles.id;
+
+
+--
+-- Name: party_phones; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.party_phones (
+    id bigint NOT NULL,
+    party_record_id bigint NOT NULL,
+    phone_number character varying NOT NULL,
+    purpose character varying NOT NULL,
+    status character varying DEFAULT 'active'::character varying NOT NULL,
+    effective_on date NOT NULL,
+    ended_on date,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT party_phones_purpose_check CHECK (((purpose)::text = ANY ((ARRAY['mobile'::character varying, 'home'::character varying, 'work'::character varying])::text[]))),
+    CONSTRAINT party_phones_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+
+--
+-- Name: party_phones_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.party_phones_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: party_phones_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.party_phones_id_seq OWNED BY public.party_phones.id;
 
 
 --
@@ -1348,6 +1601,20 @@ ALTER SEQUENCE public.teller_sessions_id_seq OWNED BY public.teller_sessions.id;
 
 
 --
+-- Name: account_lifecycle_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_lifecycle_events ALTER COLUMN id SET DEFAULT nextval('public.account_lifecycle_events_id_seq'::regclass);
+
+
+--
+-- Name: account_restrictions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions ALTER COLUMN id SET DEFAULT nextval('public.account_restrictions_id_seq'::regclass);
+
+
+--
 -- Name: capabilities id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1523,10 +1790,38 @@ ALTER TABLE ONLY public.operators ALTER COLUMN id SET DEFAULT nextval('public.op
 
 
 --
+-- Name: party_addresses id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_addresses ALTER COLUMN id SET DEFAULT nextval('public.party_addresses_id_seq'::regclass);
+
+
+--
+-- Name: party_contact_audits id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_contact_audits ALTER COLUMN id SET DEFAULT nextval('public.party_contact_audits_id_seq'::regclass);
+
+
+--
+-- Name: party_emails id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_emails ALTER COLUMN id SET DEFAULT nextval('public.party_emails_id_seq'::regclass);
+
+
+--
 -- Name: party_individual_profiles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.party_individual_profiles ALTER COLUMN id SET DEFAULT nextval('public.party_individual_profiles_id_seq'::regclass);
+
+
+--
+-- Name: party_phones id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_phones ALTER COLUMN id SET DEFAULT nextval('public.party_phones_id_seq'::regclass);
 
 
 --
@@ -1562,6 +1857,22 @@ ALTER TABLE ONLY public.roles ALTER COLUMN id SET DEFAULT nextval('public.roles_
 --
 
 ALTER TABLE ONLY public.teller_sessions ALTER COLUMN id SET DEFAULT nextval('public.teller_sessions_id_seq'::regclass);
+
+
+--
+-- Name: account_lifecycle_events account_lifecycle_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_lifecycle_events
+    ADD CONSTRAINT account_lifecycle_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: account_restrictions account_restrictions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions
+    ADD CONSTRAINT account_restrictions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1773,11 +2084,43 @@ ALTER TABLE ONLY public.operators
 
 
 --
+-- Name: party_addresses party_addresses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_addresses
+    ADD CONSTRAINT party_addresses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: party_contact_audits party_contact_audits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_contact_audits
+    ADD CONSTRAINT party_contact_audits_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: party_emails party_emails_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_emails
+    ADD CONSTRAINT party_emails_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: party_individual_profiles party_individual_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.party_individual_profiles
     ADD CONSTRAINT party_individual_profiles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: party_phones party_phones_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_phones
+    ADD CONSTRAINT party_phones_pkey PRIMARY KEY (id);
 
 
 --
@@ -1826,6 +2169,41 @@ ALTER TABLE ONLY public.schema_migrations
 
 ALTER TABLE ONLY public.teller_sessions
     ADD CONSTRAINT teller_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_account_lifecycle_events_account_action_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_account_lifecycle_events_account_action_date ON public.account_lifecycle_events USING btree (deposit_account_id, action, business_date);
+
+
+--
+-- Name: idx_account_lifecycle_events_operational_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_account_lifecycle_events_operational_event ON public.account_lifecycle_events USING btree (operational_event_id);
+
+
+--
+-- Name: idx_account_restrictions_account_status_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_account_restrictions_account_status_type ON public.account_restrictions USING btree (deposit_account_id, status, restriction_type);
+
+
+--
+-- Name: idx_account_restrictions_restricted_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_account_restrictions_restricted_event ON public.account_restrictions USING btree (restricted_operational_event_id);
+
+
+--
+-- Name: idx_account_restrictions_unrestricted_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_account_restrictions_unrestricted_event ON public.account_restrictions USING btree (unrestricted_operational_event_id);
 
 
 --
@@ -1959,6 +2337,69 @@ CREATE INDEX idx_on_deposit_account_id_c32203628a ON public.deposit_account_part
 --
 
 CREATE INDEX idx_on_party_record_id_91aa95b618 ON public.deposit_account_party_maintenance_audits USING btree (party_record_id);
+
+
+--
+-- Name: idx_on_party_record_id_status_purpose_6659aa2f25; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_party_record_id_status_purpose_6659aa2f25 ON public.party_addresses USING btree (party_record_id, status, purpose);
+
+
+--
+-- Name: index_account_lifecycle_events_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_account_lifecycle_events_on_actor_id ON public.account_lifecycle_events USING btree (actor_id);
+
+
+--
+-- Name: index_account_lifecycle_events_on_channel_and_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_account_lifecycle_events_on_channel_and_idempotency_key ON public.account_lifecycle_events USING btree (channel, idempotency_key);
+
+
+--
+-- Name: index_account_lifecycle_events_on_deposit_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_account_lifecycle_events_on_deposit_account_id ON public.account_lifecycle_events USING btree (deposit_account_id);
+
+
+--
+-- Name: index_account_restrictions_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_account_restrictions_on_actor_id ON public.account_restrictions USING btree (actor_id);
+
+
+--
+-- Name: index_account_restrictions_on_channel_and_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_account_restrictions_on_channel_and_idempotency_key ON public.account_restrictions USING btree (channel, idempotency_key);
+
+
+--
+-- Name: index_account_restrictions_on_deposit_account_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_account_restrictions_on_deposit_account_id ON public.account_restrictions USING btree (deposit_account_id);
+
+
+--
+-- Name: index_account_restrictions_on_release_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_account_restrictions_on_release_idempotency_key ON public.account_restrictions USING btree (release_idempotency_key);
+
+
+--
+-- Name: index_account_restrictions_on_released_by_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_account_restrictions_on_released_by_actor_id ON public.account_restrictions USING btree (released_by_actor_id);
 
 
 --
@@ -2466,10 +2907,73 @@ CREATE INDEX index_operators_on_default_operating_unit_id ON public.operators US
 
 
 --
+-- Name: index_party_addresses_on_party_record_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_addresses_on_party_record_id ON public.party_addresses USING btree (party_record_id);
+
+
+--
+-- Name: index_party_contact_audits_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_contact_audits_on_actor_id ON public.party_contact_audits USING btree (actor_id);
+
+
+--
+-- Name: index_party_contact_audits_on_channel_and_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_party_contact_audits_on_channel_and_idempotency_key ON public.party_contact_audits USING btree (channel, idempotency_key);
+
+
+--
+-- Name: index_party_contact_audits_on_party_record_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_contact_audits_on_party_record_id ON public.party_contact_audits USING btree (party_record_id);
+
+
+--
+-- Name: index_party_contact_audits_on_party_record_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_contact_audits_on_party_record_id_and_created_at ON public.party_contact_audits USING btree (party_record_id, created_at);
+
+
+--
+-- Name: index_party_emails_on_party_record_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_emails_on_party_record_id ON public.party_emails USING btree (party_record_id);
+
+
+--
+-- Name: index_party_emails_on_party_record_id_and_status_and_purpose; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_emails_on_party_record_id_and_status_and_purpose ON public.party_emails USING btree (party_record_id, status, purpose);
+
+
+--
 -- Name: index_party_individual_profiles_on_party_record_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_party_individual_profiles_on_party_record_id ON public.party_individual_profiles USING btree (party_record_id);
+
+
+--
+-- Name: index_party_phones_on_party_record_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_phones_on_party_record_id ON public.party_phones USING btree (party_record_id);
+
+
+--
+-- Name: index_party_phones_on_party_record_id_and_status_and_purpose; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_party_phones_on_party_record_id_and_status_and_purpose ON public.party_phones USING btree (party_record_id, status, purpose);
 
 
 --
@@ -2606,6 +3110,14 @@ ALTER TABLE ONLY public.core_business_date_close_events
 
 
 --
+-- Name: party_addresses fk_rails_0bfbaa2333; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_addresses
+    ADD CONSTRAINT fk_rails_0bfbaa2333 FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+
+
+--
 -- Name: cash_movements fk_rails_0c29c4f257; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2654,6 +3166,14 @@ ALTER TABLE ONLY public.operator_role_assignments
 
 
 --
+-- Name: party_contact_audits fk_rails_20f5c22fa5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_contact_audits
+    ADD CONSTRAINT fk_rails_20f5c22fa5 FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: party_individual_profiles fk_rails_22a835d5da; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2678,6 +3198,14 @@ ALTER TABLE ONLY public.operational_events
 
 
 --
+-- Name: account_restrictions fk_rails_2a8f88b07d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions
+    ADD CONSTRAINT fk_rails_2a8f88b07d FOREIGN KEY (unrestricted_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
 -- Name: journal_lines fk_rails_2b0c279a73; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2694,6 +3222,14 @@ ALTER TABLE ONLY public.cash_movements
 
 
 --
+-- Name: account_restrictions fk_rails_33e1250290; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions
+    ADD CONSTRAINT fk_rails_33e1250290 FOREIGN KEY (restricted_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
 -- Name: journal_entries fk_rails_3417d84ffc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2707,6 +3243,14 @@ ALTER TABLE ONLY public.journal_entries
 
 ALTER TABLE ONLY public.holds
     ADD CONSTRAINT fk_rails_4283210e70 FOREIGN KEY (released_by_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: account_lifecycle_events fk_rails_43b7201b41; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_lifecycle_events
+    ADD CONSTRAINT fk_rails_43b7201b41 FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
@@ -2758,6 +3302,14 @@ ALTER TABLE ONLY public.operator_credentials
 
 
 --
+-- Name: account_restrictions fk_rails_589f352940; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions
+    ADD CONSTRAINT fk_rails_589f352940 FOREIGN KEY (released_by_actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: cash_counts fk_rails_58a51bad41; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2795,6 +3347,14 @@ ALTER TABLE ONLY public.deposit_product_overdraft_policies
 
 ALTER TABLE ONLY public.cash_counts
     ADD CONSTRAINT fk_rails_65f53ad445 FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
+-- Name: party_emails fk_rails_669a5b6552; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_emails
+    ADD CONSTRAINT fk_rails_669a5b6552 FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
 
 
 --
@@ -2918,11 +3478,27 @@ ALTER TABLE ONLY public.cash_variances
 
 
 --
+-- Name: party_phones fk_rails_96fe9f82d4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_phones
+    ADD CONSTRAINT fk_rails_96fe9f82d4 FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
+
+
+--
 -- Name: deposit_account_party_maintenance_audits fk_rails_9f4e22e9ce; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
     ADD CONSTRAINT fk_rails_9f4e22e9ce FOREIGN KEY (deposit_account_party_id) REFERENCES public.deposit_account_parties(id);
+
+
+--
+-- Name: account_restrictions fk_rails_a18c9e00d3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions
+    ADD CONSTRAINT fk_rails_a18c9e00d3 FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
@@ -2966,6 +3542,14 @@ ALTER TABLE ONLY public.cash_variances
 
 
 --
+-- Name: account_restrictions fk_rails_bde003deac; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_restrictions
+    ADD CONSTRAINT fk_rails_bde003deac FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: deposit_account_parties fk_rails_bf2b31365a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3003,6 +3587,14 @@ ALTER TABLE ONLY public.cash_variances
 
 ALTER TABLE ONLY public.operating_units
     ADD CONSTRAINT fk_rails_cd3fabf476 FOREIGN KEY (parent_operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
+-- Name: party_contact_audits fk_rails_d30b9f4b1f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.party_contact_audits
+    ADD CONSTRAINT fk_rails_d30b9f4b1f FOREIGN KEY (party_record_id) REFERENCES public.party_records(id);
 
 
 --
@@ -3054,6 +3646,14 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: account_lifecycle_events fk_rails_e93f7f5f7a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_lifecycle_events
+    ADD CONSTRAINT fk_rails_e93f7f5f7a FOREIGN KEY (actor_id) REFERENCES public.operators(id);
+
+
+--
 -- Name: holds fk_rails_ecf3d13b03; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3067,6 +3667,14 @@ ALTER TABLE ONLY public.holds
 
 ALTER TABLE ONLY public.teller_sessions
     ADD CONSTRAINT fk_rails_f16ba359ec FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
+
+
+--
+-- Name: account_lifecycle_events fk_rails_f3616f8538; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.account_lifecycle_events
+    ADD CONSTRAINT fk_rails_f3616f8538 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -3084,6 +3692,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429223000'),
 ('20260429210200'),
 ('20260429190000'),
 ('20260424120017'),

@@ -10,6 +10,12 @@ module Branch
 
     def create
       @reversal = reversal_params
+      original_event = Core::OperationalEvents::Models::OperationalEvent.find(@reversal[:original_operational_event_id].to_i)
+      if original_event.source_account_id.present?
+        Accounts::Services::AccountRestrictionPolicy.assert_routine_servicing_allowed!(
+          deposit_account_id: original_event.source_account_id
+        )
+      end
       result = Core::OperationalEvents::Commands::RecordReversal.call(
         original_operational_event_id: @reversal[:original_operational_event_id].to_i,
         channel: branch_channel,
@@ -24,6 +30,7 @@ module Branch
     rescue Core::OperationalEvents::Commands::RecordReversal::InvalidRequest,
       Core::OperationalEvents::Commands::RecordReversal::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordReversal::PostedReplay,
+      Accounts::Commands::AccountRestricted,
       Workspace::Authorization::Forbidden,
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message

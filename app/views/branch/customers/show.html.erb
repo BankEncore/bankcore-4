@@ -8,6 +8,9 @@
   <nav class="flex flex-wrap gap-2 text-sm">
     <%= link_to "Back to search", branch_customers_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <%= link_to "Open account", new_branch_deposit_account_path(party_record_id: @party.id), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <% if can_update_party_contact? %>
+      <%= link_to "Update contact", branch_new_party_contact_path(@party), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% end %>
   </nav>
 </section>
 
@@ -40,6 +43,80 @@
     </dl>
   </section>
 <% end %>
+
+<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-semibold">Contact summary</h2>
+  <div class="mt-4 grid gap-4 text-sm md:grid-cols-3">
+    <div>
+      <h3 class="font-medium text-slate-500">Emails</h3>
+      <% if @contact_summary.emails.any? %>
+        <ul class="mt-2 space-y-1">
+          <% @contact_summary.emails.each do |email| %>
+            <li><%= email.summary %></li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="mt-2 text-slate-500">Not recorded</p>
+      <% end %>
+    </div>
+    <div>
+      <h3 class="font-medium text-slate-500">Phones</h3>
+      <% if @contact_summary.phones.any? %>
+        <ul class="mt-2 space-y-1">
+          <% @contact_summary.phones.each do |phone| %>
+            <li><%= phone.summary %></li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="mt-2 text-slate-500">Not recorded</p>
+      <% end %>
+    </div>
+    <div>
+      <h3 class="font-medium text-slate-500">Addresses</h3>
+      <% if @contact_summary.addresses.any? %>
+        <ul class="mt-2 space-y-1">
+          <% @contact_summary.addresses.each do |address| %>
+            <li><%= address.summary %></li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="mt-2 text-slate-500">Not recorded</p>
+      <% end %>
+    </div>
+  </div>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Contact audit</h2>
+  </div>
+  <% if @contact_summary.audits.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Action</th>
+            <th class="px-5 py-3">Contact</th>
+            <th class="px-5 py-3">New summary</th>
+            <th class="px-5 py-3">Actor</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @contact_summary.audits.each do |audit| %>
+            <tr>
+              <td class="px-5 py-3 font-medium"><%= audit.action %></td>
+              <td class="px-5 py-3"><%= audit.contact_table %> #<%= audit.contact_id %></td>
+              <td class="px-5 py-3"><%= audit.new_summary.presence || audit.old_summary %></td>
+              <td class="px-5 py-3">#<%= audit.actor_id %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="px-5 py-4 text-sm text-slate-500">No contact audit rows recorded.</p>
+  <% end %>
+</section>
 
 <section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
   <div class="border-b border-slate-200 px-5 py-4">

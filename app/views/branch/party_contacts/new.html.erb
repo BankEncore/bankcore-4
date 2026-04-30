@@ -1,0 +1,54 @@
+<% content_for :title, "Update contact for #{@party.name} - BankCORE" %>
+
+<section class="mx-auto max-w-3xl">
+  <div>
+    <h1 class="text-3xl font-semibold">Update contact for <%= @party.name %></h1>
+    <p class="mt-2 text-slate-600">Contact updates are Party-owned audit rows. They do not create operational events.</p>
+  </div>
+
+  <%= render "branch/shared/form_error", error_message: @error_message %>
+
+  <%= form_with url: branch_party_contacts_path(@party), scope: :contact, method: :post, class: "mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm" do |form| %>
+    <div class="grid gap-4 md:grid-cols-2">
+      <div>
+        <%= form.label :contact_type, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.select :contact_type,
+          [["Email", "email"], ["Phone", "phone"], ["Address", "address"]],
+          { selected: @contact["contact_type"] },
+          class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+      <div>
+        <%= form.label :purpose, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :purpose, value: @contact["purpose"], required: true, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        <p class="mt-1 text-xs text-slate-500">Email: primary/secondary. Phone: mobile/home/work. Address: residential/mailing.</p>
+      </div>
+      <div class="md:col-span-2">
+        <%= form.label :value, "Email or phone value", class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :value, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+      <div class="md:col-span-2">
+        <h2 class="text-sm font-semibold text-slate-700">Address fields</h2>
+        <p class="mt-1 text-xs text-slate-500">Required only when contact type is address.</p>
+      </div>
+      <div><%= form.label :line1, class: "block text-sm font-medium text-slate-700" %><%= form.text_field :line1, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %></div>
+      <div><%= form.label :line2, class: "block text-sm font-medium text-slate-700" %><%= form.text_field :line2, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %></div>
+      <div><%= form.label :city, class: "block text-sm font-medium text-slate-700" %><%= form.text_field :city, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %></div>
+      <div><%= form.label :region, class: "block text-sm font-medium text-slate-700" %><%= form.text_field :region, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %></div>
+      <div><%= form.label :postal_code, class: "block text-sm font-medium text-slate-700" %><%= form.text_field :postal_code, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %></div>
+      <div><%= form.label :country, class: "block text-sm font-medium text-slate-700" %><%= form.text_field :country, value: "US", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %></div>
+      <div>
+        <%= form.label :effective_on, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.date_field :effective_on, value: @contact["effective_on"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+      <div>
+        <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :idempotency_key, value: @contact["idempotency_key"], required: true, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+    </div>
+
+    <div class="mt-6 flex gap-3">
+      <%= form.submit "Update contact", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= link_to "Cancel", branch_customer_path(@party), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    </div>
+  <% end %>
+</section>

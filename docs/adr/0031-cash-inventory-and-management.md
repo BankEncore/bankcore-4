@@ -212,19 +212,19 @@ Candidate event families:
 | :--- | :--- | :--- |
 | `cash.movement.completed` | No GL for internal transfers within institutional custody. | First Cash slice |
 | `cash.count.recorded` | No GL by default. | First Cash slice |
-| `cash.variance.posted` | Optional GL, similar to ADR-0020 drawer variance. | First Cash slice or follow-up |
+| `cash.variance.posted` | GL adjustment for approved Cash-domain count variances; teller-session variance remains separate. | First Cash slice |
 | `cash.shipment.sent` | GL impact when custody leaves internal cash and moves to an external settlement/counterparty asset. | Future |
-| `cash.shipment.received` | GL impact when external cash or settlement value returns to internal cash custody. | Future |
+| `cash.shipment.received` | GL impact when external cash is received into a branch vault. | Accepted follow-up: ADR-0035 |
 
 Existing account `1110` represents physical cash under branch custody, including vaults and teller drawers. Internal movement between vault, drawer, and internal transit locations remains within `1110` and must not change aggregate GL cash.
 
-External shipment accounting is intentionally deferred. The seeded COA currently defines:
+Most external shipment accounting is intentionally deferred. ADR-0035 accepts the narrow inbound receipt path using `1130`; outbound shipment dispatch, shipment lifecycle state, settlement matching, and correction workflows remain future work. The seeded COA currently defines:
 
 - `1110` as Cash in Vaults (teller drawers)
 - `1120` as ACH Settlement
 - `1130` as Due from Correspondent Banks
 
-This ADR does not redefine `1120` as "Due from Federal Reserve." Fed cash shipment or Fed due-from accounting requires a dedicated COA/GL mapping decision before implementation.
+This ADR does not redefine `1120` as "Due from Federal Reserve." ADR-0035 uses `1130` for the accepted inbound receipt slice. Any broader Fed/correspondent shipment accounting still requires dedicated COA/GL mapping coverage before implementation.
 
 ---
 
@@ -279,9 +279,9 @@ Operational result:
 - Create a `cash_count`.
 - Create a `cash_variance` for -500 minor units.
 - If the variance exceeds policy, require supervisor approval.
-- If GL posting is enabled for this type, record and post a financial variance event.
+- Approval records and posts `cash.variance.posted` for the Cash-domain count variance.
 
-Posting outline if GL posting is enabled:
+Posting outline:
 
 ```text
 Shortage:
@@ -289,9 +289,39 @@ Shortage:
   Cr 1110 Cash in Vaults              500
 ```
 
-This is conceptually aligned with ADR-0020. A future implementation should decide whether to reuse `teller.drawer.variance.posted` for teller-session variance or introduce a broader `cash.variance.posted` event for non-session Cash-domain variances.
+This is conceptually aligned with ADR-0020, but event ownership remains separate: teller-session variance continues to use `teller.drawer.variance.posted`, while Cash-domain count variance uses `cash.variance.posted`.
 
-### 9.3 Future external cash shipment
+### 9.3 Accepted external cash shipment receipt
+
+ADR-0035 accepts a narrow receipt command for physical cash that has already arrived at an active branch vault.
+
+Command:
+
+```text
+Cash::Commands::ReceiveExternalCashShipment
+  destination_location: branch vault
+  amount_minor_units: 5000000
+  currency: USD
+  business_date: current open day
+  actor_id: branch supervisor or operations user
+  external_source: Federal Reserve or correspondent bank
+  shipment_reference: source shipment id
+```
+
+Operational result:
+
+- Create a completed `cash_movement` with `movement_type: external_shipment_received`.
+- Record and post `cash.shipment.received`.
+- Increase branch vault custody balance through the Cash balance projector.
+
+Posting outline:
+
+```text
+Dr 1110 Cash in Vaults
+Cr 1130 Due from Correspondent Banks
+```
+
+### 9.4 Future external cash shipment dispatch
 
 Command:
 
@@ -349,8 +379,9 @@ The first implementation slice should include:
 - cash counts for vault and drawer locations
 - cash variance records and supervisor approval
 - no-GL `cash.movement.completed` and `cash.count.recorded` event catalog entries
-- optional GL variance posting only through an explicit posting rule
+- `cash.variance.posted` through an explicit posting rule
 - cash position and reconciliation queries
+- read-only EOD warning evidence for unresolved Cash-domain exceptions
 
 ### Deferred
 
@@ -358,8 +389,8 @@ The following are post-MVP unless a selected branch story requires them earlier:
 
 - ATM cash compartments and replenishment
 - denomination, strap, bundle, roll, and coin tracking
-- external cash shipments to/from Federal Reserve or correspondent banks
-- carrier workflows and shipment settlement
+- outbound external cash shipment dispatch
+- carrier workflows, shipment lifecycle state, correction workflows, and settlement matching
 - multi-branch or multi-entity cash accounting
 - branch-scoped business dates
 - cash forecasting and liquidity optimization
@@ -397,7 +428,7 @@ Neutral:
 | :--- | :--- |
 | Cash subledger becomes a second GL | Keep GL reporting derived only from `journal_lines`; cash balances are custody projections. |
 | Internal transfers accidentally post GL | Explicitly mark internal vault/drawer/transit movement as no-GL while remaining within `1110`. |
-| Existing COA meanings drift | Do not redefine `1120`; require a future COA/posting ADR for Fed shipment accounting. |
+| Existing COA meanings drift | Do not redefine `1120`; ADR-0035 uses `1130` for inbound receipt and future shipment accounting needs explicit ADR coverage. |
 | Balance snapshots become independent truth | Require rebuild from movements and counts; test rebuild equivalence. |
 | Dual control is implemented as broad roles only | Use capability checks only for attempt authorization; enforce no-self-approval and thresholds in Cash/Workflow commands. |
 | Teller and Cash both own drawer truth | Teller owns session lifecycle; Cash owns location custody and location balances; link records rather than duplicating responsibility. |
@@ -406,12 +437,12 @@ Neutral:
 
 ## 14. Open Questions
 
-1. Should first-slice vault/drawer transfers use one generic `cash.movement.completed` event type or specific types such as `cash.vault.transfer.completed`?
-2. Should teller-session drawer variance continue using `teller.drawer.variance.posted`, or should Cash introduce `cash.variance.posted` and migrate session variance into it later?
+1. Should later vault/drawer transfer variants continue using one generic `cash.movement.completed` event type or introduce specific types such as `cash.vault.transfer.completed`?
+2. Should teller-session drawer variance ever migrate from `teller.drawer.variance.posted` into Cash, or remain permanently separate?
 3. Should `cash_balances` be one row per location/currency or include a balance kind for future denomination and compartment projections?
 4. What operator capability codes should be seeded for cash movement, cash count, vault approval, and variance approval?
-5. Should EOD readiness block on unresolved cash counts/variances in the first Cash slice, or only after branch vault workflows are fully active?
-6. Which GL account should represent Federal Reserve cash due-from or external cash shipment settlement if BankCORE implements Fed shipment flows?
+5. Should EOD readiness eventually block on unresolved cash counts/variances, or remain read-only evidence?
+6. Which additional GL accounts or settlement records are needed for outbound shipment dispatch, settlement matching, and correction workflows?
 
 ---
 
@@ -421,4 +452,4 @@ BankCORE will model cash inventory and management in a dedicated `Cash` domain.
 
 The Cash domain tracks operational custody through cash locations, movements, counts, variances, and rebuildable balance snapshots. GL remains the financial truth, and any financial impact must flow through `Core::OperationalEvents` and `Core::Posting`.
 
-The first slice is branch-safe cash control: vaults, teller drawers, internal transfers, counts, variances, and reconciliation. ATM cash, denomination tracking, and external Fed/correspondent shipment accounting are target-model extensions that require follow-up implementation decisions.
+The first slice is branch-safe cash control: vaults, teller drawers, internal transfers, counts, variances, reconciliation, and read-only EOD warning evidence. ADR-0035 adds a narrow inbound external shipment receipt path. ATM cash, denomination tracking, outbound external shipment lifecycle, settlement matching, and EOD cash blocking policy remain follow-up decisions.

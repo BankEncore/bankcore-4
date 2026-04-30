@@ -19,7 +19,14 @@ module Core
         end
 
         NSF_DENIED = "overdraft.nsf_denied"
-        CONTROL_EVENT_TYPES = %w[override.requested override.approved overdraft.nsf_denied].freeze
+        CONTROL_EVENT_TYPES = %w[
+          override.requested
+          override.approved
+          overdraft.nsf_denied
+          account.restricted
+          account.unrestricted
+          account.closed
+        ].freeze
 
         def self.call(event_type:, channel:, idempotency_key:, reference_id:, actor_id: nil, business_date: nil,
                       amount_minor_units: nil, currency: nil, source_account_id: nil, destination_account_id: nil,
@@ -31,6 +38,7 @@ module Core
           end
           raise InvalidRequest, "reference_id is required" if reference_id.blank?
           validate_nsf_denied!(type, amount_minor_units, currency, source_account_id, destination_account_id, reference_id)
+          validate_account_control!(type, channel, source_account_id, reference_id)
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
           begin
@@ -137,6 +145,30 @@ module Core
           end
         end
         private_class_method :validate_nsf_denied!
+
+        def self.validate_account_control!(type, channel, source_account_id, reference_id)
+          return unless %w[account.restricted account.unrestricted account.closed].include?(type)
+
+          raise InvalidRequest, "#{type} may only use channel branch" unless channel.to_s == "branch"
+          raise InvalidRequest, "source_account_id is required for #{type}" if source_account_id.blank?
+          raise InvalidRequest, "reference_id must be numeric for #{type}" unless reference_id.to_s.match?(/\A\d+\z/)
+
+          account = Accounts::Models::DepositAccount.find_by(id: source_account_id)
+          raise InvalidRequest, "source_account_id not found" if account.nil?
+
+          if type == "account.closed"
+            lifecycle = Accounts::Models::AccountLifecycleEvent.find_by(id: reference_id.to_i)
+            unless lifecycle&.deposit_account_id == source_account_id.to_i
+              raise InvalidRequest, "reference_id must identify an account lifecycle event for this account"
+            end
+          else
+            restriction = Accounts::Models::AccountRestriction.find_by(id: reference_id.to_i)
+            unless restriction&.deposit_account_id == source_account_id.to_i
+              raise InvalidRequest, "reference_id must identify an account restriction for this account"
+            end
+          end
+        end
+        private_class_method :validate_account_control!
 
         def self.handle_existing(existing, incoming_fp)
           existing_fp = fingerprint(

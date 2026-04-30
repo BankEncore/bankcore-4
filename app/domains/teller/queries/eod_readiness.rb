@@ -22,6 +22,22 @@ module Teller
           business_date: business_date
         ).count
 
+        pending_cash_movements = Cash::Models::CashMovement.where(
+          status: Cash::Models::CashMovement::STATUS_PENDING_APPROVAL,
+          business_date: business_date
+        ).count
+        unresolved_cash_variances = Cash::Models::CashVariance.where(
+          status: [
+            Cash::Models::CashVariance::STATUS_PENDING_APPROVAL,
+            Cash::Models::CashVariance::STATUS_APPROVED
+          ],
+          business_date: business_date
+        ).count
+        cash_required_counts_missing = 0
+        cash_warnings = []
+        cash_warnings << "pending_cash_movements" if pending_cash_movements.positive?
+        cash_warnings << "unresolved_cash_variances" if unresolved_cash_variances.positive?
+
         eod_ready = balance.balanced && open_count.zero? && pending_events.zero?
 
         {
@@ -34,6 +50,10 @@ module Teller
           open_teller_sessions_count: open_count,
           all_sessions_closed: open_count.zero?,
           pending_operational_events_count: pending_events,
+          pending_cash_movements_count: pending_cash_movements,
+          unresolved_cash_variances_count: unresolved_cash_variances,
+          required_cash_counts_missing_count: cash_required_counts_missing,
+          cash_eod_warnings: cash_warnings,
           trial_balance_row_count: rows.size,
           eod_ready: eod_ready
         }

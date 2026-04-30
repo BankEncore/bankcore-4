@@ -232,6 +232,82 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_equal Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED, reversal.status
   end
 
+  test "supervisor can restrict release and close account from branch servicing" do
+    internal_login!(username: "csr-supervisor")
+
+    get branch_new_account_restriction_path(@account)
+    assert_response :success
+    assert_includes response.body, "Restrict account"
+
+    post branch_account_restrictions_path(@account), params: {
+      restriction: {
+        restriction_type: "watch_only",
+        reason_code: "support_review",
+        reason_description: "Documented customer review",
+        effective_on: "2026-09-10",
+        idempotency_key: "branch-watch-only"
+      }
+    }
+    assert_redirected_to branch_servicing_deposit_account_path(@account)
+    follow_redirect!
+    assert_includes response.body, "Account restrictions"
+    assert_includes response.body, "watch_only"
+
+    restriction = Accounts::Models::AccountRestriction.find_by!(idempotency_key: "branch-watch-only")
+    assert_equal "account.restricted", restriction.restricted_operational_event.event_type
+
+    post branch_release_account_restriction_path(@account, restriction), params: {
+      idempotency_key: "branch-release-watch"
+    }
+    assert_redirected_to branch_servicing_deposit_account_path(@account)
+    assert_equal Accounts::Models::AccountRestriction::STATUS_RELEASED, restriction.reload.status
+    assert_equal "account.unrestricted", restriction.unrestricted_operational_event.event_type
+
+    get branch_close_account_path(@account)
+    assert_response :success
+    assert_includes response.body, "Close account"
+
+    post branch_close_account_path(@account), params: {
+      account_close: {
+        reason_code: "customer_request",
+        reason_description: "Customer requested close",
+        effective_on: "2026-09-10",
+        idempotency_key: "branch-close-account"
+      }
+    }
+    assert_redirected_to branch_servicing_deposit_account_path(@account)
+    follow_redirect!
+    assert_includes response.body, "closed"
+    assert_equal Accounts::Models::DepositAccount::STATUS_CLOSED, @account.reload.status
+    assert_equal "account.closed", Accounts::Models::AccountLifecycleEvent.find_by!(idempotency_key: "branch-close-account").operational_event.event_type
+  end
+
+  test "supervisor can update party contact with party-owned audit evidence" do
+    internal_login!(username: "csr-supervisor")
+
+    get branch_new_party_contact_path(@party)
+    assert_response :success
+    assert_includes response.body, "Update contact"
+
+    post branch_party_contacts_path(@party), params: {
+      contact: {
+        contact_type: "email",
+        purpose: "primary",
+        value: "member@example.test",
+        effective_on: "2026-09-10",
+        idempotency_key: "branch-contact-email"
+      }
+    }
+    assert_redirected_to branch_customer_path(@party)
+    follow_redirect!
+    assert_includes response.body, "member@example.test"
+    assert_includes response.body, "Contact audit"
+
+    audit = Party::Models::PartyContactAudit.find_by!(idempotency_key: "branch-contact-email")
+    assert_equal "party_emails", audit.contact_table
+    assert_equal @supervisor.id, audit.actor_id
+  end
+
   private
 
   def fund_account!(amount:, key:)

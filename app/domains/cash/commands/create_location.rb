@@ -14,6 +14,7 @@ module Cash
           operator: actor,
           operating_unit_id: operating_unit_id
         )
+        authorize_actor!(actor, location_type, operating_unit) if actor.present?
 
         if actor_id.present? && responsible_operator_id.blank?
           responsible_operator_id = actor_id if location_type.to_s == Cash::Models::CashLocation::TYPE_TELLER_DRAWER
@@ -39,7 +40,32 @@ module Cash
         end
       rescue ActiveRecord::RecordInvalid => e
         raise InvalidRequest, e.record.errors.full_messages.to_sentence
+      rescue Workspace::Authorization::Forbidden => e
+        raise InvalidRequest, e.message
       end
+
+      def self.authorize_actor!(actor, location_type, operating_unit)
+        capabilities = Workspace::Authorization::CapabilityResolver.capabilities_for(
+          operator: actor,
+          scope: operating_unit
+        )
+        required = if location_type.to_s == Cash::Models::CashLocation::TYPE_TELLER_DRAWER
+          [
+            Workspace::Authorization::CapabilityRegistry::CASH_LOCATION_MANAGE,
+            Workspace::Authorization::CapabilityRegistry::CASH_DRAWER_MANAGE,
+            Workspace::Authorization::CapabilityRegistry::SYSTEM_CONFIGURE
+          ]
+        else
+          [
+            Workspace::Authorization::CapabilityRegistry::CASH_LOCATION_MANAGE,
+            Workspace::Authorization::CapabilityRegistry::SYSTEM_CONFIGURE
+          ]
+        end
+        return if (capabilities & required).any?
+
+        raise Workspace::Authorization::Forbidden, "operator is not authorized for #{required.join(' or ')}"
+      end
+      private_class_method :authorize_actor!
 
       def self.find_existing_active(location_type, operating_unit_id, drawer_code)
         scope = Cash::Models::CashLocation.active.where(

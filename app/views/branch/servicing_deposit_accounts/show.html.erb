@@ -13,6 +13,12 @@
     <% if @can_place_holds %>
       <%= link_to "Place hold", branch_new_account_hold_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
     <% end %>
+    <% if can_maintain_account? %>
+      <%= link_to "Restrict account", branch_new_account_restriction_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <% if @account.status == Accounts::Models::DepositAccount::STATUS_OPEN %>
+        <%= link_to "Close account", branch_close_account_path(@account), class: "rounded border border-red-300 px-4 py-2 font-medium text-red-700" %>
+      <% end %>
+    <% end %>
   </nav>
 </section>
 
@@ -71,6 +77,83 @@
       <%= link_to "Admin product detail", admin_deposit_product_path(@profile.product), class: "mt-4 inline-block rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700" %>
     <% end %>
   </div>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Account restrictions</h2>
+  </div>
+  <% if @profile.restriction_history.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Type</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3">Reason</th>
+            <th class="px-5 py-3">Effective</th>
+            <th class="px-5 py-3">Released</th>
+            <th class="px-5 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @profile.restriction_history.each do |restriction| %>
+            <tr>
+              <td class="px-5 py-3 font-medium"><%= restriction.restriction_type %></td>
+              <td class="px-5 py-3"><%= restriction.status %></td>
+              <td class="px-5 py-3"><%= restriction.reason_code %></td>
+              <td class="px-5 py-3"><%= branch_date(restriction.effective_on) %></td>
+              <td class="px-5 py-3"><%= restriction.released_on ? branch_date(restriction.released_on) : "Active" %></td>
+              <td class="px-5 py-3">
+                <% if restriction.active? && can_maintain_account? %>
+                  <%= button_to "Release",
+                    branch_release_account_restriction_path(@account, restriction),
+                    method: :post,
+                    class: "rounded border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700" %>
+                <% else %>
+                  <span class="text-slate-400">None</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="px-5 py-4 text-sm text-slate-500">No account restrictions recorded.</p>
+  <% end %>
+</section>
+
+<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Lifecycle history</h2>
+  </div>
+  <% if @profile.lifecycle_events.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Action</th>
+            <th class="px-5 py-3">Reason</th>
+            <th class="px-5 py-3">Effective</th>
+            <th class="px-5 py-3">Event</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @profile.lifecycle_events.each do |entry| %>
+            <tr>
+              <td class="px-5 py-3 font-medium"><%= entry.action %></td>
+              <td class="px-5 py-3"><%= entry.reason_code %></td>
+              <td class="px-5 py-3"><%= branch_date(entry.effective_on) %></td>
+              <td class="px-5 py-3"><%= entry.operational_event_id || "Pending link" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="px-5 py-4 text-sm text-slate-500">No lifecycle events recorded.</p>
+  <% end %>
 </section>
 
 <section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">

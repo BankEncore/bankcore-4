@@ -142,8 +142,7 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     )
     vault = Cash::Commands::CreateLocation.call(
       location_type: "branch_vault",
-      operating_unit_id: operating_unit.id,
-      actor_id: operator.id
+      operating_unit: operating_unit
     )
     movement = Cash::Models::CashMovement.create!(
       destination_cash_location: vault,
