@@ -9,18 +9,53 @@
       <div><dt class="font-medium text-slate-500">Record outcome</dt><dd><%= outcome %></dd></div>
       <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= event.channel %></dd></div>
       <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= event.actor&.display_name || event.actor_id || "None" %></dd></div>
+      <div><dt class="font-medium text-slate-500">Operating unit</dt><dd><%= event.operating_unit_id || "None" %></dd></div>
       <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(event.business_date) %></dd></div>
       <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= event.idempotency_key %></dd></div>
-      <div><dt class="font-medium text-slate-500">Account</dt><dd>#<%= event.source_account_id %></dd></div>
+      <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= event.reference_id.presence || "None" %></dd></div>
+      <div><dt class="font-medium text-slate-500">Source account</dt><dd><%= event.source_account_id.present? ? "##{event.source_account_id}" : "None" %></dd></div>
+      <div><dt class="font-medium text-slate-500">Destination account</dt><dd><%= event.destination_account_id.present? ? "##{event.destination_account_id}" : "None" %></dd></div>
+      <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= event.teller_session_id.present? ? "##{event.teller_session_id}" : "None" %></dd></div>
       <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(event.amount_minor_units) %> <%= event.currency %></dd></div>
       <% if post_result.present? %>
         <div><dt class="font-medium text-slate-500">Post outcome</dt><dd><%= post_result[:outcome] %></dd></div>
       <% end %>
+      <div>
+        <dt class="font-medium text-slate-500">Posting batches</dt>
+        <dd><%= event.posting_batches.map { |batch| "##{batch.id}" }.presence&.join(", ") || "None" %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-slate-500">Journal entries</dt>
+        <dd><%= event.journal_entries.map { |entry| "##{entry.id}" }.presence&.join(", ") || "None" %></dd>
+      </div>
     </dl>
 
     <% if event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
-      <div class="mt-6">
+      <div class="mt-6 flex flex-wrap gap-3">
         <%= button_to "Post event", branch_operational_event_post_path(event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+        <%= link_to "Event detail", branch_operational_event_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <%= link_to "Trace receipt", branch_operational_event_receipt_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% if event.source_account_id.present? %>
+          <%= link_to "Source account", branch_servicing_deposit_account_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Source activity", branch_account_activity_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% end %>
+        <% if event.destination_account_id.present? %>
+          <%= link_to "Destination account", branch_servicing_deposit_account_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Destination activity", branch_account_activity_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <%= link_to "Event detail", branch_operational_event_path(event), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+        <%= link_to "Trace receipt", branch_operational_event_receipt_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% if event.source_account_id.present? %>
+          <%= link_to "Source account", branch_servicing_deposit_account_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Source activity", branch_account_activity_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% end %>
+        <% if event.destination_account_id.present? %>
+          <%= link_to "Destination account", branch_servicing_deposit_account_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Destination activity", branch_account_activity_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% end %>
       </div>
     <% end %>
   <% end %>

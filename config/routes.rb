@@ -44,6 +44,8 @@ Rails.application.routes.draw do
     post "deposit_accounts/:deposit_account_id/close",
       to: "account_closes#create"
     get "deposit_accounts/:deposit_account_id/statements", to: "account_statements#index", as: :account_statements
+    get "deposit_accounts/:deposit_account_id/fee_assessments/new", to: "fee_assessments#new", as: :new_fee_assessment
+    post "deposit_accounts/:deposit_account_id/fee_assessments", to: "fee_assessments#create", as: :fee_assessments
     get "deposit_accounts/:deposit_account_id/fee_waivers/new", to: "fee_waivers#new", as: :new_fee_waiver
     post "deposit_accounts/:deposit_account_id/fee_waivers", to: "fee_waivers#create", as: :fee_waivers
     resources :teller_sessions, only: [ :new, :create ] do
@@ -60,6 +62,8 @@ Rails.application.routes.draw do
     get "cash/counts/new", to: "cash#new_count", as: :new_cash_count
     post "cash/counts", to: "cash#create_count", as: :cash_counts
     get "cash/locations/:id", to: "cash#show_location", as: :cash_location
+    post "cash/movements/:id/approve", to: "cash#approve_movement", as: :approve_cash_movement
+    post "cash/variances/:id/approve", to: "cash#approve_variance", as: :approve_cash_variance
     resources :deposits, only: [ :new, :create ]
     resources :withdrawals, only: [ :new, :create ]
     resources :transfers, only: [ :new, :create ]
@@ -72,6 +76,7 @@ Rails.application.routes.draw do
     resources :reversals, only: [ :new, :create ]
     resources :overrides, only: [ :new, :create ]
     resources :operational_events, only: [ :index, :show ]
+    get "operational_events/:id/receipt", to: "operational_events#receipt", as: :operational_event_receipt
     post "operational_events/:id/post", to: "operational_event_posts#create", as: :operational_event_post
   end
   get "ops", to: "ops/dashboard#index", as: :ops

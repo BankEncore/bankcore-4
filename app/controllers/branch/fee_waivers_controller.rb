@@ -8,11 +8,13 @@ module Branch
     def new
       @fee_waiver = default_fee_waiver_params
       @fee_event = load_fee_event(@fee_waiver["fee_assessment_event_id"])
+      @preview = preview_for(@fee_event)
     end
 
     def create
       @fee_waiver = fee_waiver_params
       @fee_event = load_fee_event(@fee_waiver[:fee_assessment_event_id])
+      @preview = preview_for(@fee_event)
       Accounts::Services::AccountRestrictionPolicy.assert_routine_servicing_allowed!(deposit_account_id: @account.id)
       result = Core::OperationalEvents::Commands::RecordEvent.call(
         event_type: "fee.waived",
@@ -36,9 +38,11 @@ module Branch
       Accounts::Commands::AccountRestricted,
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message
+      @preview ||= preview_for(@fee_event) if @fee_event.present?
       render :new, status: :unprocessable_entity
     rescue Workspace::Authorization::Forbidden => e
       @error_message = e.message
+      @preview ||= preview_for(@fee_event) if @fee_event.present?
       render :new, status: :forbidden
     end
 
@@ -78,6 +82,15 @@ module Branch
           "fee_assessment_event_id must identify a posted fee.assessed for this account"
       end
       event
+    end
+
+    def preview_for(event)
+      Teller::Queries::TransactionPreview.call(
+        transaction_type: "fee_waiver",
+        deposit_account_id: @account.id,
+        amount_minor_units: event.amount_minor_units,
+        currency: event.currency
+      )
     end
   end
 end

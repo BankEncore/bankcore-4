@@ -69,6 +69,143 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_equal "posted", movement.operational_event.status
   end
 
+  test "branch cash transfer form renders advisory preview" do
+    source = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_BRANCH_VAULT,
+      name: "Source Vault"
+    )
+    destination = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+      name: "Destination Drawer",
+      drawer_code: "cash-preview-drawer"
+    )
+    create_cash_balance!(source, 5_000)
+    create_cash_balance!(destination, 500)
+
+    internal_login!(username: "branch-forms-supervisor")
+    get "/branch/cash/transfers/new", params: {
+      source_cash_location_id: source.id,
+      destination_cash_location_id: destination.id,
+      amount_minor_units: 1_200
+    }
+
+    assert_response :success
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Source cash location"
+    assert_includes response.body, "Destination cash location"
+    assert_includes response.body, "Projected cash balance"
+
+    post "/branch/cash/transfers", params: {
+      cash_transfer: {
+        source_cash_location_id: source.id,
+        destination_cash_location_id: destination.id,
+        amount_minor_units: 1_200,
+        reason_code: "drawer_funding",
+        idempotency_key: "branch-cash-transfer-result"
+      }
+    }
+    assert_response :created
+    assert_includes response.body, "Cash movement recorded"
+    assert_includes response.body, "Cash movement"
+    assert_includes response.body, "Approval required"
+  end
+
+  test "branch supervisor panel approves cash movement with inline credentials" do
+    source = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_BRANCH_VAULT,
+      name: "Inline Source Vault"
+    )
+    destination = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+      name: "Inline Destination Drawer",
+      drawer_code: "inline-cash-approval"
+    )
+    create_cash_balance!(source, 4_000)
+    create_cash_balance!(destination, 0)
+    movement = Cash::Commands::TransferCash.call(
+      source_cash_location_id: source.id,
+      destination_cash_location_id: destination.id,
+      amount_minor_units: 1_000,
+      actor_id: @teller.id,
+      idempotency_key: "branch-inline-cash-movement"
+    )
+
+    internal_login!(username: "branch-forms-teller")
+    get "/branch#supervisor"
+    assert_response :success
+    assert_includes response.body, "Supervisor control catalog"
+    assert_includes response.body, "Approve cash movement"
+
+    post branch_approve_cash_movement_path(movement), params: {
+      cash_movement_approval: {
+        supervisor_username: "branch-forms-supervisor",
+        supervisor_password: "password123"
+      }
+    }
+
+    assert_redirected_to "/branch#supervisor"
+    assert_equal Cash::Models::CashMovement::STATUS_COMPLETED, movement.reload.status
+    assert_equal @supervisor.id, movement.approving_actor_id
+    assert_equal "cash.movement.completed", movement.operational_event.event_type
+  end
+
+  test "branch cash movement inline approval preserves no self approval" do
+    source = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_BRANCH_VAULT,
+      name: "Self Approval Source Vault"
+    )
+    destination = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+      name: "Self Approval Destination Drawer",
+      drawer_code: "self-cash-approval"
+    )
+    create_cash_balance!(source, 4_000)
+    movement = Cash::Commands::TransferCash.call(
+      source_cash_location_id: source.id,
+      destination_cash_location_id: destination.id,
+      amount_minor_units: 1_000,
+      actor_id: @supervisor.id,
+      idempotency_key: "branch-inline-cash-self-approval"
+    )
+
+    internal_login!(username: "branch-forms-teller")
+    post branch_approve_cash_movement_path(movement), params: {
+      cash_movement_approval: {
+        supervisor_username: "branch-forms-supervisor",
+        supervisor_password: "password123"
+      }
+    }
+
+    assert_redirected_to "/branch#supervisor"
+    assert_match(/approver must not be the initiator/i, flash[:alert].to_s)
+    assert_equal Cash::Models::CashMovement::STATUS_PENDING_APPROVAL, movement.reload.status
+  end
+
+  test "branch cash count renders result envelope" do
+    location = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+      name: "Count Drawer",
+      drawer_code: "count-result-drawer"
+    )
+    create_cash_balance!(location, 2_500)
+
+    internal_login!(username: "branch-forms-supervisor")
+    post "/branch/cash/counts", params: {
+      cash_count: {
+        cash_location_id: location.id,
+        counted_amount_minor_units: 2_750,
+        expected_amount_minor_units: 2_500,
+        idempotency_key: "branch-cash-count-result"
+      }
+    }
+
+    assert_response :created
+    assert_includes response.body, "Cash count recorded"
+    assert_includes response.body, "Cash variance"
+    assert_includes response.body, "Variance approval required"
+    assert_includes response.body, "Trace receipt"
+  end
+
   test "party creation redirects to open account form and unsupported party renders validation" do
     internal_login!(username: "branch-forms-teller")
 
@@ -147,6 +284,18 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     session = open_session!
     internal_login!(username: "branch-forms-teller")
 
+    get "/branch/deposits/new", params: {
+      deposit_account_id: account.id,
+      teller_session_id: session.id,
+      amount_minor_units: 1_500
+    }
+    assert_response :success
+    assert_includes response.body, "deposit[deposit_account_number]"
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Event type"
+    assert_includes response.body, "Cash in"
+    assert_includes response.body, "Projected expected drawer cash"
+
     post "/branch/deposits", params: {
       deposit: transaction_params(account: account, session: session, amount: 3_000, key: "branch-deposit-post", record_and_post: "1")
     }
@@ -155,6 +304,23 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-deposit-post")
     assert_equal "posted", event.status
     assert_includes response.body, "Post outcome"
+    assert_includes response.body, "Posting batches"
+    assert_includes response.body, "Journal entries"
+    assert_includes response.body, "Trace receipt"
+
+    post "/branch/deposits", params: {
+      deposit: {
+        deposit_account_number: account.account_number,
+        amount_minor_units: 750,
+        currency: "USD",
+        teller_session_id: session.id,
+        idempotency_key: "branch-deposit-number-lookup",
+        record_and_post: "1"
+      }
+    }
+    assert_response :created
+    number_lookup_event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-deposit-number-lookup")
+    assert_equal account.id, number_lookup_event.source_account_id
 
     post "/branch/deposits", params: {
       deposit: transaction_params(account: account, session: nil, amount: 1_000, key: "branch-deposit-no-session")
@@ -193,6 +359,15 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     session = open_session!
     internal_login!(username: "branch-forms-teller")
 
+    get "/branch/withdrawals/new", params: {
+      deposit_account_id: account.id,
+      teller_session_id: session.id,
+      amount_minor_units: 5_000
+    }
+    assert_response :success
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Projected available balance would be negative"
+
     post "/branch/withdrawals", params: {
       withdrawal: transaction_params(account: account, session: session, amount: 5_000, key: "branch-withdrawal-nsf")
     }
@@ -204,6 +379,43 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_equal @teller.default_operating_unit_id, denial.operating_unit_id
     assert_includes response.body, "Denial event"
     assert_includes response.body, "Fee event"
+  end
+
+  test "transfer form uses shared envelope and renders trace output" do
+    source = funded_account!(amount: 10_000)
+    destination = open_account!
+    internal_login!(username: "branch-forms-teller")
+
+    get "/branch/transfers/new", params: {
+      source_account_id: source.id,
+      destination_account_id: destination.id,
+      amount_minor_units: 2_500
+    }
+    assert_response :success
+    assert_includes response.body, "transfer[source_account_id]"
+    assert_includes response.body, "transfer[destination_account_id]"
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Source account available"
+    assert_includes response.body, "Destination account available"
+
+    post "/branch/transfers", params: {
+      transfer: {
+        source_account_id: source.id,
+        destination_account_id: destination.id,
+        amount_minor_units: 2_500,
+        currency: "USD",
+        idempotency_key: "branch-transfer-post",
+        record_and_post: "1"
+      }
+    }
+
+    assert_response :created
+    event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-transfer-post")
+    assert_equal "posted", event.status
+    assert_includes response.body, "Source account"
+    assert_includes response.body, "Destination account"
+    assert_includes response.body, "Posting batches"
+    assert_includes response.body, "Journal entries"
   end
 
   test "existing teller json flow remains unchanged" do
@@ -246,6 +458,25 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     )
     Core::Posting::Commands::PostEvent.call(operational_event_id: result[:event].id)
     account
+  end
+
+  def create_cash_location!(location_type:, name:, drawer_code: nil)
+    Cash::Models::CashLocation.create!(
+      location_type: location_type,
+      operating_unit: Organization::Services::DefaultOperatingUnit.branch,
+      drawer_code: drawer_code,
+      name: name,
+      currency: "USD",
+      status: Cash::Models::CashLocation::STATUS_ACTIVE
+    )
+  end
+
+  def create_cash_balance!(location, amount_minor_units)
+    Cash::Models::CashBalance.create!(
+      cash_location: location,
+      currency: "USD",
+      amount_minor_units: amount_minor_units
+    )
   end
 
   def transaction_params(account:, session:, amount:, key:, record_and_post: "0")

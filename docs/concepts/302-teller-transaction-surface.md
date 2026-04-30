@@ -98,20 +98,125 @@ Each teller transaction form should capture only the fields required by the unde
 
 `person_served` is useful operational context, but it should not imply ownership, authority, KYC, or signer rights without an Accounts/Party authority model.
 
+### Standard Form Envelope
+
+The Branch HTML forms and JSON `/teller` requests should keep a predictable shape without forcing every transaction into one generic model. Each form should have:
+
+1. A **common control envelope** for actor/session/idempotency behavior.
+2. A **transaction-specific payload** for account, event, hold, or Cash fields.
+3. A **result envelope** that exposes durable trace evidence after commit.
+
+The common control envelope is:
+
+| Field | Required | Applies to | Notes |
+| --- | --- | --- | --- |
+| `idempotency_key` | Yes | All state-changing teller/branch forms | Stable across retries for the same intended action |
+| `amount_minor_units` | Yes for monetary forms | Customer money movement, fees, holds, Cash movement/count variance inputs | Amounts remain integer minor units |
+| `currency` | Yes for monetary forms | Customer money movement and Cash forms | Current MVP is USD, but currency stays explicit |
+| `teller_session_id` | Yes for teller cash activity when policy requires it | Cash deposit, cash withdrawal | Not required for account-to-account transfer or non-cash Branch servicing |
+| `record_and_post` | Optional | Financial operational-event forms | Allows record-only review or immediate posting; not used for Cash custody commands |
+| `reference_id` / memo / reason | Optional unless command requires it | Fees, holds, reversals, servicing actions, future receipts | Support context only; should not drive posting rules |
+| `operating_unit_id` | Usually resolved, not user-entered | Staff-originated actions | Resolve from current operator/session/scope; do not expose as routine teller input |
+| `actor_id` | Resolved, not user-entered | All staff actions | Comes from current operator or `X-Operator-Id` |
+| `channel` | Resolved, not user-entered for Branch forms | Branch HTML and JSON `/teller` | Branch HTML may intentionally record teller-channel cash events; controllers own that choice |
+
+Transaction-specific payloads should stay narrow:
+
+| Form family | Scope key | Required payload | Existing surface |
+| --- | --- | --- | --- |
+| Cash deposit | `deposit` | `deposit_account_id`, `amount_minor_units`, `currency`, `teller_session_id`, `idempotency_key`, optional `record_and_post` | `Branch::DepositsController`; JSON `/teller/operational_events` |
+| Cash withdrawal | `withdrawal` | `deposit_account_id`, `amount_minor_units`, `currency`, `teller_session_id`, `idempotency_key`, optional `record_and_post` | `Branch::WithdrawalsController`; JSON `/teller/operational_events` |
+| Account transfer | `transfer` | `source_account_id`, `destination_account_id`, `amount_minor_units`, `currency`, `idempotency_key`, optional `record_and_post` | `Branch::TransfersController`; JSON `/teller/operational_events` |
+| Hold placement | `hold` / account hold form | `deposit_account_id`, `amount_minor_units`, `currency`, hold type/reason/expiration where supported, `idempotency_key` | Branch hold surfaces; JSON `/teller/holds` |
+| Hold release | `hold_release` | `hold_id`, `idempotency_key` | Branch hold release surfaces; JSON `/teller/holds/release` |
+| Reversal | `reversal` | original event id, reason/reference where supported, `idempotency_key` | Branch/JSON reversal surfaces |
+| Teller session open | `teller_session` | `drawer_code` where supplied | Branch/JSON teller session surfaces |
+| Teller session close | `teller_session_close` | `teller_session_id`, `actual_cash_minor_units` or equivalent close count fields | Branch/JSON teller session close surfaces |
+| Cash movement | `cash_transfer` | `source_cash_location_id`, `destination_cash_location_id`, `amount_minor_units`, `reason_code`, `idempotency_key` | Branch/JSON Cash transfer surfaces |
+| Cash count | `cash_count` | `cash_location_id`, `counted_amount_minor_units`, optional `expected_amount_minor_units`, `idempotency_key` | Branch/JSON Cash count surfaces |
+
+The result envelope should be consistent even when the underlying command differs:
+
+| Result field | Meaning |
+| --- | --- |
+| `outcome` | Created, replayed, posted, denied, pending approval, or similar command outcome |
+| `operational_event_id` | Present when an operational event is recorded |
+| `event_type` / `event_status` | Event identity and lifecycle status |
+| `posting_batch_ids` / `journal_entry_ids` | Present when the event has posted |
+| `cash_movement_id` / `cash_count_id` / `cash_variance_id` | Present for Cash custody workflows |
+| `business_date` | Operational business date used by the command |
+| `teller_session_id` | Present for session-bound teller cash activity |
+| `operating_unit_id` | Resolved branch/operating-unit scope |
+| `idempotency_key` | Retry trace |
+| `warnings` / `errors` | Human-readable blocking errors or non-blocking warnings |
+
+This envelope should standardize UI behavior and tests, not create a new persistence table. Domain commands remain the write boundary.
+
 ### Real-Time Summary Panel
 
-The teller UI should show a persistent preview panel for cash/account impact:
+The teller UI should show a persistent preview panel for cash/account impact. This panel helps the operator understand what will happen before submit, but it is not a posting engine and must not become a second balance source.
+
+Preview inputs should come from existing read-side contracts:
+
+| Preview source | Existing owner | Use in panel |
+| --- | --- | --- |
+| Teller session status and drawer linkage | `Teller::Models::TellerSession`, `Teller::Queries::BranchSessionDashboard` | Confirm the operator has an open session and identify the active drawer/session context |
+| Expected drawer cash | `Teller::Queries::ExpectedCashForSession` | Show current expected cash and projected expected cash after a deposit or withdrawal |
+| Deposit account available balance | `Accounts::Services::AvailableBalanceMinorUnits` | Show current and projected available balance for withdrawals/transfers where an account is selected |
+| Cash location balance | `Cash::Queries::CashPosition` | Show vault/drawer custody balance for Cash movement forms |
+| Operational event metadata | `Core::OperationalEvents::EventCatalog` | Explain whether the selected transaction is financial, reversible, teller-channel, or no-GL |
+
+The panel should show:
 
 - transaction type
+- selected account or account pair
+- selected teller session and drawer where applicable
 - total cash in
 - total cash out
-- fees
+- fees, if the current form explicitly includes them
 - net cash impact
-- projected teller expected drawer cash
+- current expected drawer cash
+- projected expected drawer cash
+- current account available balance
 - projected account available balance where applicable
+- current source/destination Cash location balance for custody movements
 - warnings and approval requirements
 
-This panel is a preview/read model. It must not become a second source of truth. Final balances and journals come from committed operational events and posting.
+Recommended preview calculations:
+
+| Transaction family | Drawer preview | Account preview | Custody preview |
+| --- | --- | --- | --- |
+| Cash deposit | `expected_drawer_cash + amount` | `available_balance + amount`, before optional holds | No Cash custody projection unless drawer location balance is shown separately |
+| Cash withdrawal | `expected_drawer_cash - amount` | `available_balance - amount` | Warn if drawer custody balance would be insufficient, if policy enforces that |
+| Account transfer | No drawer impact | Source `available_balance - amount`; destination balance may increase after posting | No custody impact |
+| Hold placement | No drawer impact | `available_balance - hold_amount` | No custody impact |
+| Fee assessment | Usually no drawer impact if account-funded | `available_balance - fee_amount` | No custody impact |
+| Fee waiver | No drawer impact | `available_balance + waived_amount` | No custody impact |
+| Vault-to-drawer transfer | No customer account impact | No account impact | Source location decreases; destination location increases |
+| Drawer-to-vault transfer | No customer account impact | No account impact | Source location decreases; destination location increases |
+
+Warnings should be explicit but conservative:
+
+- `blocking`: no open teller session for teller cash transaction
+- `blocking`: selected session is not open
+- `blocking`: account is closed, restricted, or not eligible for the requested command
+- `blocking`: insufficient available balance for withdrawal or transfer unless product policy allows denial/fee flow
+- `blocking`: approval required but current actor lacks capability
+- `blocking`: Cash movement source location lacks sufficient custody balance, where Cash policy enforces it
+- `warning`: transaction may create NSF denial and fee
+- `warning`: transaction exceeds a configured teller/cash movement threshold
+- `warning`: record-only mode will leave a pending event until explicitly posted
+- `warning`: projected values may change if another event posts before submit
+
+The preview is intentionally non-authoritative. Final behavior is determined inside the command transaction:
+
+1. Re-read current account/session/cash state.
+2. Enforce command-level guards and capability checks.
+3. Record the operational event, audit row, or Cash custody record.
+4. Post through `Core::Posting` where applicable.
+5. Return committed trace evidence for the result envelope.
+
+Do not persist preview rows, pre-reserve funds, or treat preview output as a posting promise in the MVP. If later product scope requires reservation, quote locks, denomination-level cash proofing, or formal approval pre-checks, that should be a separate ADR-backed slice.
 
 ### Holds and Availability
 
@@ -158,6 +263,34 @@ Generalized approval queues, maker-checker tables, approval expiration, delegati
 
 Inline supervisor credential prompts may be a UX option, but they should not be the architectural source of approval truth.
 
+### Control Ownership Matrix
+
+MVP controls should stay with the domain that owns the risk. Teller and Branch screens show the decision, but the command enforces it.
+
+| Control | Owning module / command | Capability or guard | MVP behavior |
+| --- | --- | --- | --- |
+| Teller cash session required | `Core::OperationalEvents::Commands::RecordEvent`, `Teller::Commands::OpenSession` | Open `teller_sessions` row; `TELLER_REQUIRE_OPEN_SESSION_FOR_CASH` policy | Cash deposits and withdrawals are blocked without an open teller session when policy is enabled |
+| Debit authorization | `Accounts::Commands::AuthorizeDebit` | Available balance, active holds, restrictions, overdraft policy | Withdrawal/transfer either records the requested event or records `overdraft.nsf_denied` with fee evidence where policy requires |
+| Account restriction and close guards | `Accounts` commands and services | Account status, active restrictions, pending events, active holds | Restricted or closed accounts are rejected by command-level rules, not by UI-only checks |
+| Manual hold placement | `Accounts::Commands::PlaceHold` | `hold.place`; account and amount validation | Hold is no-GL, account-scoped, idempotent, and visible in hold/account reads |
+| Hold release | `Accounts::Commands::ReleaseHold` | `hold.release` | Release is supervisor/capability-gated and remains no-GL |
+| Fee waiver | `Core::OperationalEvents`, `Core::Posting`, Branch fee waiver surface | `fee.waive`; prior posted fee match | Waiver posts as its own financial event and does not mutate the original fee |
+| Reversal | `Core::OperationalEvents::Commands::RecordReversal`, `Core::Posting::Commands::PostEvent` | `reversal.create`; event-type reversibility; hold guards | Reversal creates a new linked `posting.reversal` and equal/opposite journal when allowed |
+| Teller session variance | `Teller::Commands::CloseSession`, `Teller::Commands::ApproveSessionVariance` | `teller_session_variance.approve`; configured variance threshold | Close goes to `pending_supervisor` when variance exceeds threshold; supervisor approval completes it |
+| Optional teller drawer variance GL | `Teller::Services::PostDrawerVarianceToGl`, `Core::Posting` | `TELLER_POST_DRAWER_VARIANCE_TO_GL` | GL posting occurs only when enabled and only through the approved service path |
+| Cash movement approval | `Cash::Commands::TransferCash`, `Cash::Commands::ApproveCashMovement` | `cash.movement.create`, `cash.movement.approve`; no-self-approval | Vault-involved or policy-controlled custody movements require approval; ordinary internal movement remains no-GL |
+| Cash count and variance approval | `Cash::Commands::RecordCashCount`, `Cash::Commands::ApproveCashVariance` | `cash.count.record`, `cash.variance.approve`; no-self-approval | Count creates evidence; approved variance posts `cash.variance.posted` through `Core::Posting` |
+| Business-date close | `Core::BusinessDate::Commands::CloseBusinessDate`, `Teller::Queries::EodReadiness` | `business_date.close`; readiness checks | Business date advances only when readiness passes; close is audit-recorded |
+| Operational event posting | `Core::Posting::Commands::PostEvent` | event state, posting rules, open posting date | Pending financial events post only through the posting command; controllers do not build journals |
+
+Recommended UI treatment:
+
+- Show the missing capability or failed invariant in plain language.
+- Prefer blocking errors for invariant failures and missing required approval.
+- Use warnings only for conditions that can still legitimately proceed, such as record-only mode or stale preview risk.
+- Do not encode no-self-approval or posting eligibility only in views; those checks belong in domain commands.
+- Do not introduce a generic supervisor credential prompt as the source of approval truth. If added later, it should resolve to the same capability-checked command inputs.
+
 ## Search and Retrieval
 
 The teller surface should provide minimal retrieval over existing read models:
@@ -170,6 +303,39 @@ The teller surface should provide minimal retrieval over existing read models:
 - filters by account, event type, reference id, idempotency key, and session where available
 
 Ops-oriented investigation, broad event search, close packages, and exception review remain better suited to the Ops workspace.
+
+## MVP Test Plan
+
+The teller MVP should be proven by a focused set of integration and domain tests. The goal is not to test every screen variation, but to prove that each control boundary and financial invariant survives the teller workflow.
+
+| Test area | Primary evidence | What must be proven |
+| --- | --- | --- |
+| Branch transaction forms | `test/integration/branch_transaction_forms_test.rb` | Deposits, withdrawals, and transfers can record-only or record-and-post; forms preserve idempotency; teller-session policy errors are visible |
+| Teller JSON money flows | `test/integration/teller/teller_requests_test.rb`, operational-event integration tests | Existing JSON `/teller` behavior remains stable while Branch HTML flows wrap the same domain commands |
+| Session cash policy | `test/integration/teller/teller_session_cash_policy_test.rb`, `test/domains/teller/expected_cash_for_session_test.rb` | Cash deposits increase expected drawer cash; withdrawals decrease it; missing/closed sessions are rejected where configured |
+| NSF and available balance | `test/integration/teller/overdraft_nsf_test.rb`, `test/domains/accounts/authorize_debit_test.rb` | Insufficient funds create `overdraft.nsf_denied` evidence and forced fee behavior rather than invalid postings |
+| Holds | `test/integration/teller/holds_deposit_linked_test.rb`, `test/domains/accounts/place_hold_deposit_link_test.rb`, `test/domains/accounts/expire_due_holds_test.rb` | Holds are no-GL, affect available balance, enforce deposit-link rules, and can release/expire through controlled paths |
+| Reversals | `test/domains/core/operational_events/record_reversal_deposit_hold_guard_test.rb`, reversal integration coverage | Reversals create linked compensating events and journals; guarded events are rejected |
+| Fee waiver and servicing controls | `test/integration/branch_customer_servicing_test.rb`, capability tests | Supervisor/capability-gated fee waiver and hold release remain controlled and traceable |
+| Teller variance | `test/integration/teller/teller_session_variance_test.rb`, `test/domains/core/operational_events/record_event_drawer_variance_test.rb` | Variance threshold routes to supervisor approval; optional GL drawer variance posts only when enabled |
+| Cash custody | `test/domains/cash/cash_inventory_test.rb`, `test/integration/teller/cash_inventory_json_test.rb`, Branch cash form coverage | Cash movements update custody balances, enforce approval/no-self-approval, and do not create GL for ordinary internal transfers |
+| Trial balance and EOD readiness | `test/integration/teller/reports_trial_balance_and_eod_test.rb`, `test/integration/ops_eod_and_events_test.rb` | Trial balance and readiness expose pending/open work without mutating financial truth |
+| Authorization surfaces | `test/integration/branch_authorized_surfaces_test.rb`, `test/domains/workspace/capability_resolver_test.rb` | Teller, supervisor, operations, CSR, and admin capabilities gate the intended surfaces |
+
+Minimum end-to-end MVP proof:
+
+1. Open a teller session.
+2. Record and post a cash deposit.
+3. Record and post a cash withdrawal.
+4. Exercise an NSF denial path.
+5. Complete an account transfer.
+6. Place and release a hold.
+7. Reverse an eligible posted event.
+8. Close the teller session with expected cash evidence.
+9. Move cash between vault and drawer and prove ordinary custody movement is no-GL.
+10. Confirm trial balance/EOD readiness reflects unresolved teller work.
+
+Tests should prefer existing domain commands and workspace routes over new generic transaction abstractions. If implementation later adds preview endpoints, tests should assert that previews are advisory and that command execution re-checks state before commit.
 
 ## Post-MVP / Requires ADR
 

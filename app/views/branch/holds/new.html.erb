@@ -6,12 +6,18 @@
 </section>
 
 <%= render "branch/shared/form_error", error_message: @error_message %>
+<%= render "branch/shared/transaction_preview", preview: @preview if @preview.present? %>
 
 <section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
   <%= form_with url: branch_holds_path, scope: :hold, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
     <div>
       <%= form.label :deposit_account_id, "Deposit account id", class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :deposit_account_id, value: @hold["deposit_account_id"] || @hold[:deposit_account_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :deposit_account_number, "Deposit account number", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :deposit_account_number, value: @hold["deposit_account_number"] || @hold[:deposit_account_number], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Use either id or account number.</p>
     </div>
     <div>
       <%= form.label :placed_for_operational_event_id, "Deposit event id (optional)", class: "block text-sm font-medium text-slate-700" %>

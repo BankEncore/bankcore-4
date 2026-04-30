@@ -16,7 +16,17 @@ module Branch
     end
 
     def show
-      @event = Core::OperationalEvents::Models::OperationalEvent.includes(
+      @event = load_event
+    end
+
+    def receipt
+      @event = load_event
+    end
+
+    private
+
+    def load_event
+      Core::OperationalEvents::Models::OperationalEvent.includes(
         :source_account,
         :destination_account,
         :teller_session,
@@ -25,8 +35,6 @@ module Branch
         { posting_batches: :journal_entries }
       ).find(params[:id])
     end
-
-    private
 
     def permitted_query_params
       p = params.permit(

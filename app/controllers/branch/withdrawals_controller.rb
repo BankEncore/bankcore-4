@@ -4,17 +4,20 @@ module Branch
   class WithdrawalsController < ApplicationController
     def new
       @withdrawal = default_form_params("branch-withdrawal")
+      @preview = preview_for(@withdrawal)
     end
 
     def create
       @withdrawal = withdrawal_params
+      @preview = preview_for(@withdrawal)
+      account_id = resolve_deposit_account_id(@withdrawal[:deposit_account_id], @withdrawal[:deposit_account_number])
       result = Accounts::Commands::AuthorizeDebit.call(
         event_type: "withdrawal.posted",
         channel: "teller",
         idempotency_key: @withdrawal[:idempotency_key],
         amount_minor_units: @withdrawal[:amount_minor_units].to_i,
         currency: @withdrawal[:currency],
-        source_account_id: @withdrawal[:deposit_account_id].to_i,
+        source_account_id: account_id.to_i,
         teller_session_id: parse_optional_integer(@withdrawal[:teller_session_id]),
         actor_id: current_operator.id,
         operating_unit_id: current_operating_unit&.id
@@ -35,11 +38,14 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::InvalidRequest,
       Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
-      Core::Posting::Commands::PostEvent::InvalidState => e
+      Core::Posting::Commands::PostEvent::InvalidState,
+      ActiveRecord::RecordNotFound => e
       @error_message = e.message
+      @preview ||= preview_for(@withdrawal || {})
       render :new, status: :unprocessable_entity
     rescue Core::Posting::Commands::PostEvent::NotFound
       @error_message = "Operational event not found for posting"
+      @preview ||= preview_for(@withdrawal || {})
       render :new, status: :not_found
     end
 
@@ -48,7 +54,8 @@ module Branch
     def default_form_params(prefix)
       {
         "deposit_account_id" => params[:deposit_account_id],
-        "amount_minor_units" => nil,
+        "deposit_account_number" => params[:deposit_account_number],
+        "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "teller_session_id" => params[:teller_session_id],
         "idempotency_key" => default_idempotency_key(prefix),
@@ -58,8 +65,23 @@ module Branch
 
     def withdrawal_params
       params.require(:withdrawal).permit(
-        :deposit_account_id, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
+        :deposit_account_id, :deposit_account_number, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
       ).to_h.symbolize_keys
+    end
+
+    def preview_for(attrs)
+      account_id = lookup_deposit_account_id(
+        attrs["deposit_account_id"] || attrs[:deposit_account_id],
+        attrs["deposit_account_number"] || attrs[:deposit_account_number]
+      )
+      Teller::Queries::TransactionPreview.call(
+        transaction_type: "withdrawal",
+        deposit_account_id: account_id,
+        amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units],
+        currency: attrs["currency"] || attrs[:currency],
+        teller_session_id: attrs["teller_session_id"] || attrs[:teller_session_id],
+        record_and_post: attrs["record_and_post"] || attrs[:record_and_post]
+      )
     end
   end
 end

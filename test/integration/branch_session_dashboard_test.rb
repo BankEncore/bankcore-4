@@ -46,8 +46,30 @@ class BranchSessionDashboardTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "drawer-open"
     assert_includes response.body, "drawer-pending"
     assert_includes response.body, "drawer-closed"
+    assert_includes response.body, "Variance is calculated as actual cash minus expected cash at close."
+    assert_includes response.body, "Approval required"
     assert_includes response.body, "+$12.50"
     assert_includes response.body, "-$2.50"
+  end
+
+  test "closing with variance redirects to supervisor evidence" do
+    create_operator_with_credential!(role: "teller", username: "branch-close-variance")
+    session = create_session!(
+      status: "open",
+      drawer_code: "drawer-variance",
+      opened_at: Time.zone.parse("2026-04-24 09:00")
+    )
+
+    internal_login!(username: "branch-close-variance")
+    post close_branch_teller_session_path(session), params: {
+      teller_session_close: { actual_cash_minor_units: 125 }
+    }
+
+    assert_redirected_to "#{branch_path}#supervisor"
+    assert_equal Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR, session.reload.status
+    assert_equal 0, session.expected_cash_minor_units
+    assert_equal 125, session.actual_cash_minor_units
+    assert_equal 125, session.variance_minor_units
   end
 
   test "branch dashboard renders empty states" do

@@ -26,7 +26,7 @@ class BranchAuthorizedSurfacesTest < ActionDispatch::IntegrationTest
     sid = Teller::Models::TellerSession.order(:id).last.id
 
     post "/branch/teller_sessions/#{sid}/close", params: { teller_session_close: { actual_cash_minor_units: 50_000 } }
-    assert_redirected_to "/branch"
+    assert_redirected_to "/branch#supervisor"
     session = Teller::Models::TellerSession.find(sid)
     assert_equal "pending_supervisor", session.status
 
@@ -57,9 +57,34 @@ class BranchAuthorizedSurfacesTest < ActionDispatch::IntegrationTest
 
     post "/branch/teller_sessions/approve_variance",
       params: { teller_session_approve_variance: { teller_session_id: sid } }
-    assert_redirected_to "/branch"
-    assert_match(/variance approval required|required/i, flash[:alert].to_s)
+    assert_redirected_to "/branch#supervisor"
+    assert_match(/inline supervisor credentials are invalid/i, flash[:alert].to_s)
     assert_equal "pending_supervisor", Teller::Models::TellerSession.find(sid).status
+  end
+
+  test "teller can approve session variance with inline supervisor credentials" do
+    internal_login!(username: "branch-surf-teller")
+    post "/branch/teller_sessions", params: { teller_session: { drawer_code: "surf-inline" } }
+    sid = Teller::Models::TellerSession.order(:id).last.id
+    post "/branch/teller_sessions/#{sid}/close", params: { teller_session_close: { actual_cash_minor_units: 25_000 } }
+
+    get "/branch"
+    assert_response :success
+    assert_includes response.body, "Inline supervisor approval"
+
+    post "/branch/teller_sessions/approve_variance",
+      params: {
+        teller_session_approve_variance: {
+          teller_session_id: sid,
+          supervisor_username: "branch-surf-supervisor",
+          supervisor_password: "password123"
+        }
+      }
+
+    assert_redirected_to "/branch#supervisor"
+    session = Teller::Models::TellerSession.find(sid)
+    assert_equal "closed", session.status
+    assert_equal @supervisor.id, session.supervisor_operator_id
   end
 
   test "branch override approved requires override approve capability not only teller role" do

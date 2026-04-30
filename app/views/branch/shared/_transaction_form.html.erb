@@ -1,11 +1,26 @@
 <%= render "branch/shared/form_error", error_message: error_message %>
 
+<% account_fields = local_assigns.fetch(:account_fields, [ [ :deposit_account_id, "Deposit account id", :deposit_account_number ] ]) %>
+<% include_teller_session = local_assigns.fetch(:include_teller_session, true) %>
+<% preview = local_assigns[:preview] %>
+
+<%= render "branch/shared/transaction_preview", preview: preview if preview.present? %>
+
 <section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
   <%= form_with url: path, scope: scope, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
-    <div>
-      <%= form.label :deposit_account_id, "Deposit account id", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :deposit_account_id, value: form_data["deposit_account_id"] || form_data[:deposit_account_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
+    <% account_fields.each do |field_name, label, account_number_field| %>
+      <div>
+        <%= form.label field_name, label, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field field_name, value: form_data[field_name.to_s] || form_data[field_name], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+      <% if account_number_field.present? %>
+        <div>
+          <%= form.label account_number_field, "#{label.sub(/ id\z/i, "")} number", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field account_number_field, value: form_data[account_number_field.to_s] || form_data[account_number_field], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Use either id or account number.</p>
+        </div>
+      <% end %>
+    <% end %>
     <div>
       <%= form.label :amount_minor_units, "Amount minor units", class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :amount_minor_units, value: form_data["amount_minor_units"] || form_data[:amount_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
@@ -14,10 +29,12 @@
       <%= form.label :currency, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :currency, value: form_data["currency"] || form_data[:currency] || "USD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
-    <div>
-      <%= form.label :teller_session_id, "Open teller session id", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :teller_session_id, value: form_data["teller_session_id"] || form_data[:teller_session_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
+    <% if include_teller_session %>
+      <div>
+        <%= form.label :teller_session_id, "Open teller session id", class: "block text-sm font-medium text-slate-700" %>
+        <%= form.text_field :teller_session_id, value: form_data["teller_session_id"] || form_data[:teller_session_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      </div>
+    <% end %>
     <div class="md:col-span-2">
       <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :idempotency_key, value: form_data["idempotency_key"] || form_data[:idempotency_key], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
@@ -28,6 +45,7 @@
         <%= form.check_box :record_and_post, { checked: ActiveModel::Type::Boolean.new.cast(form_data["record_and_post"] || form_data[:record_and_post]) }, "1", "0" %>
         Record and post immediately
       </label>
+      <p class="mt-1 text-xs text-slate-500">Posting eligibility, account restrictions, and balance guards are rechecked by the command on submit.</p>
     </div>
     <div class="md:col-span-2">
       <%= form.submit submit_label, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
