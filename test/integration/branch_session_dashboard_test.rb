@@ -38,7 +38,8 @@ class BranchSessionDashboardTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", "Branch workspace"
-    assert_includes response.body, "Customer servicing"
+    assert_includes response.body, 'id="csr"'
+    assert_match(/customer servicing/i, response.body)
     assert_includes response.body, "##{open_session.id}"
     assert_includes response.body, "##{pending_session.id}"
     assert_includes response.body, "##{closed_session.id}"

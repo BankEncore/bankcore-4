@@ -19,7 +19,8 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get branch_path
     assert_response :success
-    assert_includes response.body, "Customer servicing"
+    assert_includes response.body, 'id="csr"'
+    assert_match(/customer servicing/i, response.body)
 
     get branch_customers_path(query: "Member")
     assert_response :success
