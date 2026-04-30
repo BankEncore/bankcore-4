@@ -1,0 +1,83 @@
+<section class="mt-6 rounded border border-sky-200 bg-sky-50 p-6 text-sky-950 shadow-sm">
+  <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+    <div>
+      <h2 class="text-xl font-semibold">Advisory preview</h2>
+      <p class="mt-1 text-sm text-sky-800">
+        Preview only. Final balances and posting are re-checked when the transaction is submitted.
+      </p>
+    </div>
+    <span class="rounded bg-white px-3 py-1 text-sm font-medium text-sky-900">
+      <%= preview[:transaction_type].to_s.humanize %>
+    </span>
+  </div>
+
+  <% if preview[:blockers].present? %>
+    <div class="mt-4 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+      <p class="font-semibold">Blocking issues</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <% preview[:blockers].each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if preview[:warnings].present? %>
+    <div class="mt-4 rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+      <p class="font-semibold">Warnings</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <% preview[:warnings].each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+    <% if preview[:teller_session].present? %>
+      <div>
+        <dt class="font-medium text-sky-700">Teller session</dt>
+        <dd>#<%= preview.dig(:teller_session, :id) %> (<%= preview.dig(:teller_session, :status) %>)</dd>
+      </div>
+      <div>
+        <dt class="font-medium text-sky-700">Drawer</dt>
+        <dd><%= preview.dig(:teller_session, :drawer_code).presence || "None" %></dd>
+      </div>
+    <% end %>
+
+    <% if preview[:drawer].present? %>
+      <div>
+        <dt class="font-medium text-sky-700">Current expected drawer cash</dt>
+        <dd><%= branch_money(preview.dig(:drawer, :current_expected_cash_minor_units)) %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-sky-700">Projected expected drawer cash</dt>
+        <dd><%= branch_money(preview.dig(:drawer, :projected_expected_cash_minor_units)) %></dd>
+      </div>
+    <% end %>
+
+    <% preview.fetch(:accounts, {}).each do |role, account| %>
+      <div>
+        <dt class="font-medium text-sky-700"><%= role.to_s.humanize %> account available</dt>
+        <dd>
+          #<%= account[:id] %>:
+          <%= branch_money(account[:current_available_balance_minor_units]) %>
+          to
+          <%= branch_money(account[:projected_available_balance_minor_units]) %>
+        </dd>
+      </div>
+    <% end %>
+
+    <% preview.fetch(:cash_locations, {}).each do |role, location| %>
+      <div>
+        <dt class="font-medium text-sky-700"><%= role.to_s.humanize %> cash location</dt>
+        <dd>
+          #<%= location[:id] %>:
+          <%= branch_money(location[:current_balance_minor_units]) %>
+          to
+          <%= branch_money(location[:projected_balance_minor_units]) %>
+        </dd>
+      </div>
+    <% end %>
+  </dl>
+</section>

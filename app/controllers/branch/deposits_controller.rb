@@ -4,10 +4,12 @@ module Branch
   class DepositsController < ApplicationController
     def new
       @deposit = default_form_params("branch-deposit")
+      @preview = preview_for(@deposit)
     end
 
     def create
       @deposit = deposit_params
+      @preview = preview_for(@deposit)
       result = Core::OperationalEvents::Commands::RecordEvent.call(
         event_type: "deposit.accepted",
         channel: "teller",
@@ -28,9 +30,11 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message
+      @preview ||= preview_for(@deposit || {})
       render :new, status: :unprocessable_entity
     rescue Core::Posting::Commands::PostEvent::NotFound
       @error_message = "Operational event not found for posting"
+      @preview ||= preview_for(@deposit || {})
       render :new, status: :not_found
     end
 
@@ -39,7 +43,7 @@ module Branch
     def default_form_params(prefix)
       {
         "deposit_account_id" => params[:deposit_account_id],
-        "amount_minor_units" => nil,
+        "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "teller_session_id" => params[:teller_session_id],
         "idempotency_key" => default_idempotency_key(prefix),
@@ -51,6 +55,16 @@ module Branch
       params.require(:deposit).permit(
         :deposit_account_id, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
       ).to_h.symbolize_keys
+    end
+
+    def preview_for(attrs)
+      Teller::Queries::TransactionPreview.call(
+        transaction_type: "deposit",
+        deposit_account_id: attrs["deposit_account_id"] || attrs[:deposit_account_id],
+        amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units],
+        currency: attrs["currency"] || attrs[:currency],
+        teller_session_id: attrs["teller_session_id"] || attrs[:teller_session_id]
+      )
     end
   end
 end

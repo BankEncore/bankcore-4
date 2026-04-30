@@ -147,6 +147,15 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     session = open_session!
     internal_login!(username: "branch-forms-teller")
 
+    get "/branch/deposits/new", params: {
+      deposit_account_id: account.id,
+      teller_session_id: session.id,
+      amount_minor_units: 1_500
+    }
+    assert_response :success
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Projected expected drawer cash"
+
     post "/branch/deposits", params: {
       deposit: transaction_params(account: account, session: session, amount: 3_000, key: "branch-deposit-post", record_and_post: "1")
     }
@@ -155,6 +164,8 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-deposit-post")
     assert_equal "posted", event.status
     assert_includes response.body, "Post outcome"
+    assert_includes response.body, "Posting batches"
+    assert_includes response.body, "Journal entries"
 
     post "/branch/deposits", params: {
       deposit: transaction_params(account: account, session: nil, amount: 1_000, key: "branch-deposit-no-session")
@@ -193,6 +204,15 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     session = open_session!
     internal_login!(username: "branch-forms-teller")
 
+    get "/branch/withdrawals/new", params: {
+      deposit_account_id: account.id,
+      teller_session_id: session.id,
+      amount_minor_units: 5_000
+    }
+    assert_response :success
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Projected available balance would be negative"
+
     post "/branch/withdrawals", params: {
       withdrawal: transaction_params(account: account, session: session, amount: 5_000, key: "branch-withdrawal-nsf")
     }
@@ -204,6 +224,43 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_equal @teller.default_operating_unit_id, denial.operating_unit_id
     assert_includes response.body, "Denial event"
     assert_includes response.body, "Fee event"
+  end
+
+  test "transfer form uses shared envelope and renders trace output" do
+    source = funded_account!(amount: 10_000)
+    destination = open_account!
+    internal_login!(username: "branch-forms-teller")
+
+    get "/branch/transfers/new", params: {
+      source_account_id: source.id,
+      destination_account_id: destination.id,
+      amount_minor_units: 2_500
+    }
+    assert_response :success
+    assert_includes response.body, "transfer[source_account_id]"
+    assert_includes response.body, "transfer[destination_account_id]"
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Source account available"
+    assert_includes response.body, "Destination account available"
+
+    post "/branch/transfers", params: {
+      transfer: {
+        source_account_id: source.id,
+        destination_account_id: destination.id,
+        amount_minor_units: 2_500,
+        currency: "USD",
+        idempotency_key: "branch-transfer-post",
+        record_and_post: "1"
+      }
+    }
+
+    assert_response :created
+    event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-transfer-post")
+    assert_equal "posted", event.status
+    assert_includes response.body, "Source account"
+    assert_includes response.body, "Destination account"
+    assert_includes response.body, "Posting batches"
+    assert_includes response.body, "Journal entries"
   end
 
   test "existing teller json flow remains unchanged" do

@@ -4,10 +4,12 @@ module Branch
   class WithdrawalsController < ApplicationController
     def new
       @withdrawal = default_form_params("branch-withdrawal")
+      @preview = preview_for(@withdrawal)
     end
 
     def create
       @withdrawal = withdrawal_params
+      @preview = preview_for(@withdrawal)
       result = Accounts::Commands::AuthorizeDebit.call(
         event_type: "withdrawal.posted",
         channel: "teller",
@@ -37,9 +39,11 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
       Core::Posting::Commands::PostEvent::InvalidState => e
       @error_message = e.message
+      @preview ||= preview_for(@withdrawal || {})
       render :new, status: :unprocessable_entity
     rescue Core::Posting::Commands::PostEvent::NotFound
       @error_message = "Operational event not found for posting"
+      @preview ||= preview_for(@withdrawal || {})
       render :new, status: :not_found
     end
 
@@ -48,7 +52,7 @@ module Branch
     def default_form_params(prefix)
       {
         "deposit_account_id" => params[:deposit_account_id],
-        "amount_minor_units" => nil,
+        "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "teller_session_id" => params[:teller_session_id],
         "idempotency_key" => default_idempotency_key(prefix),
@@ -60,6 +64,16 @@ module Branch
       params.require(:withdrawal).permit(
         :deposit_account_id, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
       ).to_h.symbolize_keys
+    end
+
+    def preview_for(attrs)
+      Teller::Queries::TransactionPreview.call(
+        transaction_type: "withdrawal",
+        deposit_account_id: attrs["deposit_account_id"] || attrs[:deposit_account_id],
+        amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units],
+        currency: attrs["currency"] || attrs[:currency],
+        teller_session_id: attrs["teller_session_id"] || attrs[:teller_session_id]
+      )
     end
   end
 end
