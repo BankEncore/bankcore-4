@@ -34,6 +34,35 @@
   <% end %>
 
   <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+    <% if preview[:event].present? %>
+      <div>
+        <dt class="font-medium text-sky-700">Event type</dt>
+        <dd><%= preview.dig(:event, :event_type) %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-sky-700">Financial impact</dt>
+        <dd>
+          <%= preview.dig(:event, :financial_impact) %>
+          · <%= preview.dig(:event, :posts_to_gl) ? "Posts to GL" : "No GL posting" %>
+        </dd>
+      </div>
+    <% end %>
+
+    <% if preview[:cash_impact].present? %>
+      <div>
+        <dt class="font-medium text-sky-700">Cash in</dt>
+        <dd><%= branch_money(preview.dig(:cash_impact, :cash_in_minor_units)) %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-sky-700">Cash out</dt>
+        <dd><%= branch_money(preview.dig(:cash_impact, :cash_out_minor_units)) %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-sky-700">Net cash impact</dt>
+        <dd><%= branch_money(preview.dig(:cash_impact, :net_cash_impact_minor_units), signed: true) %></dd>
+      </div>
+    <% end %>
+
     <% if preview[:teller_session].present? %>
       <div>
         <dt class="font-medium text-sky-700">Teller session</dt>

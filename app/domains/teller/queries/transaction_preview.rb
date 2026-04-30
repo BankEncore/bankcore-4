@@ -7,7 +7,18 @@ module Teller
       CASH_OUT_TYPES = %w[withdrawal].freeze
       TRANSFER_TYPES = %w[transfer].freeze
       HOLD_TYPES = %w[hold].freeze
+      FEE_ASSESSMENT_TYPES = %w[fee_assessment].freeze
+      FEE_WAIVER_TYPES = %w[fee_waiver].freeze
       CASH_TRANSFER_TYPES = %w[cash_transfer].freeze
+      EVENT_TYPES = {
+        "deposit" => "deposit.accepted",
+        "withdrawal" => "withdrawal.posted",
+        "transfer" => "transfer.completed",
+        "hold" => "hold.placed",
+        "fee_assessment" => "fee.assessed",
+        "fee_waiver" => "fee.waived",
+        "cash_transfer" => "cash.movement.completed"
+      }.freeze
 
       def self.call(...)
         new(...).call
@@ -15,7 +26,7 @@ module Teller
 
       def initialize(transaction_type:, amount_minor_units: nil, currency: "USD", deposit_account_id: nil,
         source_account_id: nil, destination_account_id: nil, teller_session_id: nil,
-        source_cash_location_id: nil, destination_cash_location_id: nil)
+        source_cash_location_id: nil, destination_cash_location_id: nil, record_and_post: nil)
         @transaction_type = transaction_type.to_s
         @amount_minor_units = amount_minor_units.to_i if amount_minor_units.present?
         @currency = currency.presence || "USD"
@@ -25,15 +36,19 @@ module Teller
         @teller_session_id = normalize_id(teller_session_id)
         @source_cash_location_id = normalize_id(source_cash_location_id)
         @destination_cash_location_id = normalize_id(destination_cash_location_id)
+        @record_and_post = record_and_post
         @warnings = []
         @blockers = []
       end
 
       def call
+        append_general_warnings
         {
           transaction_type: transaction_type,
+          event: event_preview,
           amount_minor_units: amount_minor_units,
           currency: currency,
+          cash_impact: cash_impact_preview,
           teller_session: session_preview,
           drawer: drawer_preview,
           accounts: accounts_preview,
@@ -47,7 +62,7 @@ module Teller
 
       attr_reader :transaction_type, :amount_minor_units, :currency, :deposit_account_id, :source_account_id,
         :destination_account_id, :teller_session_id, :source_cash_location_id, :destination_cash_location_id,
-        :warnings, :blockers
+        :record_and_post, :warnings, :blockers
 
       def normalize_id(value)
         return nil if value.blank?
@@ -108,6 +123,10 @@ module Teller
           }.compact
         when *HOLD_TYPES
           { source: account_preview(deposit_account_id, account_delta(-1)) }.compact
+        when *FEE_ASSESSMENT_TYPES
+          { source: account_preview(deposit_account_id, account_delta(-1)) }.compact
+        when *FEE_WAIVER_TYPES
+          { source: account_preview(deposit_account_id, account_delta(1)) }.compact
         else
           {}
         end
@@ -126,7 +145,7 @@ module Teller
 
         current = Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: account.id)
         projected = delta.nil? ? current : current + delta
-        warnings << "Projected available balance would be negative." if projected.negative?
+        warnings << "Projected available balance would be negative; submit may create NSF denial or be rejected by command policy." if projected.negative?
 
         {
           id: account.id,
@@ -175,6 +194,39 @@ module Teller
 
       def teller_cash_transaction?
         CASH_IN_TYPES.include?(transaction_type) || CASH_OUT_TYPES.include?(transaction_type)
+      end
+
+      def event_preview
+        entry = Core::OperationalEvents::EventCatalog.entry_for(EVENT_TYPES[transaction_type])
+        return nil if entry.nil?
+
+        {
+          event_type: entry.event_type,
+          category: entry.category,
+          posts_to_gl: entry.posts_to_gl,
+          reversible_via_posting_reversal: entry.reversible_via_posting_reversal,
+          financial_impact: entry.financial_impact,
+          description: entry.description
+        }
+      end
+
+      def cash_impact_preview
+        cash_in = CASH_IN_TYPES.include?(transaction_type) ? amount_minor_units.to_i : 0
+        cash_out = CASH_OUT_TYPES.include?(transaction_type) ? amount_minor_units.to_i : 0
+        return nil if cash_in.zero? && cash_out.zero?
+
+        {
+          cash_in_minor_units: cash_in,
+          cash_out_minor_units: cash_out,
+          net_cash_impact_minor_units: cash_in - cash_out
+        }
+      end
+
+      def append_general_warnings
+        if record_and_post.to_s == "0" && event_preview&.fetch(:posts_to_gl)
+          warnings << "Record-only mode will leave a pending event until explicitly posted."
+        end
+        warnings << "Projected values may change if another event posts before submit." if amount_minor_units.present?
       end
 
       def drawer_delta

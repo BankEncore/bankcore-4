@@ -15,6 +15,11 @@
       <%= form.text_field :deposit_account_id, value: @hold["deposit_account_id"] || @hold[:deposit_account_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
     <div>
+      <%= form.label :deposit_account_number, "Deposit account number", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.text_field :deposit_account_number, value: @hold["deposit_account_number"] || @hold[:deposit_account_number], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Use either id or account number.</p>
+    </div>
+    <div>
       <%= form.label :placed_for_operational_event_id, "Deposit event id (optional)", class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :placed_for_operational_event_id, value: @hold["placed_for_operational_event_id"] || @hold[:placed_for_operational_event_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>

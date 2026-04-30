@@ -10,14 +10,16 @@ module Branch
     def create
       @transfer = transfer_params
       @preview = preview_for(@transfer)
+      source_account_id = resolve_deposit_account_id(@transfer[:source_account_id], @transfer[:source_account_number])
+      destination_account_id = resolve_deposit_account_id(@transfer[:destination_account_id], @transfer[:destination_account_number])
       result = Accounts::Commands::AuthorizeDebit.call(
         event_type: "transfer.completed",
         channel: "teller",
         idempotency_key: @transfer[:idempotency_key],
         amount_minor_units: @transfer[:amount_minor_units].to_i,
         currency: @transfer[:currency],
-        source_account_id: @transfer[:source_account_id].to_i,
-        destination_account_id: @transfer[:destination_account_id].to_i,
+        source_account_id: source_account_id.to_i,
+        destination_account_id: destination_account_id.to_i,
         actor_id: current_operator.id,
         operating_unit_id: current_operating_unit&.id
       )
@@ -37,7 +39,8 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::InvalidRequest,
       Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
-      Core::Posting::Commands::PostEvent::InvalidState => e
+      Core::Posting::Commands::PostEvent::InvalidState,
+      ActiveRecord::RecordNotFound => e
       @error_message = e.message
       @preview ||= preview_for(@transfer || {})
       render :new, status: :unprocessable_entity
@@ -52,7 +55,9 @@ module Branch
     def default_form_params(prefix)
       {
         "source_account_id" => params[:source_account_id],
+        "source_account_number" => params[:source_account_number],
         "destination_account_id" => params[:destination_account_id],
+        "destination_account_number" => params[:destination_account_number],
         "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "idempotency_key" => default_idempotency_key(prefix),
@@ -62,17 +67,26 @@ module Branch
 
     def transfer_params
       params.require(:transfer).permit(
-        :source_account_id, :destination_account_id, :amount_minor_units, :currency, :idempotency_key, :record_and_post
+        :source_account_id, :source_account_number, :destination_account_id, :destination_account_number, :amount_minor_units, :currency, :idempotency_key, :record_and_post
       ).to_h.symbolize_keys
     end
 
     def preview_for(attrs)
+      source_account_id = lookup_deposit_account_id(
+        attrs["source_account_id"] || attrs[:source_account_id],
+        attrs["source_account_number"] || attrs[:source_account_number]
+      )
+      destination_account_id = lookup_deposit_account_id(
+        attrs["destination_account_id"] || attrs[:destination_account_id],
+        attrs["destination_account_number"] || attrs[:destination_account_number]
+      )
       Teller::Queries::TransactionPreview.call(
         transaction_type: "transfer",
-        source_account_id: attrs["source_account_id"] || attrs[:source_account_id],
-        destination_account_id: attrs["destination_account_id"] || attrs[:destination_account_id],
+        source_account_id: source_account_id,
+        destination_account_id: destination_account_id,
         amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units],
-        currency: attrs["currency"] || attrs[:currency]
+        currency: attrs["currency"] || attrs[:currency],
+        record_and_post: attrs["record_and_post"] || attrs[:record_and_post]
       )
     end
   end

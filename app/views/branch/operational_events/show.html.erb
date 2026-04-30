@@ -23,6 +23,7 @@
   </dl>
 
   <div class="mt-6 flex flex-wrap gap-3">
+    <%= link_to "Trace receipt", branch_operational_event_receipt_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% if @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
       <%= button_to "Post event", branch_operational_event_post_path(@event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
     <% end %>

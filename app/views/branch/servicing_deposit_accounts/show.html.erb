@@ -13,6 +13,7 @@
     <% if @can_place_holds %>
       <%= link_to "Place hold", branch_new_account_hold_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
     <% end %>
+    <%= link_to "Assess fee", branch_new_fee_assessment_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% if can_maintain_account? %>
       <%= link_to "Restrict account", branch_new_account_restriction_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
       <% if @account.status == Accounts::Models::DepositAccount::STATUS_OPEN %>

@@ -26,6 +26,44 @@ module Branch
       value.presence&.to_i
     end
 
+    def resolve_deposit_account_id(account_id, account_number)
+      return account_id if account_id.present?
+      return nil if account_number.blank?
+
+      account = Accounts::Models::DepositAccount.find_by(account_number: account_number.to_s.strip)
+      raise ActiveRecord::RecordNotFound, "deposit account number #{account_number} not found" if account.nil?
+
+      account.id
+    end
+
+    def lookup_deposit_account_id(account_id, account_number)
+      resolve_deposit_account_id(account_id, account_number)
+    rescue ActiveRecord::RecordNotFound
+      nil
+    end
+
+    def inline_supervisor_operator!(attrs, capability_code:, scope: current_operating_unit)
+      username = attrs[:supervisor_username].presence || attrs["supervisor_username"].presence
+      password = attrs[:supervisor_password].presence || attrs["supervisor_password"].presence
+
+      if username.blank? && password.blank? && current_operator&.has_capability?(capability_code, scope: scope)
+        return current_operator
+      end
+
+      credential = Workspace::Models::OperatorCredential.find_for_login(username)
+      unless credential&.authenticate(password)
+        raise Workspace::Authorization::Forbidden, "inline supervisor credentials are invalid"
+      end
+
+      operator = credential.operator
+      Workspace::Authorization::Authorizer.require_capability!(
+        actor_id: operator.id,
+        capability_code: capability_code,
+        scope: scope
+      )
+      operator
+    end
+
     def require_branch_capability!(capability_code, alert: "Supervisor role required")
       return if current_operator&.has_capability?(capability_code, scope: current_operating_unit)
 

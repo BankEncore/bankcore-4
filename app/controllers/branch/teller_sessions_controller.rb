@@ -2,9 +2,6 @@
 
 module Branch
   class TellerSessionsController < ApplicationController
-    before_action -> { require_branch_capability!(Workspace::Authorization::CapabilityRegistry::TELLER_SESSION_VARIANCE_APPROVE, alert: "Teller session variance approval required") },
-      only: [ :approve_variance ]
-
     def new
       @teller_session = { "drawer_code" => params[:drawer_code] }
     end
@@ -29,14 +26,22 @@ module Branch
     def approve_variance
       attrs = approve_variance_params
       teller_session_id = attrs[:teller_session_id].to_i
+      session_record = Teller::Models::TellerSession.find(teller_session_id)
+      supervisor = inline_supervisor_operator!(
+        attrs,
+        capability_code: Workspace::Authorization::CapabilityRegistry::TELLER_SESSION_VARIANCE_APPROVE,
+        scope: session_record.operating_unit
+      )
       session = Teller::Commands::ApproveSessionVariance.call(
         teller_session_id: teller_session_id,
-        supervisor_operator_id: current_operator.id
+        supervisor_operator_id: supervisor.id
       )
       redirect_to branch_path(anchor: "supervisor"), notice: "Approved variance for teller session ##{session.id}."
-    rescue Teller::Commands::ApproveSessionVariance::NotFound => e
+    rescue ActiveRecord::RecordNotFound,
+      Teller::Commands::ApproveSessionVariance::NotFound => e
       redirect_to branch_path(anchor: "supervisor"), alert: e.message
-    rescue Teller::Commands::ApproveSessionVariance::InvalidState => e
+    rescue Teller::Commands::ApproveSessionVariance::InvalidState,
+      Workspace::Authorization::Forbidden => e
       redirect_to branch_path(anchor: "supervisor"), alert: e.message
     end
 
@@ -71,7 +76,9 @@ module Branch
     end
 
     def approve_variance_params
-      params.require(:teller_session_approve_variance).permit(:teller_session_id).to_h.symbolize_keys
+      params.require(:teller_session_approve_variance).permit(
+        :teller_session_id, :supervisor_username, :supervisor_password
+      ).to_h.symbolize_keys
     end
   end
 end

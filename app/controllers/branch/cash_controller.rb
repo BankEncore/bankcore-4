@@ -30,7 +30,9 @@ module Branch
         channel: branch_channel,
         idempotency_key: @cash_transfer[:idempotency_key].presence || default_idempotency_key("cash-transfer")
       )
-      redirect_to branch_cash_path, notice: "Recorded cash movement ##{movement.id}."
+      @cash_result_type = "transfer"
+      @movement = movement
+      render :result, status: :created
     rescue Cash::Commands::TransferCash::Error => e
       @locations = active_locations
       @error_message = e.message
@@ -60,7 +62,7 @@ module Branch
 
     def new_count
       @locations = active_locations
-      @cash_count = {}
+      @cash_count = default_count_params
     end
 
     def create_count
@@ -72,8 +74,9 @@ module Branch
         channel: branch_channel,
         idempotency_key: @cash_count[:idempotency_key].presence || default_idempotency_key("cash-count")
       )
-      message = count.cash_variance ? "Recorded count ##{count.id}; variance requires approval." : "Recorded count ##{count.id}."
-      redirect_to branch_cash_path, notice: message
+      @cash_result_type = "count"
+      @count = count
+      render :result, status: :created
     rescue Cash::Commands::RecordCashCount::Error => e
       @locations = active_locations
       @error_message = e.message
@@ -82,6 +85,43 @@ module Branch
 
     def show_location
       @activity = Cash::Queries::LocationActivity.call(cash_location_id: params[:id].to_i)
+    end
+
+    def approve_movement
+      movement = Cash::Models::CashMovement.find(params[:id])
+      supervisor = inline_supervisor_operator!(
+        approval_params(:cash_movement_approval),
+        capability_code: Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_APPROVE,
+        scope: movement.operating_unit
+      )
+      approved = Cash::Commands::ApproveCashMovement.call(
+        cash_movement_id: movement.id,
+        approving_actor_id: supervisor.id,
+        channel: branch_channel
+      )
+      redirect_to branch_path(anchor: "supervisor"), notice: "Approved cash movement ##{approved.id}."
+    rescue ActiveRecord::RecordNotFound,
+      Cash::Commands::ApproveCashMovement::Error,
+      Workspace::Authorization::Forbidden => e
+      redirect_to branch_path(anchor: "supervisor"), alert: e.message
+    end
+
+    def approve_variance
+      variance = Cash::Models::CashVariance.find(params[:id])
+      supervisor = inline_supervisor_operator!(
+        approval_params(:cash_variance_approval),
+        capability_code: Workspace::Authorization::CapabilityRegistry::CASH_VARIANCE_APPROVE,
+        scope: variance.operating_unit
+      )
+      approved = Cash::Commands::ApproveCashVariance.call(
+        cash_variance_id: variance.id,
+        approving_actor_id: supervisor.id
+      )
+      redirect_to branch_path(anchor: "supervisor"), notice: "Approved cash variance ##{approved.id}."
+    rescue ActiveRecord::RecordNotFound,
+      Cash::Commands::ApproveCashVariance::Error,
+      Workspace::Authorization::Forbidden => e
+      redirect_to branch_path(anchor: "supervisor"), alert: e.message
     end
 
     private
@@ -125,9 +165,24 @@ module Branch
       ).to_h.symbolize_keys
     end
 
+    def default_count_params
+      {
+        "cash_location_id" => params[:cash_location_id],
+        "counted_amount_minor_units" => params[:counted_amount_minor_units],
+        "expected_amount_minor_units" => params[:expected_amount_minor_units],
+        "idempotency_key" => default_idempotency_key("cash-count")
+      }
+    end
+
     def external_shipment_params
       params.require(:cash_shipment).permit(
         :destination_cash_location_id, :amount_minor_units, :external_source, :shipment_reference, :idempotency_key
+      ).to_h.symbolize_keys
+    end
+
+    def approval_params(scope)
+      params.fetch(scope, ActionController::Parameters.new).permit(
+        :supervisor_username, :supervisor_password
       ).to_h.symbolize_keys
     end
   end

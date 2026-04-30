@@ -12,8 +12,9 @@ module Branch
     def create
       @hold = hold_params
       @preview = preview_for(@hold)
+      account_id = resolve_deposit_account_id(@hold[:deposit_account_id], @hold[:deposit_account_number])
       result = Accounts::Commands::PlaceHold.call(
-        deposit_account_id: @hold[:deposit_account_id].to_i,
+        deposit_account_id: account_id.to_i,
         amount_minor_units: @hold[:amount_minor_units].to_i,
         currency: @hold[:currency],
         channel: branch_channel,
@@ -26,7 +27,8 @@ module Branch
       @hold_record = result[:hold]
       @outcome = result[:outcome]
       render :result, status: @outcome == :created ? :created : :ok
-    rescue Accounts::Commands::PlaceHold::InvalidRequest => e
+    rescue Accounts::Commands::PlaceHold::InvalidRequest,
+      ActiveRecord::RecordNotFound => e
       @error_message = e.message
       @preview ||= preview_for(@hold || {})
       render :new, status: :unprocessable_entity
@@ -64,6 +66,7 @@ module Branch
     def default_hold_params(prefix)
       {
         "deposit_account_id" => params[:deposit_account_id],
+        "deposit_account_number" => params[:deposit_account_number],
         "placed_for_operational_event_id" => params[:placed_for_operational_event_id],
         "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
@@ -80,7 +83,7 @@ module Branch
 
     def hold_params
       params.require(:hold).permit(
-        :deposit_account_id, :placed_for_operational_event_id, :amount_minor_units, :currency, :idempotency_key
+        :deposit_account_id, :deposit_account_number, :placed_for_operational_event_id, :amount_minor_units, :currency, :idempotency_key
       ).to_h.symbolize_keys
     end
 
@@ -89,9 +92,13 @@ module Branch
     end
 
     def preview_for(attrs)
+      account_id = lookup_deposit_account_id(
+        attrs["deposit_account_id"] || attrs[:deposit_account_id],
+        attrs["deposit_account_number"] || attrs[:deposit_account_number]
+      )
       Teller::Queries::TransactionPreview.call(
         transaction_type: "hold",
-        deposit_account_id: attrs["deposit_account_id"] || attrs[:deposit_account_id],
+        deposit_account_id: account_id,
         amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units],
         currency: attrs["currency"] || attrs[:currency]
       )

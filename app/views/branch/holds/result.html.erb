@@ -30,6 +30,7 @@
 
   <div class="mt-6 flex flex-wrap gap-3">
     <%= link_to "Event detail", branch_operational_event_path(@event), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <%= link_to "Trace receipt", branch_operational_event_receipt_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% if @event.source_account_id.present? %>
       <%= link_to "Account profile", branch_servicing_deposit_account_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
       <%= link_to "Account holds", branch_account_holds_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>

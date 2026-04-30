@@ -12,8 +12,8 @@
   error_message: @error_message,
   preview: @preview,
   account_fields: [
-    [ :source_account_id, "Source account id" ],
-    [ :destination_account_id, "Destination account id" ]
+    [ :source_account_id, "Source account id", :source_account_number ],
+    [ :destination_account_id, "Destination account id", :destination_account_number ]
   ],
   include_teller_session: false,
   submit_label: "Record transfer" %>

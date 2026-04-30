@@ -98,6 +98,25 @@ module Teller
         assert_equal 1_100, preview.dig(:accounts, :source, :projected_available_balance_minor_units)
       end
 
+      test "previews fee assessment metadata and account impact" do
+        account = open_account!
+        session = Teller::Commands::OpenSession.call(drawer_code: "fee-preview-#{SecureRandom.hex(4)}", operator_id: @operator.id)
+        fund_account!(account, session, 1_500)
+
+        preview = TransactionPreview.call(
+          transaction_type: "fee_assessment",
+          deposit_account_id: account.id,
+          amount_minor_units: 250,
+          currency: "USD",
+          record_and_post: "0"
+        )
+
+        assert_equal "fee.assessed", preview.dig(:event, :event_type)
+        assert_equal "gl_posting", preview.dig(:event, :financial_impact)
+        assert_equal 1_250, preview.dig(:accounts, :source, :projected_available_balance_minor_units)
+        assert_includes preview[:warnings], "Record-only mode will leave a pending event until explicitly posted."
+      end
+
       private
 
       def open_account!

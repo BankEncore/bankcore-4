@@ -1,0 +1,66 @@
+<section class="mt-6 rounded border border-amber-200 bg-white p-5 shadow-sm">
+  <h3 class="text-lg font-semibold text-amber-950">Supervisor control catalog</h3>
+  <p class="mt-1 text-sm text-slate-600">Controls are surfaced here, but each action is still enforced by its owning command.</p>
+
+  <div class="mt-4 grid gap-3 md:grid-cols-2">
+    <% controls.controls.each do |control| %>
+      <div class="rounded border border-slate-200 p-3 text-sm">
+        <div class="font-medium text-slate-950"><%= control.label %></div>
+        <div class="mt-1 text-xs text-slate-500"><%= control.capability_code %> · <%= control.owner_command %></div>
+        <% if control.no_self_approval %>
+          <div class="mt-1 text-xs font-medium text-amber-800">No-self-approval enforced by command.</div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<section class="mt-6 rounded border border-amber-200 bg-white p-5 shadow-sm">
+  <h3 class="text-lg font-semibold text-amber-950">Pending Cash approvals</h3>
+  <% cash_movements = controls.pending.fetch(:cash_movements) %>
+  <% cash_variances = controls.pending.fetch(:cash_variances) %>
+
+  <% if cash_movements.any? || cash_variances.any? %>
+    <div class="mt-4 grid gap-4">
+      <% cash_movements.each do |movement| %>
+        <div class="rounded border border-slate-200 p-4 text-sm">
+          <div class="font-medium">Cash movement #<%= movement.id %> · <%= movement.movement_type %></div>
+          <div class="mt-1 text-slate-600"><%= movement.source_cash_location&.name || "None" %> → <%= movement.destination_cash_location&.name || "None" %> · <%= branch_money(movement.amount_minor_units) %></div>
+          <div class="mt-1 text-xs text-slate-500">Requested by <%= movement.actor&.display_name || movement.actor_id %>; no-self-approval applies.</div>
+          <%= form_with url: branch_approve_cash_movement_path(movement), method: :post, scope: :cash_movement_approval, class: "mt-3" do |form| %>
+            <%= render "branch/shared/inline_supervisor_fields", form: form, scope: :cash_movement_approval %>
+            <%= form.submit "Approve cash movement", class: "mt-3 rounded bg-amber-800 px-3 py-1.5 text-sm font-medium text-white" %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% cash_variances.each do |variance| %>
+        <div class="rounded border border-slate-200 p-4 text-sm">
+          <div class="font-medium">Cash variance #<%= variance.id %> · <%= branch_money(variance.amount_minor_units, signed: true) %></div>
+          <div class="mt-1 text-slate-600"><%= variance.cash_location.name %> · business date <%= branch_date(variance.business_date) %></div>
+          <div class="mt-1 text-xs text-slate-500">Counted by <%= variance.actor&.display_name || variance.actor_id %>; no-self-approval applies.</div>
+          <%= form_with url: branch_approve_cash_variance_path(variance), method: :post, scope: :cash_variance_approval, class: "mt-3" do |form| %>
+            <%= render "branch/shared/inline_supervisor_fields", form: form, scope: :cash_variance_approval %>
+            <%= form.submit "Approve cash variance", class: "mt-3 rounded bg-amber-800 px-3 py-1.5 text-sm font-medium text-white" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="mt-4 text-sm text-slate-600">No Cash approvals are pending.</p>
+  <% end %>
+</section>
+
+<section class="mt-6 rounded border border-amber-200 bg-white p-5 shadow-sm">
+  <h3 class="text-lg font-semibold text-amber-950">Other teller controls</h3>
+  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-3">
+    <div><dt class="font-medium text-slate-500">Active holds</dt><dd><%= controls.pending.fetch(:active_holds).size %> shown</dd></div>
+    <div><dt class="font-medium text-slate-500">Recent reversible events</dt><dd><%= controls.pending.fetch(:reversible_events).size %> shown</dd></div>
+    <div><dt class="font-medium text-slate-500">Pending events</dt><dd><%= controls.pending.fetch(:pending_events).size %> shown</dd></div>
+  </dl>
+  <div class="mt-4 flex flex-wrap gap-2 text-sm">
+    <%= link_to "Release hold", release_branch_holds_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+    <%= link_to "Reversal", new_branch_reversal_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+    <%= link_to "Pending events", branch_operational_events_path(status: Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING), class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+  </div>
+</section>

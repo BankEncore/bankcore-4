@@ -221,13 +221,41 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
   test "supervisor can waive a posted fee through posting flow" do
     fund_account!(amount: 10_000, key: "csr-fee-funding")
+    internal_login!(username: "csr-supervisor")
+
+    get branch_new_fee_assessment_path(@account), params: { amount_minor_units: 500 }
+    assert_response :success
+    assert_includes response.body, "Assess fee"
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "fee.assessed"
+
+    post branch_fee_assessments_path(@account), params: {
+      fee_assessment: {
+        amount_minor_units: 500,
+        currency: "USD",
+        reference_id: "manual-service-fee",
+        idempotency_key: "csr-manual-fee",
+        record_and_post: "1"
+      }
+    }
+
+    assert_response :created
+    manual_fee = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "csr-manual-fee")
+    assert_equal "fee.assessed", manual_fee.event_type
+    assert_equal Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED, manual_fee.status
+    assert_includes response.body, "Trace receipt"
+
+    get branch_operational_event_receipt_path(manual_fee)
+    assert_response :success
+    assert_includes response.body, "Trace receipt"
+    assert_includes response.body, "manual-service-fee"
+
     fee_event = record_and_post_event!(
       event_type: "fee.assessed",
       amount: 1_000,
       key: "csr-fee-assessed"
     )
 
-    internal_login!(username: "csr-supervisor")
     post branch_fee_waivers_path(@account), params: {
       fee_waiver: {
         fee_assessment_event_id: fee_event.id,
