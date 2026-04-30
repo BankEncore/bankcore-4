@@ -32,7 +32,17 @@
             <tr>
               <td class="px-5 py-4">
                 <div class="font-medium text-slate-950">#<%= session.id %></div>
-                <div class="text-xs text-slate-500"><%= session.status.humanize %></div>
+                <% status_classes = case session.status
+                  when Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR
+                    "bg-amber-100 text-amber-900"
+                  when Teller::Models::TellerSession::STATUS_CLOSED
+                    "bg-emerald-100 text-emerald-900"
+                  else
+                    "bg-slate-100 text-slate-700"
+                  end %>
+                <div class="mt-1">
+                  <span class="rounded-full px-2 py-0.5 text-xs font-medium <%= status_classes %>"><%= session.status.humanize %></span>
+                </div>
               </td>
               <td class="px-5 py-4"><%= session.drawer_code.presence || "Default drawer" %></td>
               <td class="px-5 py-4"><%= branch_session_time(session.opened_at) %></td>
@@ -45,8 +55,10 @@
                   <% if session.supervisor_approved_at.present? %>
                     <div><%= session.supervisor_operator&.display_name.presence || "Supervisor" %></div>
                     <div class="text-xs text-slate-500"><%= branch_session_time(session.supervisor_approved_at) %></div>
+                  <% elsif session.status == Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR %>
+                    <span class="font-medium text-amber-800">Approval required</span>
                   <% else %>
-                    <span class="text-slate-500">Not approved</span>
+                    <span class="text-slate-500">Not required</span>
                   <% end %>
                 </td>
                 <% if variance_approve %>
@@ -68,6 +80,9 @@
                   <% expected_cash_minor_units = branch_expected_cash_for(session) %>
                   <div class="mb-2 text-xs text-slate-600">
                     Expected cash: <span class="font-medium text-slate-950"><%= branch_money(expected_cash_minor_units) %></span>
+                  </div>
+                  <div class="mb-2 text-xs text-slate-500">
+                    Variance is calculated as actual cash minus expected cash at close.
                   </div>
                   <%= form_with url: close_branch_teller_session_path(session), scope: :teller_session_close, method: :post, class: "grid gap-2 md:grid-cols-2" do |form| %>
                     <%= form.text_field :actual_cash_minor_units, placeholder: "Actual cash", class: "rounded border border-slate-300 px-2 py-1" %>

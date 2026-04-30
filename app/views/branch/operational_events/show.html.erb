@@ -28,6 +28,12 @@
     <% end %>
     <% if @event.source_account_id.present? %>
       <%= link_to "Account profile", branch_servicing_deposit_account_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Account activity", branch_account_activity_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Account holds", branch_account_holds_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% end %>
+    <% if @event.destination_account_id.present? %>
+      <%= link_to "Destination account", branch_servicing_deposit_account_path(@event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Destination activity", branch_account_activity_path(@event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% end %>
     <% if current_operator.supervisor? && @event.event_type == "fee.assessed" && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
       <%= link_to "Waive fee", branch_new_fee_waiver_path(@event.source_account_id, fee_assessment_event_id: @event.id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>

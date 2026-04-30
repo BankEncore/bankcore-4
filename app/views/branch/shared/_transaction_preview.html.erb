@@ -73,9 +73,8 @@
         <dt class="font-medium text-sky-700"><%= role.to_s.humanize %> cash location</dt>
         <dd>
           #<%= location[:id] %>:
-          <%= branch_money(location[:current_balance_minor_units]) %>
-          to
-          <%= branch_money(location[:projected_balance_minor_units]) %>
+          Current cash balance <%= branch_money(location[:current_balance_minor_units]) %>;
+          Projected cash balance <%= branch_money(location[:projected_balance_minor_units]) %>
         </dd>
       </div>
     <% end %>

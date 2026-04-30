@@ -6,6 +6,7 @@ module Teller
       CASH_IN_TYPES = %w[deposit].freeze
       CASH_OUT_TYPES = %w[withdrawal].freeze
       TRANSFER_TYPES = %w[transfer].freeze
+      HOLD_TYPES = %w[hold].freeze
       CASH_TRANSFER_TYPES = %w[cash_transfer].freeze
 
       def self.call(...)
@@ -105,6 +106,8 @@ module Teller
             source: account_preview(source_account_id, account_delta(-1)),
             destination: account_preview(destination_account_id, account_delta(1))
           }.compact
+        when *HOLD_TYPES
+          { source: account_preview(deposit_account_id, account_delta(-1)) }.compact
         else
           {}
         end

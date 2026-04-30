@@ -17,11 +17,13 @@ module Branch
 
     def new_transfer
       @locations = active_locations
-      @cash_transfer = {}
+      @cash_transfer = default_transfer_params
+      @preview = transfer_preview_for(@cash_transfer)
     end
 
     def create_transfer
       @cash_transfer = transfer_params
+      @preview = transfer_preview_for(@cash_transfer)
       movement = Cash::Commands::TransferCash.call(
         **@cash_transfer,
         actor_id: current_operator.id,
@@ -32,6 +34,7 @@ module Branch
     rescue Cash::Commands::TransferCash::Error => e
       @locations = active_locations
       @error_message = e.message
+      @preview ||= transfer_preview_for(@cash_transfer || {})
       render :new_transfer, status: :unprocessable_entity
     end
 
@@ -95,6 +98,25 @@ module Branch
       params.require(:cash_transfer).permit(
         :source_cash_location_id, :destination_cash_location_id, :amount_minor_units, :idempotency_key, :reason_code
       ).to_h.symbolize_keys
+    end
+
+    def default_transfer_params
+      {
+        "source_cash_location_id" => params[:source_cash_location_id],
+        "destination_cash_location_id" => params[:destination_cash_location_id],
+        "amount_minor_units" => params[:amount_minor_units],
+        "idempotency_key" => default_idempotency_key("cash-transfer"),
+        "reason_code" => params[:reason_code]
+      }
+    end
+
+    def transfer_preview_for(attrs)
+      Teller::Queries::TransactionPreview.call(
+        transaction_type: "cash_transfer",
+        source_cash_location_id: attrs["source_cash_location_id"] || attrs[:source_cash_location_id],
+        destination_cash_location_id: attrs["destination_cash_location_id"] || attrs[:destination_cash_location_id],
+        amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units]
+      )
     end
 
     def count_params

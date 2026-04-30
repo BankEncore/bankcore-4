@@ -79,6 +79,25 @@ module Teller
         assert_equal 750, preview.dig(:cash_locations, :destination, :projected_balance_minor_units)
       end
 
+      test "previews hold impact against available balance without writing events" do
+        account = open_account!
+        session = Teller::Commands::OpenSession.call(drawer_code: "hold-preview-#{SecureRandom.hex(4)}", operator_id: @operator.id)
+        fund_account!(account, session, 1_500)
+        event_count = Core::OperationalEvents::Models::OperationalEvent.count
+
+        preview = TransactionPreview.call(
+          transaction_type: "hold",
+          deposit_account_id: account.id,
+          amount_minor_units: 400,
+          currency: "USD"
+        )
+
+        assert_equal event_count, Core::OperationalEvents::Models::OperationalEvent.count
+        assert_empty preview[:blockers]
+        assert_equal 1_500, preview.dig(:accounts, :source, :current_available_balance_minor_units)
+        assert_equal 1_100, preview.dig(:accounts, :source, :projected_available_balance_minor_units)
+      end
+
       private
 
       def open_account!

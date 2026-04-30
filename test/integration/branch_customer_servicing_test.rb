@@ -116,7 +116,15 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
   end
 
   test "branch account holds use branch channel and actor attribution" do
+    get new_branch_hold_path, params: { deposit_account_id: @account.id, amount_minor_units: 800 }
+    assert_redirected_to login_path
+
     internal_login!(username: "csr-teller")
+
+    get new_branch_hold_path, params: { deposit_account_id: @account.id, amount_minor_units: 800 }
+    assert_response :success
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Source account available"
 
     post branch_account_hold_placements_path(@account), params: {
       hold: {
@@ -176,12 +184,39 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
       hold_release: { idempotency_key: "csr-release-hold" }
     }
     assert_response :created
+    assert_includes response.body, "hold.released"
 
     release_event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "csr-release-hold")
     assert_equal "hold.released", release_event.event_type
     assert_equal "branch", release_event.channel
     assert_equal @supervisor.id, release_event.actor_id
     assert_equal Accounts::Models::Hold::STATUS_RELEASED, hold.reload.status
+
+    post release_branch_holds_path, params: {
+      hold_release: { hold_id: hold.id, idempotency_key: "csr-release-hold-global-replay" }
+    }
+    assert_response :unprocessable_entity
+    assert_includes response.body, "hold is not active"
+
+    fresh_hold_result = Accounts::Commands::PlaceHold.call(
+      deposit_account_id: @account.id,
+      amount_minor_units: 100,
+      currency: "USD",
+      channel: "branch",
+      idempotency_key: "csr-place-global-hold",
+      actor_id: @supervisor.id,
+      operating_unit_id: @supervisor.default_operating_unit_id
+    )
+    fresh_hold = fresh_hold_result[:hold]
+
+    post release_branch_holds_path, params: {
+      hold_release: { hold_id: fresh_hold.id, idempotency_key: "csr-release-global-hold" }
+    }
+    assert_response :created
+    assert_includes response.body, "Hold trace"
+    assert_includes response.body, "No-GL evidence"
+    assert_includes response.body, "Event detail"
+    assert_includes response.body, "Account holds"
   end
 
   test "supervisor can waive a posted fee through posting flow" do
@@ -215,6 +250,12 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     original = fund_account!(amount: 2_500, key: "csr-reversal-original")
 
     internal_login!(username: "csr-supervisor")
+    get new_branch_reversal_path(original_operational_event_id: original.id)
+    assert_response :success
+    assert_includes response.body, "Original event preview"
+    assert_includes response.body, "deposit.accepted"
+    assert_includes response.body, "Posting expected"
+
     post branch_reversals_path, params: {
       reversal: {
         original_operational_event_id: original.id,
@@ -231,6 +272,8 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_equal original.id, reversal.reversal_of_event_id
     assert_equal reversal.id, original.reload.reversed_by_event_id
     assert_equal Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED, reversal.status
+    assert_includes response.body, "Event detail"
+    assert_includes response.body, "Source activity"
   end
 
   test "supervisor can restrict release and close account from branch servicing" do

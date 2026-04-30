@@ -6,10 +6,12 @@ module Branch
 
     def new
       @hold = default_hold_params("branch-hold")
+      @preview = preview_for(@hold)
     end
 
     def create
       @hold = hold_params
+      @preview = preview_for(@hold)
       result = Accounts::Commands::PlaceHold.call(
         deposit_account_id: @hold[:deposit_account_id].to_i,
         amount_minor_units: @hold[:amount_minor_units].to_i,
@@ -26,6 +28,7 @@ module Branch
       render :result, status: @outcome == :created ? :created : :ok
     rescue Accounts::Commands::PlaceHold::InvalidRequest => e
       @error_message = e.message
+      @preview ||= preview_for(@hold || {})
       render :new, status: :unprocessable_entity
     end
 
@@ -62,7 +65,7 @@ module Branch
       {
         "deposit_account_id" => params[:deposit_account_id],
         "placed_for_operational_event_id" => params[:placed_for_operational_event_id],
-        "amount_minor_units" => nil,
+        "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "idempotency_key" => default_idempotency_key(prefix)
       }
@@ -83,6 +86,15 @@ module Branch
 
     def release_params
       params.require(:hold_release).permit(:hold_id, :idempotency_key).to_h.symbolize_keys
+    end
+
+    def preview_for(attrs)
+      Teller::Queries::TransactionPreview.call(
+        transaction_type: "hold",
+        deposit_account_id: attrs["deposit_account_id"] || attrs[:deposit_account_id],
+        amount_minor_units: attrs["amount_minor_units"] || attrs[:amount_minor_units],
+        currency: attrs["currency"] || attrs[:currency]
+      )
     end
   end
 end

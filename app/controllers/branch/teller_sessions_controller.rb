@@ -48,11 +48,12 @@ module Branch
         actual_cash_minor_units: close_params[:actual_cash_minor_units].to_i
       )
       message = if session.status == Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR
-        "Session ##{session.id} is pending supervisor approval for variance."
+        "Session ##{session.id} is pending supervisor approval for variance #{session.variance_minor_units} minor units."
       else
-        "Closed teller session ##{session.id}."
+        "Closed teller session ##{session.id} with variance #{session.variance_minor_units} minor units."
       end
-      redirect_to branch_path, notice: message
+      anchor = session.status == Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR ? "supervisor" : "teller"
+      redirect_to branch_path(anchor: anchor), notice: message
     rescue Teller::Commands::CloseSession::NotFound => e
       redirect_to branch_path, alert: e.message
     rescue Teller::Commands::CloseSession::InvalidState => e

@@ -69,6 +69,33 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_equal "posted", movement.operational_event.status
   end
 
+  test "branch cash transfer form renders advisory preview" do
+    source = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_BRANCH_VAULT,
+      name: "Source Vault"
+    )
+    destination = create_cash_location!(
+      location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+      name: "Destination Drawer",
+      drawer_code: "cash-preview-drawer"
+    )
+    create_cash_balance!(source, 5_000)
+    create_cash_balance!(destination, 500)
+
+    internal_login!(username: "branch-forms-supervisor")
+    get "/branch/cash/transfers/new", params: {
+      source_cash_location_id: source.id,
+      destination_cash_location_id: destination.id,
+      amount_minor_units: 1_200
+    }
+
+    assert_response :success
+    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Source cash location"
+    assert_includes response.body, "Destination cash location"
+    assert_includes response.body, "Projected cash balance"
+  end
+
   test "party creation redirects to open account form and unsupported party renders validation" do
     internal_login!(username: "branch-forms-teller")
 
@@ -303,6 +330,25 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     )
     Core::Posting::Commands::PostEvent.call(operational_event_id: result[:event].id)
     account
+  end
+
+  def create_cash_location!(location_type:, name:, drawer_code: nil)
+    Cash::Models::CashLocation.create!(
+      location_type: location_type,
+      operating_unit: Organization::Services::DefaultOperatingUnit.branch,
+      drawer_code: drawer_code,
+      name: name,
+      currency: "USD",
+      status: Cash::Models::CashLocation::STATUS_ACTIVE
+    )
+  end
+
+  def create_cash_balance!(location, amount_minor_units)
+    Cash::Models::CashBalance.create!(
+      cash_location: location,
+      currency: "USD",
+      amount_minor_units: amount_minor_units
+    )
   end
 
   def transaction_params(account:, session:, amount:, key:, record_and_post: "0")
