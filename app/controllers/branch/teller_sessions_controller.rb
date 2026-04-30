@@ -2,6 +2,9 @@
 
 module Branch
   class TellerSessionsController < ApplicationController
+    before_action -> { require_branch_capability!(Workspace::Authorization::CapabilityRegistry::TELLER_SESSION_VARIANCE_APPROVE, alert: "Teller session variance approval required") },
+      only: [ :approve_variance ]
+
     def new
       @teller_session = { "drawer_code" => params[:drawer_code] }
     end
@@ -21,6 +24,20 @@ module Branch
       Organization::Services::DefaultOperatingUnit::NotFound => e
       @error_message = e.message
       render :new, status: :unprocessable_entity
+    end
+
+    def approve_variance
+      attrs = approve_variance_params
+      teller_session_id = attrs[:teller_session_id].to_i
+      session = Teller::Commands::ApproveSessionVariance.call(
+        teller_session_id: teller_session_id,
+        supervisor_operator_id: current_operator.id
+      )
+      redirect_to branch_path(anchor: "supervisor"), notice: "Approved variance for teller session ##{session.id}."
+    rescue Teller::Commands::ApproveSessionVariance::NotFound => e
+      redirect_to branch_path(anchor: "supervisor"), alert: e.message
+    rescue Teller::Commands::ApproveSessionVariance::InvalidState => e
+      redirect_to branch_path(anchor: "supervisor"), alert: e.message
     end
 
     def close
@@ -50,6 +67,10 @@ module Branch
 
     def close_params
       params.require(:teller_session_close).permit(:actual_cash_minor_units)
+    end
+
+    def approve_variance_params
+      params.require(:teller_session_approve_variance).permit(:teller_session_id).to_h.symbolize_keys
     end
   end
 end

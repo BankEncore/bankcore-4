@@ -4,6 +4,7 @@
     <p class="mt-1 text-sm text-slate-600"><%= description %></p>
   </div>
 
+  <% variance_approve = local_assigns.fetch(:variance_approve, false) %>
   <% if sessions.any? %>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -18,6 +19,9 @@
               <th class="px-5 py-3 text-right">Actual</th>
               <th class="px-5 py-3 text-right">Variance</th>
               <th class="px-5 py-3">Supervisor</th>
+              <% if variance_approve %>
+                <th class="px-5 py-3">Actions</th>
+              <% end %>
             <% else %>
               <th class="px-5 py-3">Close session</th>
             <% end %>
@@ -45,6 +49,20 @@
                     <span class="text-slate-500">Not approved</span>
                   <% end %>
                 </td>
+                <% if variance_approve %>
+                  <td class="px-5 py-4">
+                    <% if session.status == Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR &&
+                          session.supervisor_approved_at.blank? &&
+                          branch_operator_can?(Workspace::Authorization::CapabilityRegistry::TELLER_SESSION_VARIANCE_APPROVE) %>
+                      <%= form_with url: approve_variance_branch_teller_sessions_path, scope: :teller_session_approve_variance, method: :post, local: true, class: "inline" do |form| %>
+                        <%= form.hidden_field :teller_session_id, value: session.id %>
+                        <%= form.submit "Approve variance", class: "rounded bg-amber-800 px-3 py-1 text-sm font-medium text-white" %>
+                      <% end %>
+                    <% else %>
+                      <span class="text-slate-400">—</span>
+                    <% end %>
+                  </td>
+                <% end %>
               <% else %>
                 <td class="px-5 py-4">
                   <% expected_cash_minor_units = branch_expected_cash_for(session) %>

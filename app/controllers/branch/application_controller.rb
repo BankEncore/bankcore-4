@@ -3,8 +3,8 @@
 module Branch
   class ApplicationController < Internal::ApplicationController
     before_action :require_branch_operator!
-    helper_method :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?, :can_reverse_event?,
-      :can_manage_authorized_signers?, :can_maintain_account?, :can_update_party_contact?
+    helper_method :branch_operator_can?, :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?,
+      :can_reverse_event?, :can_manage_authorized_signers?, :can_maintain_account?, :can_update_party_contact?
 
     private
 
@@ -26,20 +26,19 @@ module Branch
       value.presence&.to_i
     end
 
-    def require_branch_supervisor!
-      return if current_operator&.supervisor?
-
-      redirect_to branch_path, alert: "Supervisor role required"
-    end
-
     def require_branch_capability!(capability_code, alert: "Supervisor role required")
       return if current_operator&.has_capability?(capability_code, scope: current_operating_unit)
 
       redirect_to branch_path, alert: alert
     end
 
+    def branch_operator_can?(capability_code)
+      current_operator.present? &&
+        current_operator.has_capability?(capability_code, scope: current_operating_unit)
+    end
+
     def can_place_servicing_hold?
-      current_operator&.teller? || current_operator&.supervisor?
+      branch_operator_can?(Workspace::Authorization::CapabilityRegistry::HOLD_PLACE)
     end
 
     def can_release_servicing_hold?
