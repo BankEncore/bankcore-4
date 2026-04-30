@@ -132,6 +132,56 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal @account.id, cr.deposit_account_id
   end
 
+  test "posts cash shipment received as Dr 1110 Cr 1130" do
+    operating_unit = Organization::Services::DefaultOperatingUnit.branch
+    operator = Workspace::Models::Operator.create!(
+      role: "supervisor",
+      display_name: "Cash Shipment Supervisor",
+      active: true,
+      default_operating_unit: operating_unit
+    )
+    vault = Cash::Commands::CreateLocation.call(
+      location_type: "branch_vault",
+      operating_unit_id: operating_unit.id,
+      actor_id: operator.id
+    )
+    movement = Cash::Models::CashMovement.create!(
+      destination_cash_location: vault,
+      operating_unit: operating_unit,
+      actor: operator,
+      amount_minor_units: 75_000,
+      currency: "USD",
+      business_date: Date.new(2026, 4, 22),
+      status: Cash::Models::CashMovement::STATUS_COMPLETED,
+      movement_type: Cash::Models::CashMovement::TYPE_EXTERNAL_SHIPMENT_RECEIVED,
+      external_source: "Federal Reserve",
+      shipment_reference: "POST-FRB-001",
+      idempotency_key: "post-cash-shipment-movement",
+      request_fingerprint: "post-cash-shipment-fingerprint",
+      completed_at: Time.current
+    )
+    event = Core::OperationalEvents::Models::OperationalEvent.create!(
+      event_type: "cash.shipment.received",
+      status: "pending",
+      business_date: Date.new(2026, 4, 22),
+      channel: "branch",
+      idempotency_key: "post-cash-shipment-event",
+      amount_minor_units: 75_000,
+      currency: "USD",
+      actor: operator,
+      operating_unit: operating_unit,
+      reference_id: movement.id.to_s
+    )
+
+    Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
+
+    lines = event.reload.posting_batches.sole.journal_entries.sole.journal_lines.includes(:gl_account).order(:sequence_no)
+    assert_equal "1110", lines.first.gl_account.account_number
+    assert_equal "debit", lines.first.side
+    assert_equal "1130", lines.second.gl_account.account_number
+    assert_equal "credit", lines.second.side
+  end
+
   private
 
   def fund_account!(amount)

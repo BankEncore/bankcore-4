@@ -15,6 +15,7 @@ module Workspace
       CASH_COUNT_RECORD = "cash.count.record"
       CASH_VARIANCE_APPROVE = "cash.variance.approve"
       CASH_POSITION_VIEW = "cash.position.view"
+      CASH_SHIPMENT_RECEIVE = "cash.shipment.receive"
       PARTY_CREATE = "party.create"
       ACCOUNT_OPEN = "account.open"
       ACCOUNT_MAINTAIN = "account.maintain"
@@ -68,6 +69,8 @@ module Workspace
           description: "May approve Cash-domain variances and related GL posting." },
         { code: CASH_POSITION_VIEW, name: "View cash position", category: "cash",
           description: "May view Cash-domain positions and reconciliation summaries." },
+        { code: CASH_SHIPMENT_RECEIVE, name: "Receive external cash shipment", category: "cash",
+          description: "May record external Fed or correspondent cash shipments into branch vault custody." },
         { code: PARTY_CREATE, name: "Create party", category: "party",
           description: "May create party records." },
         { code: ACCOUNT_OPEN, name: "Open account", category: "account",
@@ -127,7 +130,7 @@ module Workspace
         BRANCH_SUPERVISOR => [
           DEPOSIT_ACCEPT, WITHDRAWAL_POST, TRANSFER_COMPLETE, TELLER_SESSION_OPEN, TELLER_SESSION_CLOSE,
           CASH_DRAWER_MANAGE, CASH_LOCATION_MANAGE, CASH_MOVEMENT_CREATE, CASH_MOVEMENT_APPROVE,
-          CASH_COUNT_RECORD, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW,
+          CASH_COUNT_RECORD, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW, CASH_SHIPMENT_RECEIVE,
           PARTY_CREATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE,
           BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE, REVERSAL_CREATE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
         ],
@@ -141,7 +144,7 @@ module Workspace
         OPERATIONS => [
           OPS_BATCH_PROCESS, OPS_EXCEPTION_RESOLVE, OPS_RECONCILIATION_PERFORM, OPERATIONAL_EVENT_VIEW,
           JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW, BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE,
-          CASH_MOVEMENT_APPROVE, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW
+          CASH_MOVEMENT_APPROVE, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW, CASH_SHIPMENT_RECEIVE
         ],
         AUDITOR => [
           OPERATIONAL_EVENT_VIEW, JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW

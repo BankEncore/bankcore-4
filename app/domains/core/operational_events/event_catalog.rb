@@ -199,6 +199,22 @@ module Core
           support_search_keys: %w[reference_id actor_id]
         ),
         Entry.new(
+          event_type: "cash.shipment.received",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "Cash::Commands::ReceiveExternalCashShipment",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "External Fed or correspondent cash shipment received into branch vault custody",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[branch],
+          financial_impact: "gl_posting",
+          customer_visible: false,
+          statement_visible: false,
+          payload_schema: "docs/operational_events/cash-shipment-received.md",
+          support_search_keys: %w[reference_id actor_id idempotency_key]
+        ),
+        Entry.new(
           event_type: "cash.movement.completed",
           category: "operational",
           posts_to_gl: false,

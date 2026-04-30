@@ -36,6 +36,8 @@ Rails.application.routes.draw do
     get "cash", to: "cash#index", as: :cash
     get "cash/transfers/new", to: "cash#new_transfer", as: :new_cash_transfer
     post "cash/transfers", to: "cash#create_transfer", as: :cash_transfers
+    get "cash/shipments/received/new", to: "cash#new_external_shipment", as: :new_external_cash_shipment
+    post "cash/shipments/received", to: "cash#create_external_shipment", as: :external_cash_shipments
     get "cash/counts/new", to: "cash#new_count", as: :new_cash_count
     post "cash/counts", to: "cash#create_count", as: :cash_counts
     get "cash/locations/:id", to: "cash#show_location", as: :cash_location
