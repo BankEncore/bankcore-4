@@ -35,6 +35,40 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "branch supervisor can receive external cash shipment and teller cannot" do
+    vault = Cash::Commands::CreateLocation.call(
+      location_type: "branch_vault",
+      operating_unit_id: @supervisor.default_operating_unit_id,
+      actor_id: @supervisor.id
+    )
+
+    internal_login!(username: "branch-forms-teller")
+    get "/branch/cash/shipments/received/new"
+    assert_redirected_to "/branch"
+    delete "/logout"
+
+    internal_login!(username: "branch-forms-supervisor")
+    get "/branch/cash/shipments/received/new"
+    assert_response :success
+    assert_includes response.body, "cash_shipment[shipment_reference]"
+
+    post "/branch/cash/shipments/received", params: {
+      cash_shipment: {
+        destination_cash_location_id: vault.id,
+        amount_minor_units: 90_000,
+        external_source: "Federal Reserve",
+        shipment_reference: "UI-FRB-001",
+        idempotency_key: "ui-fed-cash-receipt"
+      }
+    }
+
+    assert_redirected_to "/branch/cash"
+    movement = Cash::Models::CashMovement.find_by!(idempotency_key: "ui-fed-cash-receipt")
+    assert_equal Cash::Models::CashMovement::TYPE_EXTERNAL_SHIPMENT_RECEIVED, movement.movement_type
+    assert_equal 90_000, vault.cash_balance.reload.amount_minor_units
+    assert_equal "posted", movement.operational_event.status
+  end
+
   test "party creation redirects to open account form and unsupported party renders validation" do
     internal_login!(username: "branch-forms-teller")
 

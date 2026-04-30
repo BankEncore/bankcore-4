@@ -68,6 +68,7 @@ Catalog metadata fields:
 | [interest-posted.md](interest-posted.md) | `interest.posted` | Yes | `RecordEvent` | `pending_to_posted` | `system` | Yes | Yes |
 | [teller-drawer-variance-posted.md](teller-drawer-variance-posted.md) | `teller.drawer.variance.posted` | Yes (optional flag) | `RecordEvent` | `pending_to_posted` | `system` | No | No |
 | [cash-variance-posted.md](cash-variance-posted.md) | `cash.variance.posted` | Yes (optional GL) | `RecordEvent` | `pending_to_posted` | `system` | No | No |
+| [cash-shipment-received.md](cash-shipment-received.md) | `cash.shipment.received` | Yes | `Cash::Commands::ReceiveExternalCashShipment` | `pending_to_posted` | `branch` | No | No |
 | [cash-movement-completed.md](cash-movement-completed.md) | `cash.movement.completed` | No | `Cash::Commands::TransferCash` | `posted_immediately` | `teller`, `branch`, `system` | No | No |
 | [cash-count-recorded.md](cash-count-recorded.md) | `cash.count.recorded` | No | `Cash::Commands::RecordCashCount` | `posted_immediately` | `teller`, `branch`, `system` | No | No |
 

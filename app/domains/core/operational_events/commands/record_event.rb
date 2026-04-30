@@ -25,11 +25,12 @@ module Core
 
         DRAWER_VARIANCE_POSTED = "teller.drawer.variance.posted"
         CASH_VARIANCE_POSTED = "cash.variance.posted"
+        CASH_SHIPMENT_RECEIVED = "cash.shipment.received"
         INTEREST_EVENT_TYPES = %w[interest.accrued interest.posted].freeze
 
         FINANCIAL_EVENT_TYPES = (
           %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived ach.credit.received] +
-            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ]
+            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED, CASH_SHIPMENT_RECEIVED ]
         ).freeze
         CHANNELS = %w[teller branch api batch system].freeze
         STAFF_CHANNELS = %w[teller branch].freeze
@@ -70,6 +71,7 @@ module Core
           validate_teller_cash_session!(channel, event_type, teller_session_id)
           validate_drawer_variance!(event_type, channel, amount_minor_units, teller_session_id)
           validate_cash_variance!(event_type, channel, amount_minor_units, currency, reference_id)
+          validate_cash_shipment_received!(event_type, channel, amount_minor_units, currency, reference_id)
 
           on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
           begin
@@ -148,7 +150,7 @@ module Core
 
         def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
                                 destination_account_id: nil, teller_session_id: nil, operating_unit_id: nil, reference_id: nil)
-          if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ].include?(event_type.to_s)
+          if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED, CASH_SHIPMENT_RECEIVED ].include?(event_type.to_s)
             payload = {
               event_type: event_type.to_s,
               channel: channel.to_s,
@@ -219,6 +221,8 @@ module Core
           end
           raise InvalidRequest, "currency is required" if currency.blank?
           raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
+          return if event_type.to_s == CASH_SHIPMENT_RECEIVED
+
           raise InvalidRequest, "source_account_id is required" if source_account_id.blank?
           if event_type.to_s == "transfer.completed" && destination_account_id.blank?
             raise InvalidRequest, "destination_account_id is required for transfer.completed"
@@ -226,7 +230,7 @@ module Core
         end
 
         def self.validate_source_account!(event_type, source_account_id)
-          return if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ].include?(event_type.to_s) && source_account_id.blank?
+          return if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED, CASH_SHIPMENT_RECEIVED ].include?(event_type.to_s) && source_account_id.blank?
 
           acc = Accounts::Models::DepositAccount.find_by(id: source_account_id)
           raise InvalidRequest, "source_account_id not found" if acc.nil?
@@ -287,6 +291,28 @@ module Core
           end
         end
         private_class_method :validate_cash_variance!
+
+        def self.validate_cash_shipment_received!(event_type, channel, amount_minor_units, currency, reference_id)
+          return unless event_type.to_s == CASH_SHIPMENT_RECEIVED
+
+          raise InvalidRequest, "cash.shipment.received may only use channel branch" unless channel.to_s == "branch"
+          raise InvalidRequest, "amount_minor_units must be positive for cash.shipment.received" unless amount_minor_units.to_i.positive?
+          raise InvalidRequest, "currency must be USD" unless currency.to_s == "USD"
+          raise InvalidRequest, "reference_id is required for cash.shipment.received" if reference_id.blank?
+          unless reference_id.to_s.match?(/\A\d+\z/)
+            raise InvalidRequest, "reference_id must be the numeric id of a cash_movement"
+          end
+
+          movement = Cash::Models::CashMovement.find_by(id: reference_id.to_i)
+          raise InvalidRequest, "referenced cash movement not found" if movement.nil?
+          unless movement.movement_type == Cash::Models::CashMovement::TYPE_EXTERNAL_SHIPMENT_RECEIVED
+            raise InvalidRequest, "reference_id must identify an external shipment receipt movement"
+          end
+          unless movement.amount_minor_units.to_i == amount_minor_units.to_i && movement.currency.to_s == currency.to_s
+            raise InvalidRequest, "cash.shipment.received must match cash movement amount and currency"
+          end
+        end
+        private_class_method :validate_cash_shipment_received!
 
         def self.validate_withdrawal_available!(event_type, source_account_id, amount_minor_units)
           return unless event_type.to_s == "withdrawal.posted"

@@ -38,6 +38,8 @@ module Cash
         end
       rescue Workspace::Authorization::Forbidden => e
         raise InvalidState, e.message
+      rescue Cash::Commands::TransferCash::InvalidRequest => e
+        raise InvalidState, e.message
       end
     end
   end

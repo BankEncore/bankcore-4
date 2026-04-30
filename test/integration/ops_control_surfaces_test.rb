@@ -93,6 +93,36 @@ class OpsControlSurfacesTest < ActionDispatch::IntegrationTest
     assert_equal @operator.id, session.supervisor_operator_id
   end
 
+  test "cash movement approval redirects when source balance is insufficient" do
+    teller = create_operator_with_credential!(role: "teller", username: "ops-cash-teller")
+    operating_unit = Organization::Services::DefaultOperatingUnit.branch!
+    vault = Cash::Commands::CreateLocation.call(
+      location_type: Cash::Models::CashLocation::TYPE_BRANCH_VAULT,
+      operating_unit: operating_unit,
+      name: "Ops Insufficient Vault"
+    )
+    drawer = Cash::Commands::CreateLocation.call(
+      location_type: Cash::Models::CashLocation::TYPE_TELLER_DRAWER,
+      operating_unit: operating_unit,
+      drawer_code: "OPS-INSUFF",
+      name: "Ops Insufficient Drawer"
+    )
+    movement = Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: drawer.id,
+      amount_minor_units: 2_500,
+      actor_id: teller.id,
+      idempotency_key: "ops-insufficient-cash-movement"
+    )
+
+    internal_login!(username: "ops-controls")
+    post "/ops/cash/movements/#{movement.id}/approve"
+
+    assert_redirected_to "/ops/cash"
+    assert_equal "source cash balance is insufficient", flash[:alert]
+    assert_equal Cash::Models::CashMovement::STATUS_PENDING_APPROVAL, movement.reload.status
+  end
+
   test "ops controls remain forbidden to branch roles" do
     create_operator_with_credential!(role: "teller", username: "ops-control-teller")
     internal_login!(username: "ops-control-teller")

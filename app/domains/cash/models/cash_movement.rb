@@ -22,7 +22,14 @@ module Cash
       TYPE_DRAWER_TO_VAULT = "drawer_to_vault"
       TYPE_INTERNAL_TRANSFER = "internal_transfer"
       TYPE_ADJUSTMENT = "adjustment"
-      MOVEMENT_TYPES = [ TYPE_VAULT_TO_DRAWER, TYPE_DRAWER_TO_VAULT, TYPE_INTERNAL_TRANSFER, TYPE_ADJUSTMENT ].freeze
+      TYPE_EXTERNAL_SHIPMENT_RECEIVED = "external_shipment_received"
+      MOVEMENT_TYPES = [
+        TYPE_VAULT_TO_DRAWER,
+        TYPE_DRAWER_TO_VAULT,
+        TYPE_INTERNAL_TRANSFER,
+        TYPE_ADJUSTMENT,
+        TYPE_EXTERNAL_SHIPMENT_RECEIVED
+      ].freeze
 
       belongs_to :source_cash_location, class_name: "Cash::Models::CashLocation", optional: true
       belongs_to :destination_cash_location, class_name: "Cash::Models::CashLocation", optional: true
@@ -36,6 +43,7 @@ module Cash
       validates :status, inclusion: { in: STATUSES }
       validates :movement_type, inclusion: { in: MOVEMENT_TYPES }
       validates :business_date, :idempotency_key, :request_fingerprint, presence: true
+      validates :external_source, :shipment_reference, presence: true, if: :external_shipment_received?
 
       def completed?
         status == STATUS_COMPLETED
@@ -43,6 +51,10 @@ module Cash
 
       def pending_approval?
         status == STATUS_PENDING_APPROVAL
+      end
+
+      def external_shipment_received?
+        movement_type == TYPE_EXTERNAL_SHIPMENT_RECEIVED
       end
     end
   end

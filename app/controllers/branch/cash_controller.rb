@@ -6,6 +6,8 @@ module Branch
       only: [ :index, :show_location ]
     before_action -> { require_branch_capability!(Workspace::Authorization::CapabilityRegistry::CASH_MOVEMENT_CREATE) },
       only: [ :new_transfer, :create_transfer ]
+    before_action -> { require_branch_capability!(Workspace::Authorization::CapabilityRegistry::CASH_SHIPMENT_RECEIVE) },
+      only: [ :new_external_shipment, :create_external_shipment ]
     before_action -> { require_branch_capability!(Workspace::Authorization::CapabilityRegistry::CASH_COUNT_RECORD) },
       only: [ :new_count, :create_count ]
 
@@ -31,6 +33,26 @@ module Branch
       @locations = active_locations
       @error_message = e.message
       render :new_transfer, status: :unprocessable_entity
+    end
+
+    def new_external_shipment
+      @vault_locations = active_vault_locations
+      @cash_shipment = {}
+    end
+
+    def create_external_shipment
+      @cash_shipment = external_shipment_params
+      movement = Cash::Commands::ReceiveExternalCashShipment.call(
+        **@cash_shipment,
+        actor_id: current_operator.id,
+        channel: branch_channel,
+        idempotency_key: @cash_shipment[:idempotency_key].presence || default_idempotency_key("cash-shipment")
+      )
+      redirect_to branch_cash_path, notice: "Received external cash shipment ##{movement.id}."
+    rescue Cash::Commands::ReceiveExternalCashShipment::Error => e
+      @vault_locations = active_vault_locations
+      @error_message = e.message
+      render :new_external_shipment, status: :unprocessable_entity
     end
 
     def new_count
@@ -65,6 +87,10 @@ module Branch
       Cash::Models::CashLocation.active.where(operating_unit: current_operating_unit).order(:location_type, :drawer_code, :id)
     end
 
+    def active_vault_locations
+      active_locations.where(location_type: Cash::Models::CashLocation::TYPE_BRANCH_VAULT)
+    end
+
     def transfer_params
       params.require(:cash_transfer).permit(
         :source_cash_location_id, :destination_cash_location_id, :amount_minor_units, :idempotency_key, :reason_code
@@ -74,6 +100,12 @@ module Branch
     def count_params
       params.require(:cash_count).permit(
         :cash_location_id, :counted_amount_minor_units, :expected_amount_minor_units, :idempotency_key
+      ).to_h.symbolize_keys
+    end
+
+    def external_shipment_params
+      params.require(:cash_shipment).permit(
+        :destination_cash_location_id, :amount_minor_units, :external_source, :shipment_reference, :idempotency_key
       ).to_h.symbolize_keys
     end
   end

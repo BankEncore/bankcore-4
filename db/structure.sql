@@ -299,11 +299,14 @@ CREATE TABLE public.cash_movements (
     rejected_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    external_source character varying,
+    shipment_reference character varying,
     CONSTRAINT cash_movements_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
+    CONSTRAINT cash_movements_external_shipment_required_fields_check CHECK ((((movement_type)::text <> 'external_shipment_received'::text) OR ((source_cash_location_id IS NULL) AND (destination_cash_location_id IS NOT NULL) AND (external_source IS NOT NULL) AND (length(TRIM(BOTH FROM external_source)) > 0) AND (shipment_reference IS NOT NULL) AND (length(TRIM(BOTH FROM shipment_reference)) > 0)))),
     CONSTRAINT cash_movements_location_present_check CHECK (((source_cash_location_id IS NOT NULL) OR (destination_cash_location_id IS NOT NULL))),
     CONSTRAINT cash_movements_positive_amount_check CHECK ((amount_minor_units > 0)),
     CONSTRAINT cash_movements_status_check CHECK (((status)::text = ANY (ARRAY[('pending_approval'::character varying)::text, ('approved'::character varying)::text, ('completed'::character varying)::text, ('cancelled'::character varying)::text, ('rejected'::character varying)::text]))),
-    CONSTRAINT cash_movements_type_check CHECK (((movement_type)::text = ANY (ARRAY[('vault_to_drawer'::character varying)::text, ('drawer_to_vault'::character varying)::text, ('internal_transfer'::character varying)::text, ('adjustment'::character varying)::text])))
+    CONSTRAINT cash_movements_type_check CHECK (((movement_type)::text = ANY (ARRAY[('vault_to_drawer'::character varying)::text, ('drawer_to_vault'::character varying)::text, ('internal_transfer'::character varying)::text, ('adjustment'::character varying)::text, ('external_shipment_received'::character varying)::text])))
 );
 
 
@@ -1840,6 +1843,13 @@ CREATE UNIQUE INDEX idx_active_cash_drawer_identity ON public.cash_locations USI
 
 
 --
+-- Name: idx_cash_movements_external_shipment_reference; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_movements_external_shipment_reference ON public.cash_movements USING btree (external_source, shipment_reference);
+
+
+--
 -- Name: idx_dap_maintenance_audits_idempotency; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3074,6 +3084,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429210200'),
 ('20260429190000'),
 ('20260424120017'),
 ('20260424120016'),

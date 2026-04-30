@@ -91,6 +91,31 @@ class CashInventoryTest < ActiveSupport::TestCase
     assert_equal "completed", approved.status
   end
 
+  test "cash movement approval reports insufficient source balance without completing" do
+    vault = vault!
+    drawer = drawer!("B3")
+    movement = Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: drawer.id,
+      amount_minor_units: 2_500,
+      actor_id: @teller.id,
+      idempotency_key: "vault-to-drawer-insufficient"
+    )
+
+    error = assert_raises(Cash::Commands::ApproveCashMovement::InvalidState) do
+      Cash::Commands::ApproveCashMovement.call(
+        cash_movement_id: movement.id,
+        approving_actor_id: @supervisor.id
+      )
+    end
+
+    assert_equal "source cash balance is insufficient", error.message
+    assert_equal Cash::Models::CashMovement::STATUS_PENDING_APPROVAL, movement.reload.status
+    assert_nil movement.operational_event_id
+    assert_equal 0, vault.cash_balance.reload.amount_minor_units
+    assert_equal 0, drawer.cash_balance.reload.amount_minor_units
+  end
+
   test "cash count variance approval posts cash variance to GL once" do
     drawer = drawer!("C1")
     Cash::Commands::RecordCashCount.call(
@@ -160,6 +185,88 @@ class CashInventoryTest < ActiveSupport::TestCase
     )
 
     assert_equal "posted", variance.status
+  end
+
+  test "external cash shipment receipt increases vault cash and posts GL" do
+    vault = vault!
+
+    movement = Cash::Commands::ReceiveExternalCashShipment.call(
+      destination_cash_location_id: vault.id,
+      amount_minor_units: 50_000,
+      actor_id: @supervisor.id,
+      idempotency_key: "fed-cash-receipt-1",
+      external_source: "Federal Reserve",
+      shipment_reference: "FRB-20260429-001"
+    )
+
+    assert_equal Cash::Models::CashMovement::STATUS_COMPLETED, movement.status
+    assert_equal Cash::Models::CashMovement::TYPE_EXTERNAL_SHIPMENT_RECEIVED, movement.movement_type
+    assert_nil movement.source_cash_location_id
+    assert_equal vault.id, movement.destination_cash_location_id
+    assert_equal "Federal Reserve", movement.external_source
+    assert_equal "FRB-20260429-001", movement.shipment_reference
+    assert_equal 50_000, vault.cash_balance.reload.amount_minor_units
+
+    event = movement.operational_event
+    assert_equal "cash.shipment.received", event.event_type
+    assert_equal "posted", event.status
+    assert_equal movement.id.to_s, event.reference_id
+    lines = event.journal_entries.sole.journal_lines.includes(:gl_account).order(:sequence_no)
+    assert_equal "1110", lines.first.gl_account.account_number
+    assert_equal "debit", lines.first.side
+    assert_equal "1130", lines.second.gl_account.account_number
+    assert_equal "credit", lines.second.side
+  end
+
+  test "external cash shipment receipt is idempotent" do
+    vault = vault!
+    attrs = {
+      destination_cash_location_id: vault.id,
+      amount_minor_units: 25_000,
+      actor_id: @supervisor.id,
+      idempotency_key: "fed-cash-receipt-idempotent",
+      external_source: "Correspondent Bank",
+      shipment_reference: "CORR-001"
+    }
+
+    first = Cash::Commands::ReceiveExternalCashShipment.call(**attrs)
+
+    assert_no_difference -> { Cash::Models::CashMovement.count } do
+      assert_no_difference -> { Core::OperationalEvents::Models::OperationalEvent.count } do
+        second = Cash::Commands::ReceiveExternalCashShipment.call(**attrs)
+        assert_equal first.id, second.id
+      end
+    end
+    assert_equal 25_000, vault.cash_balance.reload.amount_minor_units
+    assert_equal 1, first.operational_event.journal_entries.count
+  end
+
+  test "external cash shipment receipt requires shipment capability and branch vault destination" do
+    drawer = drawer!("D1")
+
+    assert_raises(Cash::Commands::ReceiveExternalCashShipment::InvalidRequest) do
+      Cash::Commands::ReceiveExternalCashShipment.call(
+        destination_cash_location_id: drawer.id,
+        amount_minor_units: 10_000,
+        actor_id: @supervisor.id,
+        idempotency_key: "cash-receipt-drawer",
+        external_source: "Federal Reserve",
+        shipment_reference: "BAD-DEST"
+      )
+    end
+
+    vault = vault!
+    error = assert_raises(Cash::Commands::ReceiveExternalCashShipment::InvalidRequest) do
+      Cash::Commands::ReceiveExternalCashShipment.call(
+        destination_cash_location_id: vault.id,
+        amount_minor_units: 10_000,
+        actor_id: @teller.id,
+        idempotency_key: "cash-receipt-unauthorized",
+        external_source: "Federal Reserve",
+        shipment_reference: "NO-AUTH"
+      )
+    end
+    assert_includes error.message, "cash.shipment.receive"
   end
 
   private
