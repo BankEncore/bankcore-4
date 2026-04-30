@@ -1,4 +1,5 @@
 <% content_for :title, "Branch Workspace - BankCORE" %>
+<% cap = Workspace::Authorization::CapabilityRegistry %>
 
 <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
   <div>
@@ -7,79 +8,110 @@
       Teller operations and customer servicing for branch staff.
     </p>
   </div>
+</section>
 
-  <nav class="flex flex-wrap gap-2 text-sm">
+<section id="csr" class="scroll-mt-8 rounded border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-semibold text-slate-950">CSR — customer servicing</h2>
+  <p class="mt-1 text-sm text-slate-600">Search customers, open accounts, and account servicing.</p>
+  <div class="mt-4 flex flex-wrap gap-2 text-sm">
     <%= link_to "Find customer", branch_customers_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white shadow-sm" %>
-    <%= link_to "Create party", new_branch_party_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Open account", new_branch_deposit_account_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Open session", new_branch_teller_session_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Record withdrawal", new_branch_withdrawal_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Transfer", new_branch_transfer_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Cash position", branch_cash_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Place hold", new_branch_hold_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-  </nav>
+    <% if branch_operator_can?(cap::PARTY_CREATE) %>
+      <%= link_to "Create party", new_branch_party_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::ACCOUNT_OPEN) %>
+      <%= link_to "Open account", new_branch_deposit_account_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::OPERATIONAL_EVENT_VIEW) %>
+      <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+  </div>
+  <% unless branch_operator_can?(cap::PARTY_CREATE) || branch_operator_can?(cap::ACCOUNT_OPEN) || branch_operator_can?(cap::OPERATIONAL_EVENT_VIEW) %>
+    <p class="mt-3 text-sm text-slate-500">Additional CSR actions may be limited for your role.</p>
+  <% end %>
 </section>
 
-<section class="mt-8 grid gap-4 md:grid-cols-2">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Customer servicing</p>
-    <h2 class="mt-2 text-xl font-semibold">Find and service customers</h2>
-    <p class="mt-2 text-sm text-slate-600">Search customers, review account profiles, inspect holds, statements, and recent activity.</p>
-    <div class="mt-4 flex flex-wrap gap-2 text-sm">
-      <%= link_to "Find customer", branch_customers_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
-      <%= link_to "Open account", new_branch_deposit_account_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
+<section id="teller" class="mt-10 scroll-mt-8">
+  <h2 class="text-xl font-semibold text-slate-950">Teller — line operations</h2>
+  <p class="mt-1 text-sm text-slate-600">Sessions, cash transactions, holds, and cash custody.</p>
+
+  <div class="mt-6 grid gap-4 md:grid-cols-3">
+    <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Open sessions</p>
+      <p class="mt-2 text-3xl font-semibold"><%= @session_dashboard.open_sessions.size %></p>
+    </div>
+
+    <div class="rounded border border-amber-200 bg-amber-50 p-5 shadow-sm">
+      <p class="text-sm font-medium text-amber-800">Pending supervisor</p>
+      <p class="mt-2 text-3xl font-semibold text-amber-950"><%= @session_dashboard.pending_supervisor_sessions.size %></p>
+      <p class="mt-2 text-xs text-amber-900"><%= link_to "Jump to supervisor queue", "#{branch_path}#supervisor", class: "underline" %></p>
+    </div>
+
+    <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Recent closed</p>
+      <p class="mt-2 text-3xl font-semibold"><%= @session_dashboard.recent_closed_sessions.size %></p>
     </div>
   </div>
 
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Teller operations</p>
-    <h2 class="mt-2 text-xl font-semibold">Cash and transaction workflows</h2>
-    <p class="mt-2 text-sm text-slate-600">Open sessions, record deposits and withdrawals, transfer funds, place holds, and review events.</p>
-    <div class="mt-4 flex flex-wrap gap-2 text-sm">
-      <%= link_to "Open session", new_branch_teller_session_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
-      <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
-      <%= link_to "Cash position", branch_cash_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
-      <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
-    </div>
+  <div class="mt-6 flex flex-wrap gap-2 text-sm">
+    <% if branch_operator_can?(cap::TELLER_SESSION_OPEN) %>
+      <%= link_to "Open session", new_branch_teller_session_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::DEPOSIT_ACCEPT) %>
+      <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::WITHDRAWAL_POST) %>
+      <%= link_to "Record withdrawal", new_branch_withdrawal_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::TRANSFER_COMPLETE) %>
+      <%= link_to "Transfer", new_branch_transfer_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::HOLD_PLACE) %>
+      <%= link_to "Place hold", new_branch_hold_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::CASH_POSITION_VIEW) %>
+      <%= link_to "Cash position", branch_cash_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::OPERATIONAL_EVENT_VIEW) %>
+      <%= link_to "Events", branch_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+    <% end %>
   </div>
+
+  <%= render "session_group",
+    title: "Open sessions",
+    description: "Drawer sessions currently available for teller cash activity.",
+    sessions: @session_dashboard.open_sessions,
+    empty_message: "No open teller sessions.",
+    show_close_fields: false %>
+
+  <%= render "session_group",
+    title: "Recent closed sessions",
+    description: "Most recently closed drawer sessions.",
+    sessions: @session_dashboard.recent_closed_sessions,
+    empty_message: "No closed teller sessions yet.",
+    show_close_fields: true %>
 </section>
 
-<section class="mt-8 grid gap-4 md:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Open sessions</p>
-    <p class="mt-2 text-3xl font-semibold"><%= @session_dashboard.open_sessions.size %></p>
+<section id="supervisor" class="mt-10 scroll-mt-8 rounded border border-amber-100 bg-amber-50/50 p-6 shadow-sm">
+  <h2 class="text-xl font-semibold text-amber-950">Supervisor — approvals</h2>
+  <p class="mt-1 text-sm text-amber-900">Session variance, reversals, overrides, fee waivers, and cash approvals.</p>
+
+  <div class="mt-4 flex flex-wrap gap-2 text-sm">
+    <% if branch_operator_can?(cap::REVERSAL_CREATE) %>
+      <%= link_to "Reversal", new_branch_reversal_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::OVERRIDE_APPROVE) %>
+      <%= link_to "Override", new_branch_override_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+    <% end %>
+    <% if branch_operator_can?(cap::CASH_POSITION_VIEW) %>
+      <%= link_to "Cash position", branch_cash_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+    <% end %>
   </div>
 
-  <div class="rounded border border-amber-200 bg-amber-50 p-5 shadow-sm">
-    <p class="text-sm font-medium text-amber-800">Pending supervisor</p>
-    <p class="mt-2 text-3xl font-semibold text-amber-950"><%= @session_dashboard.pending_supervisor_sessions.size %></p>
-  </div>
-
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Recent closed</p>
-    <p class="mt-2 text-3xl font-semibold"><%= @session_dashboard.recent_closed_sessions.size %></p>
-  </div>
+  <%= render "session_group",
+    title: "Pending supervisor sessions",
+    description: "Closed attempts with variance above the configured threshold.",
+    sessions: @session_dashboard.pending_supervisor_sessions,
+    empty_message: "No sessions are waiting for supervisor variance approval.",
+    show_close_fields: true,
+    variance_approve: true %>
 </section>
-
-<%= render "session_group",
-  title: "Open sessions",
-  description: "Drawer sessions currently available for teller cash activity.",
-  sessions: @session_dashboard.open_sessions,
-  empty_message: "No open teller sessions.",
-  show_close_fields: false %>
-
-<%= render "session_group",
-  title: "Pending supervisor sessions",
-  description: "Closed attempts with variance above the configured threshold.",
-  sessions: @session_dashboard.pending_supervisor_sessions,
-  empty_message: "No sessions are waiting for supervisor variance approval.",
-  show_close_fields: true %>
-
-<%= render "session_group",
-  title: "Recent closed sessions",
-  description: "Most recently closed drawer sessions.",
-  sessions: @session_dashboard.recent_closed_sessions,
-  empty_message: "No closed teller sessions yet.",
-  show_close_fields: true %>

@@ -2,7 +2,7 @@
 
 module Teller
   class OverridesController < ApplicationController
-    before_action :require_supervisor_for_override_approval!, only: [ :create ]
+    before_action :require_override_approve_capability!, only: [ :create ]
 
     def create
       attrs = params.require(:override).permit(:event_type, :channel, :idempotency_key, :reference_id, :business_date).to_h.symbolize_keys
@@ -25,11 +25,14 @@ module Teller
 
     private
 
-    def require_supervisor_for_override_approval!
+    def require_override_approve_capability!
       return if performed?
       return unless params.dig(:override, :event_type).to_s == "override.approved"
 
-      require_supervisor!
+      require_capability!(
+        Workspace::Authorization::CapabilityRegistry::OVERRIDE_APPROVE,
+        message: "override approve capability required"
+      )
     end
   end
 end

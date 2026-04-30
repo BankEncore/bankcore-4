@@ -3692,6 +3692,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260430120000'),
 ('20260429223000'),
 ('20260429210200'),
 ('20260429190000'),

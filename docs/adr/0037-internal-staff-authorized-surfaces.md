@@ -91,3 +91,14 @@ flowchart LR
 
 - Branch cash operating model (target): [301-branch-level-cash-tracking.md](../concepts/301-branch-level-cash-tracking.md)
 - Capability summary: [branch-operations-capability-map.md](../architecture/branch-operations-capability-map.md)
+
+---
+
+## 6. Implementation notes (Branch HTML)
+
+Shipped wiring:
+
+- **Surface nav:** [app/views/branch/shared/_surface_nav.html.erb](../../app/views/branch/shared/_surface_nav.html.erb) is rendered from [app/views/layouts/internal.html.erb](../../app/views/layouts/internal.html.erb) when `controller_path` starts with `branch/`; anchor targets match `id` sections on [app/views/branch/dashboard/index.html.erb](../../app/views/branch/dashboard/index.html.erb) (`#csr`, `#teller`, `#supervisor`).
+- **Capability-gated links:** [Branch::ApplicationController](../../app/controllers/branch/application_controller.rb) exposes `branch_operator_can?` to views; dashboard links use `Workspace::Authorization::CapabilityRegistry` constants.
+- **Teller session variance on Branch:** `POST /branch/teller_sessions/approve_variance` on [Branch::TellerSessionsController](../../app/controllers/branch/teller_sessions_controller.rb); pending rows include an approve form in [app/views/branch/dashboard/_session_group.html.erb](../../app/views/branch/dashboard/_session_group.html.erb) when `variance_approve: true`.
+- **Override approval:** capability `override.approve` ([CapabilityRegistry](../../app/domains/workspace/authorization/capability_registry.rb)); enforced on [Branch::OverridesController](../../app/controllers/branch/overrides_controller.rb) and [Teller::OverridesController](../../app/controllers/teller/overrides_controller.rb).

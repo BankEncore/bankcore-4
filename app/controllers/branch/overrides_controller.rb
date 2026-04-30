@@ -2,7 +2,7 @@
 
 module Branch
   class OverridesController < ApplicationController
-    before_action :require_branch_supervisor_for_approval!
+    before_action :require_override_approve_capability_for_approval!
 
     def new
       @override = default_form_params("branch-override")
@@ -29,10 +29,13 @@ module Branch
 
     private
 
-    def require_branch_supervisor_for_approval!
+    def require_override_approve_capability_for_approval!
       return unless params.dig(:override, :event_type).to_s == "override.approved"
 
-      require_branch_supervisor!
+      require_branch_capability!(
+        Workspace::Authorization::CapabilityRegistry::OVERRIDE_APPROVE,
+        alert: "Override approval capability required"
+      )
     end
 
     def default_form_params(prefix)

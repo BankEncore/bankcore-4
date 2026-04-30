@@ -27,6 +27,7 @@ module Workspace
 
         assert operator.has_capability?(CapabilityRegistry::REVERSAL_CREATE)
         assert operator.has_capability?(CapabilityRegistry::FEE_WAIVE)
+        assert operator.has_capability?(CapabilityRegistry::OVERRIDE_APPROVE)
       end
 
       test "inactive operators receive no capabilities" do

@@ -25,6 +25,7 @@ module Workspace
       HOLD_RELEASE = "hold.release"
       BUSINESS_DATE_CLOSE = "business_date.close"
       TELLER_SESSION_VARIANCE_APPROVE = "teller_session_variance.approve"
+      OVERRIDE_APPROVE = "override.approve"
       REVERSAL_CREATE = "reversal.create"
       OPS_BATCH_PROCESS = "ops.batch.process"
       OPS_EXCEPTION_RESOLVE = "ops.exception.resolve"
@@ -90,6 +91,8 @@ module Workspace
           description: "May close the current business date after readiness checks." },
         { code: TELLER_SESSION_VARIANCE_APPROVE, name: "Approve teller session variance", category: "control",
           description: "May approve a teller session variance." },
+        { code: OVERRIDE_APPROVE, name: "Approve override", category: "control",
+          description: "May record override.approved teller-channel control events." },
         { code: REVERSAL_CREATE, name: "Create reversal", category: "control",
           description: "May create controlled reversals." },
         { code: OPS_BATCH_PROCESS, name: "Process operations batch", category: "operations",
@@ -135,7 +138,7 @@ module Workspace
           CASH_DRAWER_MANAGE, CASH_LOCATION_MANAGE, CASH_MOVEMENT_CREATE, CASH_MOVEMENT_APPROVE,
           CASH_COUNT_RECORD, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW, CASH_SHIPMENT_RECEIVE,
           PARTY_CREATE, PARTY_CONTACT_UPDATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, FEE_WAIVE, HOLD_RELEASE,
-          BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE, REVERSAL_CREATE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
+          BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE, OVERRIDE_APPROVE, REVERSAL_CREATE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
         ],
         CSR => [
           PARTY_CREATE, PARTY_CONTACT_UPDATE, ACCOUNT_OPEN, ACCOUNT_MAINTAIN, HOLD_PLACE, OPERATIONAL_EVENT_VIEW, REPORT_VIEW
@@ -147,7 +150,7 @@ module Workspace
         OPERATIONS => [
           OPS_BATCH_PROCESS, OPS_EXCEPTION_RESOLVE, OPS_RECONCILIATION_PERFORM, OPERATIONAL_EVENT_VIEW,
           JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW, BUSINESS_DATE_CLOSE, TELLER_SESSION_VARIANCE_APPROVE,
-          CASH_MOVEMENT_APPROVE, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW, CASH_SHIPMENT_RECEIVE
+          OVERRIDE_APPROVE, CASH_MOVEMENT_APPROVE, CASH_VARIANCE_APPROVE, CASH_POSITION_VIEW, CASH_SHIPMENT_RECEIVE
         ],
         AUDITOR => [
           OPERATIONAL_EVENT_VIEW, JOURNAL_ENTRY_VIEW, AUDIT_EXPORT, REPORT_VIEW

@@ -47,6 +47,9 @@ Rails.application.routes.draw do
     get "deposit_accounts/:deposit_account_id/fee_waivers/new", to: "fee_waivers#new", as: :new_fee_waiver
     post "deposit_accounts/:deposit_account_id/fee_waivers", to: "fee_waivers#create", as: :fee_waivers
     resources :teller_sessions, only: [ :new, :create ] do
+      collection do
+        post :approve_variance
+      end
       post :close, on: :member
     end
     get "cash", to: "cash#index", as: :cash
