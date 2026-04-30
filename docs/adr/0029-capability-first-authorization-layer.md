@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-04-27  
-**Aligns with:** [module catalog](../architecture/bankcore-module-catalog.md) §7, [ADR-0015](0015-teller-workspace-authentication.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0027](0027-external-read-api-boundary.md), [roadmap](../roadmap.md) Phase 1G / Phase 4
+**Aligns with:** [module catalog](../architecture/bankcore-module-catalog.md) §7, [ADR-0015](0015-teller-workspace-authentication.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0027](0027-external-read-api-boundary.md), [ADR-0037](0037-internal-staff-authorized-surfaces.md), [roadmap](../roadmap.md) Phase 1G / Phase 4
 
 ---
 
@@ -109,6 +109,10 @@ Examples of rules that remain outside capabilities:
 - future branch-specific transaction state
 
 Those checks belong in policy, command, transaction-code, approval-rule, workflow, and domain validation layers.
+
+### 2.1 Surfaces vs capabilities
+
+**Capabilities** answer whether an operator may attempt a **category** of action (coarse gate). **Authorized surfaces** answer **where** in staff UIs or APIs that action is exposed—e.g. Branch HTML teller line vs supervisor vs CSR lanes, versus JSON `/teller` ([ADR-0037](0037-internal-staff-authorized-surfaces.md)). Surfaces must still call the same domain commands; they do not duplicate ledger or custody ownership.
 
 ---
 

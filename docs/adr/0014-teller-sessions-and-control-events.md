@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-04-23  
-**Aligns with:** [roadmap.md](../roadmap.md) Phase 1, [module catalog](../architecture/bankcore-module-catalog.md)
+**Aligns with:** [roadmap.md](../roadmap.md) Phase 1, [module catalog](../architecture/bankcore-module-catalog.md), [ADR-0031](0031-cash-inventory-and-management.md), [ADR-0037](0037-internal-staff-authorized-surfaces.md)
 
 ---
 
@@ -23,3 +23,11 @@
 Teller workspace routes (including **`GET /teller/reports/*`** per [ADR-0016](0016-trial-balance-and-eod-readiness.md)) are listed in [docs/operational_events/README.md](../operational_events/README.md). **Authentication and supervisor gates** for the teller workspace (`X-Operator-Id`, reversal / `override.approved`, **`POST /teller/teller_sessions/approve_variance`**) are defined in [ADR-0015](0015-teller-workspace-authentication.md).
 
 **Approve variance body (JSON):** `{ "teller_session_approve_variance": { "teller_session_id": <id> } }` with supervisor **`X-Operator-Id`**.
+
+---
+
+## 3. Related boundaries
+
+- **Teller session ↔ drawer custody:** An open session resolves a **`teller_drawer`** `Cash` location (`cash_location_id`). Custody balances and movements remain owned by **`Cash`** per [ADR-0031](0031-cash-inventory-and-management.md).
+- **Expected drawer cash:** Still derived from posted teller-channel operational events on the session (`deposit.accepted`, `withdrawal.posted`); custody `cash_balances` follow `Cash` commands unless a future product decision ties them automatically (see ADR-0031 §5.2).
+- **Where supervisors act:** Session variance approval and related gates may appear on **Branch HTML supervisor** surfaces or JSON `/teller`; surfaces do not change `Teller` domain ownership ([ADR-0037](0037-internal-staff-authorized-surfaces.md)).

@@ -33,6 +33,7 @@ When a slice changes financial effects, posting rules, reversals, GL ownership, 
 5. `Accounts`, `Party`, `Products`, `Deposits`, `Cash`, `Workflow`, `Workspace`, and `Organization` own their respective state and controls.
 6. `operating_unit_id` is operational attribution and authorization scope. It is not a branch ledger, branch business date, or legal entity.
 7. Corrections are explicit forward records: reversals, releases, expirations, voids, replacements, or superseding rows.
+8. **Authorized surfaces** (Branch HTML teller line, teller supervisor, CSR, and JSON `/teller`) orchestrate access; **capabilities** gate categories of action. Surfaces do not own domain state—see [ADR-0037](../adr/0037-internal-staff-authorized-surfaces.md).
 
 ---
 
@@ -218,3 +219,4 @@ These capabilities support oversight and production-scale operations.
 - [ADR-0031: Cash inventory and management](../adr/0031-cash-inventory-and-management.md)
 - [ADR-0032: Operating units and branch scope](../adr/0032-operating-units-and-branch-scope.md)
 - [ADR-0036: Branch servicing event and audit taxonomy](../adr/0036-branch-servicing-event-audit-taxonomy.md)
+- [ADR-0037: Internal staff authorized surfaces](../adr/0037-internal-staff-authorized-surfaces.md)

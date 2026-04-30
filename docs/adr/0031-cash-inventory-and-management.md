@@ -3,7 +3,7 @@
 **Status:** Proposed  
 **Date:** 2026-04-27  
 **Decision Type:** Cash domain / operational control architecture  
-**Aligns with:** [ADR-0002](0002-operational-event-model.md), [ADR-0003](0003-posting-journal-architecture.md), [ADR-0010](0010-ledger-persistence-and-seeded-coa.md), [ADR-0012](0012-posting-rule-registry-and-journal-subledger.md), [ADR-0014](0014-teller-sessions-and-control-events.md), [ADR-0018](0018-business-date-close-and-posting-invariant.md), [ADR-0020](0020-teller-drawer-variance-gl-posting.md), [ADR-0029](0029-capability-first-authorization-layer.md), [module catalog](../architecture/bankcore-module-catalog.md)
+**Aligns with:** [ADR-0002](0002-operational-event-model.md), [ADR-0003](0003-posting-journal-architecture.md), [ADR-0010](0010-ledger-persistence-and-seeded-coa.md), [ADR-0012](0012-posting-rule-registry-and-journal-subledger.md), [ADR-0014](0014-teller-sessions-and-control-events.md), [ADR-0018](0018-business-date-close-and-posting-invariant.md), [ADR-0020](0020-teller-drawer-variance-gl-posting.md), [ADR-0029](0029-capability-first-authorization-layer.md), [ADR-0037](0037-internal-staff-authorized-surfaces.md), [module catalog](../architecture/bankcore-module-catalog.md)
 
 ---
 
@@ -110,6 +110,8 @@ Representative queries:
 `Teller` continues to own teller sessions, expected cash, actual cash at close, and teller-session variance workflow. Teller sessions may reference a drawer `cash_location_id` once the Cash domain is implemented.
 
 Teller cash deposits and withdrawals still record financial customer activity through existing operational event types such as `deposit.accepted` and `withdrawal.posted`.
+
+**Open product decision (deferral):** Whether each teller-channel cash operational event should **automatically** adjust the linked drawer’s **`cash_balances`** (versus relying primarily on explicit `Cash` movements such as vault-to-drawer) is **not** fixed in this ADR. Until decided and documented, custody balance changes should originate from **`Cash`** commands and counts; teller **expected** cash remains session-event-derived per [ADR-0014](0014-teller-sessions-and-control-events.md). Target operating semantics for branch cash layers remain in [301-branch-level-cash-tracking.md](../concepts/301-branch-level-cash-tracking.md) (see *Alignment with BankCORE implementation and roadmap*). Staff **where** tellers and supervisors initiate custody actions is covered by [ADR-0037](0037-internal-staff-authorized-surfaces.md).
 
 ### 5.3 `Workflow` and `Workspace`
 

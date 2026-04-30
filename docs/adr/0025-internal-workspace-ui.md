@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-04-24  
-**Aligns with:** [module catalog](../architecture/bankcore-module-catalog.md) §7, [ADR-0015](0015-teller-workspace-authentication.md), [roadmap](../roadmap.md) Phase 3.5
+**Aligns with:** [module catalog](../architecture/bankcore-module-catalog.md) §7, [ADR-0015](0015-teller-workspace-authentication.md), [ADR-0037](0037-internal-staff-authorized-surfaces.md), [roadmap](../roadmap.md) Phase 3.5
 
 ---
 
@@ -23,6 +23,8 @@ Use a hybrid workspace architecture:
 - HTML controllers are organized by workspace, not domain ownership.
 - Controllers validate and normalize input, call domain commands/queries/orchestrators, and prepare response/view state.
 - Controllers must never construct journal lines, embed posting rules, or implement balance math.
+
+The `branch` workspace may expose **multiple authorized surfaces** (capability-gated navigation lanes or controller groups) for the same HTML namespace—for example **teller line**, **teller supervisor**, and **CSR**—without splitting domain modules. See [ADR-0037](0037-internal-staff-authorized-surfaces.md).
 
 ---
 
