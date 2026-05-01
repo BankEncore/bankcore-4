@@ -30,6 +30,22 @@ module Ops
       tag.span(value.to_s.humanize, class: "rounded border px-2 py-1 text-xs font-medium #{classes}")
     end
 
+    def ops_event_type_badge(value)
+      event_type = value.to_s
+      classes = case event_type
+      when /\A(deposit|withdrawal|transfer|ach|interest)\./
+        "bg-blue-50 text-blue-800 border-blue-200"
+      when /\A(fee|overdraft)\./
+        "bg-violet-50 text-violet-800 border-violet-200"
+      when /\A(hold|posting)\./
+        "bg-amber-50 text-amber-900 border-amber-200"
+      else
+        "bg-slate-50 text-slate-700 border-slate-200"
+      end
+
+      tag.span(event_type.presence || "Unknown", class: "rounded border px-2 py-1 text-xs font-medium #{classes}")
+    end
+
     def ops_account_label(account)
       return "None" if account.nil?
 

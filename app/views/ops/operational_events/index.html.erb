@@ -32,7 +32,7 @@
 
     <div class="flex items-end gap-3 md:col-span-4">
       <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Clear", ops_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Clear filters", ops_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     </div>
   <% end %>
 </section>
@@ -53,10 +53,12 @@
     <% if @event_search[:rows].any? %>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
-              <th class="px-5 py-3">Event</th>
+              <th class="px-5 py-3">Event id</th>
+              <th class="px-5 py-3">Created</th>
               <th class="px-5 py-3">Status</th>
+              <th class="px-5 py-3">Event type</th>
               <th class="px-5 py-3">Business date</th>
               <th class="px-5 py-3">Channel</th>
               <th class="px-5 py-3 text-right">Amount</th>
@@ -64,17 +66,18 @@
               <th class="px-5 py-3">Destination</th>
               <th class="px-5 py-3">Actor/session</th>
               <th class="px-5 py-3">Support keys</th>
-              <th class="px-5 py-3">Created</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <% @event_search[:rows].each do |event| %>
-              <tr>
+              <tr class="focus-within:bg-slate-50 hover:bg-slate-50">
                 <td class="px-5 py-4">
-                  <%= link_to "##{event.id}", ops_operational_event_path(event), class: "font-medium text-slate-950 underline" %>
-                  <div class="text-xs text-slate-500"><%= event.event_type %></div>
+                  <%= link_to "##{event.id}", ops_operational_event_path(event), class: "font-semibold text-slate-950 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500" %>
+                  <div class="text-xs text-slate-500">Primary action: view details</div>
                 </td>
+                <td class="px-5 py-4"><%= ops_time(event.created_at) %></td>
                 <td class="px-5 py-4"><%= ops_status_badge(event.status) %></td>
+                <td class="px-5 py-4"><%= ops_event_type_badge(event.event_type) %></td>
                 <td class="px-5 py-4"><%= event.business_date.iso8601 %></td>
                 <td class="px-5 py-4"><%= event.channel %></td>
                 <td class="px-5 py-4 text-right"><%= ops_event_amount(event) %></td>
@@ -89,14 +92,19 @@
                   <div>Idempotency: <%= event.idempotency_key %></div>
                   <div>Reversal of: <%= event.reversal_of_event_id || "none" %></div>
                 </td>
-                <td class="px-5 py-4"><%= ops_time(event.created_at) %></td>
               </tr>
             <% end %>
           </tbody>
         </table>
       </div>
     <% else %>
-      <div class="px-5 py-8 text-sm text-slate-600">No operational events matched these filters.</div>
+      <div class="px-5 py-8 text-sm text-slate-600">
+        <p>No operational events matched these filters.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <%= link_to "Clear filters", ops_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+          <%= link_to "Try broader date range", ops_operational_events_path(request.query_parameters.merge(business_date: nil, business_date_from: nil, business_date_to: nil, limit: 100)), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+        </div>
+      </div>
     <% end %>
   </section>
 

@@ -104,8 +104,9 @@
   <% if @contact_summary.audits.any? %>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
           <tr>
+            <th class="px-5 py-3">When</th>
             <th class="px-5 py-3">Action</th>
             <th class="px-5 py-3">Contact</th>
             <th class="px-5 py-3">New summary</th>
@@ -115,7 +116,10 @@
         <tbody class="divide-y divide-slate-100">
           <% @contact_summary.audits.each do |audit| %>
             <tr>
-              <td class="px-5 py-3 font-medium"><%= audit.action %></td>
+              <td class="px-5 py-3"><%= audit.created_at&.in_time_zone&.strftime("%Y-%m-%d %H:%M") || "Not recorded" %></td>
+              <td class="px-5 py-3">
+                <span class="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-700"><%= audit.action.to_s.humanize %></span>
+              </td>
               <td class="px-5 py-3"><%= audit.contact_table %> #<%= audit.contact_id %></td>
               <td class="px-5 py-3"><%= audit.new_summary.presence || audit.old_summary %></td>
               <td class="px-5 py-3">#<%= audit.actor_id %></td>
