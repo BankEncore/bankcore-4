@@ -27,12 +27,9 @@
 <section class="mt-4 rounded border border-slate-200 bg-slate-50 p-4">
   <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Quick actions</h2>
   <div class="mt-3 flex flex-wrap gap-2 text-sm">
-    <%= link_to "Account profile", branch_servicing_deposit_account_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
-    <% if @can_place_holds %>
-      <%= link_to "Place hold", branch_new_account_hold_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
-    <% end %>
     <%= link_to "Review holds", branch_account_holds_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
     <%= link_to "Review transactions", branch_account_activity_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+    <%= link_to "Review statements", branch_account_statements_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
     <% if can_waive_fee? %>
       <%= link_to "Post fee waiver", branch_new_fee_waiver_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
     <% end %>
