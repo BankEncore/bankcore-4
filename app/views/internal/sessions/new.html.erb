@@ -8,11 +8,13 @@
     <div>
       <%= form.label :username, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :username, autofocus: true, autocomplete: "username", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Use your assigned operator username (example: <code>teller.main</code>).</p>
     </div>
 
     <div>
       <%= form.label :password, class: "block text-sm font-medium text-slate-700" %>
       <%= form.password_field :password, autocomplete: "current-password", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Passwords are validated on submit; check the alert above for exact failure details.</p>
     </div>
 
     <%= form.submit "Sign in", class: "w-full rounded bg-slate-900 px-4 py-2 font-medium text-white" %>

@@ -12,7 +12,8 @@
   <%= form_with url: branch_customers_path, method: :get, class: "grid gap-4 md:grid-cols-[1fr_auto]" do |form| %>
     <div>
       <%= form.label :query, "Customer search", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :query, value: @query, placeholder: "Party id or customer name", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <%= form.text_field :query, value: @query, placeholder: "Party #123 or Jane Doe", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Examples: <code>Party #123</code>, <code>123</code>, <code>Jane Doe</code>, or a legal entity name.</p>
     </div>
     <div class="self-end">
       <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
