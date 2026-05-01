@@ -32,29 +32,29 @@
 
     <% if event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
       <div class="mt-6 flex flex-wrap gap-3">
-        <%= button_to "Post event", branch_operational_event_post_path(event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-        <%= link_to "Event detail", branch_operational_event_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-        <%= link_to "Trace receipt", branch_operational_event_receipt_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <%= button_to "Post event", branch_operational_event_post_path(event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+        <%= link_to "Event detail", branch_operational_event_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+        <%= link_to "Trace receipt", branch_operational_event_receipt_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <% if event.source_account_id.present? %>
-          <%= link_to "Source account", branch_servicing_deposit_account_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-          <%= link_to "Source activity", branch_account_activity_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Source account", branch_servicing_deposit_account_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+          <%= link_to "Source activity", branch_account_activity_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <% end %>
         <% if event.destination_account_id.present? %>
-          <%= link_to "Destination account", branch_servicing_deposit_account_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-          <%= link_to "Destination activity", branch_account_activity_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Destination account", branch_servicing_deposit_account_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+          <%= link_to "Destination activity", branch_account_activity_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <% end %>
       </div>
     <% else %>
       <div class="mt-6 flex flex-wrap gap-3">
-        <%= link_to "Event detail", branch_operational_event_path(event), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-        <%= link_to "Trace receipt", branch_operational_event_receipt_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <%= link_to "Event detail", branch_operational_event_path(event), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+        <%= link_to "Trace receipt", branch_operational_event_receipt_path(event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <% if event.source_account_id.present? %>
-          <%= link_to "Source account", branch_servicing_deposit_account_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-          <%= link_to "Source activity", branch_account_activity_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Source account", branch_servicing_deposit_account_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+          <%= link_to "Source activity", branch_account_activity_path(event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <% end %>
         <% if event.destination_account_id.present? %>
-          <%= link_to "Destination account", branch_servicing_deposit_account_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-          <%= link_to "Destination activity", branch_account_activity_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <%= link_to "Destination account", branch_servicing_deposit_account_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+          <%= link_to "Destination activity", branch_account_activity_path(event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <% end %>
       </div>
     <% end %>

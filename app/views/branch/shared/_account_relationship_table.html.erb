@@ -45,13 +45,13 @@
           <td class="px-5 py-4"><%= branch_date(row.relationship.ended_on) %></td>
           <% if local_assigns.fetch(:show_actions, false) %>
             <td class="px-5 py-4">
-              <%= link_to "Service account", branch_servicing_deposit_account_path(row.account, customer_context_params), class: "rounded bg-slate-900 px-3 py-1.5 font-medium text-white" %>
+              <%= link_to "Service account", branch_servicing_deposit_account_path(row.account, customer_context_params), class: "rounded bg-slate-900 px-3 py-1.5 font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
             </td>
           <% end %>
           <% if local_assigns.fetch(:can_end_authorized_signers, false) %>
             <td class="px-5 py-4">
               <% if row.relationship.role == Accounts::Models::DepositAccountParty::ROLE_AUTHORIZED_SIGNER && row.relationship.status == Accounts::Models::DepositAccountParty::STATUS_ACTIVE && row.relationship.ended_on.nil? %>
-                <%= link_to "End signer", branch_end_account_authorized_signer_path(row.account, row.relationship), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+                <%= link_to "End signer", branch_end_account_authorized_signer_path(row.account, row.relationship), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
               <% else %>
                 <span class="text-slate-500">No action</span>
               <% end %>

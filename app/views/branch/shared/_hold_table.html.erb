@@ -37,7 +37,7 @@
           </td>
           <td class="px-5 py-4">
             <% if local_assigns.fetch(:can_release, false) && hold.status == Accounts::Models::Hold::STATUS_ACTIVE %>
-              <%= link_to "Release", branch_release_account_hold_path(hold.deposit_account_id, hold.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+              <%= link_to "Release", branch_release_account_hold_path(hold.deposit_account_id, hold.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
             <% else %>
               <span class="text-slate-500">No action</span>
             <% end %>
