@@ -21,9 +21,9 @@
           <td class="px-5 py-4 text-right"><%= branch_money(event.amount_minor_units) %> <%= event.currency %></td>
           <td class="px-5 py-4">
             <% if local_assigns.fetch(:can_waive_fees, false) && event.event_type == "fee.assessed" && event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
-              <%= link_to "Waive fee", branch_new_fee_waiver_path(event.source_account_id, fee_assessment_event_id: event.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+              <%= link_to "Waive fee", branch_new_fee_waiver_path(event.source_account_id, fee_assessment_event_id: event.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
             <% elsif local_assigns.fetch(:can_reverse_events, false) && event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
-              <%= link_to "Reverse", new_branch_reversal_path(original_operational_event_id: event.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700" %>
+              <%= link_to "Reverse", new_branch_reversal_path(original_operational_event_id: event.id), class: "rounded border border-slate-300 px-3 py-1.5 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
             <% else %>
               <span class="text-slate-500">View only</span>
             <% end %>

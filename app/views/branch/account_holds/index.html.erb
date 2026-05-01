@@ -6,7 +6,7 @@
     <h1 class="text-3xl font-semibold">Account holds</h1>
     <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
   </div>
-  <nav class="flex flex-wrap gap-2 text-sm">
+  <nav class="flex flex-wrap gap-2 text-sm" aria-label="Account hold actions">
     <%= link_to "Back to account", branch_servicing_deposit_account_path(@account, customer_return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% if can_place_servicing_hold? %>
       <%= link_to "Place hold", branch_new_account_hold_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>

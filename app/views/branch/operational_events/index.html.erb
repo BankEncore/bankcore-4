@@ -5,7 +5,7 @@
     <h1 class="text-3xl font-semibold">Branch operational events</h1>
     <p class="mt-2 text-slate-600">Search recent teller-facing events and post pending events.</p>
   </div>
-  <nav class="flex flex-wrap gap-2 text-sm">
+  <nav class="flex flex-wrap gap-2 text-sm" aria-label="Operational event actions">
     <%= link_to "Place hold", new_branch_hold_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <%= link_to "Release hold", release_branch_holds_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <% if current_operator.supervisor? %>

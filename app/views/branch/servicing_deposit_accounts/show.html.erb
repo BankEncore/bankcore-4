@@ -6,7 +6,7 @@
     <h1 class="text-3xl font-semibold">Account <%= @account.account_number %></h1>
     <p class="mt-2 text-slate-600"><%= @profile.product.product_code %> · <%= @profile.product.name %></p>
   </div>
-  <nav class="flex flex-wrap gap-2 text-sm">
+  <nav class="flex flex-wrap gap-2 text-sm" aria-label="Account actions">
     <%= link_to "Find customer", branch_customers_path(customer_return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% if can_manage_authorized_signers? %>
       <%= link_to "Add authorized signer", branch_new_account_authorized_signer_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>

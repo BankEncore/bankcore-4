@@ -23,7 +23,7 @@
   <%= form_with url: path, scope: scope, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
     <% account_fields.each do |field_name, label, account_number_field| %>
       <div>
-        <%= form.label field_name, label, class: "block text-sm font-medium text-slate-700" %>
+        <%= form.label field_name, label, class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <%= form.text_field field_name, value: normalized_form_data[field_name.to_s], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
         <p class="mt-1 text-xs text-slate-500">Enter an internal numeric ID (example: <code>123</code>).</p>
         <% if (message = inline_error_for.call(field_name)).present? %>
@@ -32,7 +32,7 @@
       </div>
       <% if account_number_field.present? %>
         <div>
-          <%= form.label account_number_field, "#{label.sub(/ id\z/i, "")} number", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.label account_number_field, "#{label.sub(/ id\z/i, "")} number", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
           <%= form.text_field account_number_field, value: normalized_form_data[account_number_field.to_s], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
           <p class="mt-1 text-xs text-slate-500">Use either ID or account number. Keep leading zeros when applicable.</p>
           <% if (message = inline_error_for.call(account_number_field)).present? %>
@@ -42,7 +42,7 @@
       <% end %>
     <% end %>
     <div>
-      <%= form.label :amount_minor_units, "Amount minor units", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.label :amount_minor_units, "Amount minor units", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
       <%= form.text_field :amount_minor_units, value: normalized_form_data["amount_minor_units"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
       <p class="mt-1 text-xs text-slate-500">Enter whole-number minor units (example: <code>1050</code> = $10.50 USD).</p>
       <% if (message = inline_error_for.call(:amount_minor_units)).present? %>
@@ -50,7 +50,7 @@
       <% end %>
     </div>
     <div>
-      <%= form.label :currency, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.label :currency, class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
       <%= form.text_field :currency, value: normalized_form_data["currency"] || "USD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
       <p class="mt-1 text-xs text-slate-500">Use ISO currency code (example: <code>USD</code>).</p>
       <% if (message = inline_error_for.call(:currency)).present? %>
@@ -59,7 +59,7 @@
     </div>
     <% if include_teller_session %>
       <div>
-        <%= form.label :teller_session_id, "Open teller session id", class: "block text-sm font-medium text-slate-700" %>
+        <%= form.label :teller_session_id, "Open teller session id", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
         <%= form.text_field :teller_session_id, value: normalized_form_data["teller_session_id"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
         <p class="mt-1 text-xs text-slate-500">Required for teller cash flows when open-session checks are enabled.</p>
         <% if (message = inline_error_for.call(:teller_session_id)).present? %>
@@ -68,7 +68,7 @@
       </div>
     <% end %>
     <div class="md:col-span-2">
-      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
+      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
       <%= form.text_field :idempotency_key, value: normalized_form_data["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
       <p class="mt-1 text-xs text-slate-500">Reference identifier for safe retries (example: <code>branch-deposit-2026-05-01-001</code>).</p>
       <% if (message = inline_error_for.call(:idempotency_key)).present? %>
@@ -83,7 +83,7 @@
       <p class="mt-1 text-xs text-slate-500">Posting eligibility, account restrictions, and balance guards are rechecked by the command on submit.</p>
     </div>
     <div class="md:col-span-2">
-      <%= form.submit submit_label, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= form.submit submit_label, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
     </div>
   <% end %>
 </section>
