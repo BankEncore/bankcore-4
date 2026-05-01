@@ -3,6 +3,19 @@
 <% account_fields = local_assigns.fetch(:account_fields, [ [ :deposit_account_id, "Deposit account id", :deposit_account_number ] ]) %>
 <% include_teller_session = local_assigns.fetch(:include_teller_session, true) %>
 <% preview = local_assigns[:preview] %>
+<% field_errors = local_assigns[:field_errors] || {} %>
+<% normalized_form_data = form_data.respond_to?(:to_h) ? form_data.to_h.stringify_keys : form_data.stringify_keys %>
+<%
+  inline_error_for = lambda do |field_name|
+    explicit = field_errors[field_name.to_s] || field_errors[field_name.to_sym]
+    next explicit if explicit.present?
+
+    next nil if error_message.blank?
+
+    label_text = field_name.to_s.humanize
+    error_message if error_message.downcase.include?(field_name.to_s.humanize.downcase) || error_message.downcase.include?(label_text.downcase)
+  end
+%>
 
 <%= render "branch/shared/transaction_preview", preview: preview if preview.present? %>
 
@@ -11,34 +24,56 @@
     <% account_fields.each do |field_name, label, account_number_field| %>
       <div>
         <%= form.label field_name, label, class: "block text-sm font-medium text-slate-700" %>
-        <%= form.text_field field_name, value: form_data[field_name.to_s] || form_data[field_name], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        <%= form.text_field field_name, value: normalized_form_data[field_name.to_s], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        <p class="mt-1 text-xs text-slate-500">Enter an internal numeric ID (example: <code>123</code>).</p>
+        <% if (message = inline_error_for.call(field_name)).present? %>
+          <p class="mt-1 text-xs text-red-700"><%= message %></p>
+        <% end %>
       </div>
       <% if account_number_field.present? %>
         <div>
           <%= form.label account_number_field, "#{label.sub(/ id\z/i, "")} number", class: "block text-sm font-medium text-slate-700" %>
-          <%= form.text_field account_number_field, value: form_data[account_number_field.to_s] || form_data[account_number_field], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-          <p class="mt-1 text-xs text-slate-500">Use either id or account number.</p>
+          <%= form.text_field account_number_field, value: normalized_form_data[account_number_field.to_s], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Use either ID or account number. Keep leading zeros when applicable.</p>
+          <% if (message = inline_error_for.call(account_number_field)).present? %>
+            <p class="mt-1 text-xs text-red-700"><%= message %></p>
+          <% end %>
         </div>
       <% end %>
     <% end %>
     <div>
       <%= form.label :amount_minor_units, "Amount minor units", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :amount_minor_units, value: form_data["amount_minor_units"] || form_data[:amount_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <%= form.text_field :amount_minor_units, value: normalized_form_data["amount_minor_units"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Enter whole-number minor units (example: <code>1050</code> = $10.50 USD).</p>
+      <% if (message = inline_error_for.call(:amount_minor_units)).present? %>
+        <p class="mt-1 text-xs text-red-700"><%= message %></p>
+      <% end %>
     </div>
     <div>
       <%= form.label :currency, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :currency, value: form_data["currency"] || form_data[:currency] || "USD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <%= form.text_field :currency, value: normalized_form_data["currency"] || "USD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Use ISO currency code (example: <code>USD</code>).</p>
+      <% if (message = inline_error_for.call(:currency)).present? %>
+        <p class="mt-1 text-xs text-red-700"><%= message %></p>
+      <% end %>
     </div>
     <% if include_teller_session %>
       <div>
         <%= form.label :teller_session_id, "Open teller session id", class: "block text-sm font-medium text-slate-700" %>
-        <%= form.text_field :teller_session_id, value: form_data["teller_session_id"] || form_data[:teller_session_id], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        <%= form.text_field :teller_session_id, value: normalized_form_data["teller_session_id"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        <p class="mt-1 text-xs text-slate-500">Required for teller cash flows when open-session checks are enabled.</p>
+        <% if (message = inline_error_for.call(:teller_session_id)).present? %>
+          <p class="mt-1 text-xs text-red-700"><%= message %></p>
+        <% end %>
       </div>
     <% end %>
     <div class="md:col-span-2">
       <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :idempotency_key, value: form_data["idempotency_key"] || form_data[:idempotency_key], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Keep this value stable when retrying the same request.</p>
+      <%= form.text_field :idempotency_key, value: normalized_form_data["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Reference identifier for safe retries (example: <code>branch-deposit-2026-05-01-001</code>).</p>
+      <% if (message = inline_error_for.call(:idempotency_key)).present? %>
+        <p class="mt-1 text-xs text-red-700"><%= message %></p>
+      <% end %>
     </div>
     <div class="md:col-span-2">
       <label class="flex items-center gap-2 text-sm text-slate-700">
