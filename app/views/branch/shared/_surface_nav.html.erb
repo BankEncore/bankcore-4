@@ -1,5 +1,32 @@
-<nav class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-4 text-sm" aria-label="Branch surfaces">
-  <%= link_to "CSR", "#{branch_path}#csr", class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm hover:bg-slate-50" %>
-  <%= link_to "Teller", "#{branch_path}#teller", class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm hover:bg-slate-50" %>
-  <%= link_to "Supervisor", "#{branch_path}#supervisor", class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm hover:bg-slate-50" %>
+<nav class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-4 text-sm" aria-label="Branch surfaces" data-surface-nav>
+  <% tab_base = "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-800 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+  <% tab_active = "border-slate-900 bg-slate-900 text-white hover:bg-slate-900" %>
+
+  <%= link_to "CSR", "#{branch_path}#csr", class: tab_base, data: { surface_tab: "csr", base_class: tab_base, active_class: tab_active } %>
+  <%= link_to "Teller", "#{branch_path}#teller", class: tab_base, data: { surface_tab: "teller", base_class: tab_base, active_class: tab_active } %>
+  <%= link_to "Supervisor", "#{branch_path}#supervisor", class: tab_base, data: { surface_tab: "supervisor", base_class: tab_base, active_class: tab_active } %>
 </nav>
+
+<script>
+  (() => {
+    const nav = document.querySelector("[data-surface-nav]");
+    if (!nav) return;
+
+    const tabs = Array.from(nav.querySelectorAll("[data-surface-tab]"));
+    const applyActiveState = () => {
+      const hash = (window.location.hash || "#csr").replace("#", "");
+      tabs.forEach((tab) => {
+        const isActive = tab.dataset.surfaceTab === hash;
+        tab.className = `${tab.dataset.baseClass}${isActive ? ` ${tab.dataset.activeClass}` : ""}`;
+        if (isActive) {
+          tab.setAttribute("aria-current", "true");
+        } else {
+          tab.removeAttribute("aria-current");
+        }
+      });
+    };
+
+    applyActiveState();
+    window.addEventListener("hashchange", applyActiveState);
+  })();
+</script>
