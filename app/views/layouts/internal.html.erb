@@ -20,16 +20,22 @@
         </div>
 
         <% if respond_to?(:current_operator, true) && current_operator %>
-          <nav class="flex items-center gap-4 text-sm">
-            <%= link_to "Home", internal_path, class: "text-slate-700 hover:text-slate-950" %>
+          <% nav_link_base = "rounded-md px-2.5 py-1.5 font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+          <% nav_link_active = "bg-slate-900 text-white hover:bg-slate-900 hover:text-white" %>
+          <nav class="flex items-center gap-2 text-sm" aria-label="Primary">
+            <% home_active = current_page?(internal_path) %>
+            <%= link_to "Home", internal_path, class: [nav_link_base, (nav_link_active if home_active)].compact.join(" "), aria: { current: ("page" if home_active) } %>
             <% if branch_access? %>
-              <%= link_to "Branch", branch_path, class: "text-slate-700 hover:text-slate-950" %>
+              <% branch_active = controller_path.start_with?("branch/") %>
+              <%= link_to "Branch", branch_path, class: [nav_link_base, (nav_link_active if branch_active)].compact.join(" "), aria: { current: ("page" if branch_active) } %>
             <% end %>
             <% if ops_access? %>
-              <%= link_to "Ops", ops_path, class: "text-slate-700 hover:text-slate-950" %>
+              <% ops_active = controller_path.start_with?("ops/") %>
+              <%= link_to "Ops", ops_path, class: [nav_link_base, (nav_link_active if ops_active)].compact.join(" "), aria: { current: ("page" if ops_active) } %>
             <% end %>
             <% if admin_access? %>
-              <%= link_to "Admin", admin_path, class: "text-slate-700 hover:text-slate-950" %>
+              <% admin_active = controller_path.start_with?("admin/") %>
+              <%= link_to "Admin", admin_path, class: [nav_link_base, (nav_link_active if admin_active)].compact.join(" "), aria: { current: ("page" if admin_active) } %>
             <% end %>
             <span class="text-slate-500"><%= current_operator.display_name.presence || current_operator.role.titleize %></span>
             <%= button_to "Sign out", logout_path, method: :delete, class: "rounded bg-slate-900 px-3 py-1.5 text-white" %>
