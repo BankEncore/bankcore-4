@@ -10,7 +10,6 @@ class IntegrationAchIngestReceiptFileTest < ActiveSupport::TestCase
 
     @party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Ava", last_name: "Ach")
     @account = Accounts::Commands::OpenAccount.call(party_record_id: @party.id)
-    @account.update!(account_number: "001234567890")
   end
 
   test "posts a valid ACH credit item with reconciliation evidence" do
@@ -20,7 +19,7 @@ class IntegrationAchIngestReceiptFileTest < ActiveSupport::TestCase
     assert_equal({ posted: 1 }, result.counts)
     row = result.outcomes.sole
     assert_equal :posted, row.fetch(:outcome)
-    assert_equal "001234567890", row.fetch(:account_number)
+    assert_equal @account.account_number, row.fetch(:account_number)
     assert_equal @account.id, row.fetch(:deposit_account_id)
     assert row.fetch(:operational_event_id)
     assert row.fetch(:posting_batch_id)
@@ -41,17 +40,17 @@ class IntegrationAchIngestReceiptFileTest < ActiveSupport::TestCase
     assert_equal @account.id, lines.second.deposit_account_id
   end
 
-  test "preserves leading zeroes in account number lookup and outcome evidence" do
+  test "preserves exact account number string in lookup and outcome evidence" do
     result = ingest!(item_id: "trace-leading-zero")
 
     assert_equal :posted, result.outcomes.sole.fetch(:outcome)
-    assert_equal "001234567890", result.outcomes.sole.fetch(:account_number)
+    assert_equal @account.account_number, result.outcomes.sole.fetch(:account_number)
   end
 
   test "returns account-not-found and account-closed outcomes" do
     closed_party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Closed", last_name: "Ach")
     closed = Accounts::Commands::OpenAccount.call(party_record_id: closed_party.id)
-    closed.update!(account_number: "009999999999", status: Accounts::Models::DepositAccount::STATUS_CLOSED)
+    closed.update!(status: Accounts::Models::DepositAccount::STATUS_CLOSED)
 
     result = Integration::Ach::Commands::IngestReceiptFile.call(
       file_id: "file-20260425-002",
@@ -60,7 +59,7 @@ class IntegrationAchIngestReceiptFileTest < ActiveSupport::TestCase
           batch_id: "batch-1",
           items: [
             ach_item(item_id: "missing", account_number: "000000000000"),
-            ach_item(item_id: "closed", account_number: "009999999999")
+            ach_item(item_id: "closed", account_number: closed.account_number)
           ]
         }
       ]

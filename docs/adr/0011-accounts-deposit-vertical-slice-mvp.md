@@ -29,7 +29,7 @@ The **Accounts** module owns a new **`deposit_accounts`** table with at least:
 | Column            | Type     | Notes |
 | ----------------- | -------- | ----- |
 | `id`              | bigint   | PK |
-| `account_number`  | string   | NOT NULL, **UNIQUE** — institution-unique display/reference; generation strategy is implementation detail (tests may use random; production may use sequential or another allocator later). |
+| `account_number`  | string   | NOT NULL, **UNIQUE** — institution-unique 12-digit display/reference in the form `1YYMM######C`, where `######` is a global increasing sequence and `C` is a Luhn check digit. |
 | `currency`        | string   | NOT NULL, default **`USD`** (ADR-0008 single-currency MVP). |
 | `status`          | string   | NOT NULL — application enum for slice 1: **`open`**, **`closed`** (extend only via ADR/catalog when needed). |
 | `deposit_product_id` | bigint | NOT NULL, FK → **`deposit_products`** — Phase 2 narrow implementation ([ADR-0017](0017-deposit-products-fk-narrow-scope.md)). |
@@ -74,7 +74,7 @@ Per [ADR-0007 §2.8](0007-party-account-ownership.md), **`OpenAccount`** always 
 
 **Result:**
 
-1. One **`deposit_accounts`** row: `account_number` unique, `currency: "USD"`, `status: "open"`, **`deposit_product_id`** → seeded **`deposit_products`** row, `product_code: "slice1_demand_deposit"` (cache).
+1. One **`deposit_accounts`** row: `account_number` unique (for example `126040000013`), `currency: "USD"`, `status: "open"`, **`deposit_product_id`** → seeded **`deposit_products`** row, `product_code: "slice1_demand_deposit"` (cache).
 2. One or two **`deposit_account_parties`** rows: primary `party_record_id: 42`, `role: "owner"`, `status: "active"`, `effective_on: 2026-04-22`, `ended_on: NULL`; when joint is supplied, a second row with `role: "joint_owner"` and the same `effective_on` / `ended_on`.
 
 3. **`RecordEvent`** for `deposit.accepted` (with `source_account_id` set to the new **`deposit_accounts.id`**, channel, idempotency key, amount, currency) creates an **`operational_events`** row in **`pending`** status; **`PostEvent`** then moves it to **`posted`** with a balanced journal (1110 / 2110). Posting remains **account-scoped**; it does not branch on joint participation.

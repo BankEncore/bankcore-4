@@ -37,7 +37,7 @@ module Accounts
 
         Models::DepositAccount.transaction do
           account = Models::DepositAccount.create!(
-            account_number: generate_account_number,
+            account_number: Accounts::Services::DepositAccountNumberGenerator.call(on_date: on_date),
             currency: deposit_product.currency,
             status: Models::DepositAccount::STATUS_OPEN,
             deposit_product: deposit_product,
@@ -85,11 +85,6 @@ module Accounts
         raise ProductNotFound, e.message
       end
       private_class_method :resolve_deposit_product!
-
-      def self.generate_account_number
-        "DA#{SecureRandom.hex(8).upcase}"
-      end
-      private_class_method :generate_account_number
     end
   end
 end

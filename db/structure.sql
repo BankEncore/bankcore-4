@@ -530,6 +530,39 @@ ALTER SEQUENCE public.core_business_date_settings_id_seq OWNED BY public.core_bu
 
 
 --
+-- Name: deposit_account_number_allocations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_account_number_allocations (
+    id bigint NOT NULL,
+    allocation_key character varying NOT NULL,
+    last_sequence integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT chk_deposit_account_number_allocations_sequence_range CHECK (((last_sequence >= 0) AND (last_sequence <= 999999)))
+);
+
+
+--
+-- Name: deposit_account_number_allocations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_account_number_allocations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_account_number_allocations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_account_number_allocations_id_seq OWNED BY public.deposit_account_number_allocations.id;
+
+
+--
 -- Name: deposit_account_parties; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -621,7 +654,8 @@ CREATE TABLE public.deposit_accounts (
     product_code character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    deposit_product_id bigint NOT NULL
+    deposit_product_id bigint NOT NULL,
+    CONSTRAINT chk_deposit_accounts_account_number_12_digits CHECK (((account_number)::text ~ '^1[0-9]{11}$'::text))
 );
 
 
@@ -1671,6 +1705,13 @@ ALTER TABLE ONLY public.core_business_date_settings ALTER COLUMN id SET DEFAULT 
 
 
 --
+-- Name: deposit_account_number_allocations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_number_allocations ALTER COLUMN id SET DEFAULT nextval('public.deposit_account_number_allocations_id_seq'::regclass);
+
+
+--
 -- Name: deposit_account_parties id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1945,6 +1986,14 @@ ALTER TABLE ONLY public.core_business_date_close_events
 
 ALTER TABLE ONLY public.core_business_date_settings
     ADD CONSTRAINT core_business_date_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deposit_account_number_allocations deposit_account_number_allocations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_number_allocations
+    ADD CONSTRAINT deposit_account_number_allocations_pkey PRIMARY KEY (id);
 
 
 --
@@ -2610,6 +2659,13 @@ CREATE UNIQUE INDEX index_core_business_date_close_events_on_closed_on ON public
 --
 
 CREATE UNIQUE INDEX index_dap_unique_open_active_per_account_party_role ON public.deposit_account_parties USING btree (deposit_account_id, party_record_id, role) WHERE (((status)::text = 'active'::text) AND (ended_on IS NULL));
+
+
+--
+-- Name: index_deposit_account_number_allocations_on_allocation_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_deposit_account_number_allocations_on_allocation_key ON public.deposit_account_number_allocations USING btree (allocation_key);
 
 
 --
@@ -3692,6 +3748,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260502160000'),
 ('20260430120000'),
 ('20260429223000'),
 ('20260429210200'),

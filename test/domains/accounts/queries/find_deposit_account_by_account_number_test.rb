@@ -8,11 +8,10 @@ class AccountsQueriesFindDepositAccountByAccountNumberTest < ActiveSupport::Test
     Core::BusinessDate::Commands::SetBusinessDate.call(on: Date.new(2026, 4, 25))
     party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Ach", last_name: "Lookup")
     @account = Accounts::Commands::OpenAccount.call(party_record_id: party.id)
-    @account.update!(account_number: "001234567890")
   end
 
-  test "finds an account by exact normalized account number preserving leading zeroes" do
-    found = Accounts::Queries::FindDepositAccountByAccountNumber.call(account_number: " 001234567890 ")
+  test "finds an account by exact normalized account number preserving the string" do
+    found = Accounts::Queries::FindDepositAccountByAccountNumber.call(account_number: " #{@account.account_number} ")
 
     assert_equal @account.id, found.id
   end
@@ -20,7 +19,7 @@ class AccountsQueriesFindDepositAccountByAccountNumberTest < ActiveSupport::Test
   test "open returns nil for closed account" do
     @account.update!(status: Accounts::Models::DepositAccount::STATUS_CLOSED)
 
-    assert_nil Accounts::Queries::FindDepositAccountByAccountNumber.open(account_number: "001234567890")
+    assert_nil Accounts::Queries::FindDepositAccountByAccountNumber.open(account_number: @account.account_number)
   end
 
   test "blank account number is invalid" do

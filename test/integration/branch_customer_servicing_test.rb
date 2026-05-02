@@ -37,6 +37,38 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Operational events"
   end
 
+  test "account profile separates balance activity from other operational events" do
+    deposit_event = fund_account!(amount: 5_000, key: "account-profile-balance-deposit")
+    hold_event = Accounts::Commands::PlaceHold.call(
+      deposit_account_id: @account.id,
+      amount_minor_units: 500,
+      currency: "USD",
+      channel: "branch",
+      idempotency_key: "account-profile-non-balance-hold",
+      actor_id: @supervisor.id,
+      hold_type: "administrative",
+      reason_code: "manual_review",
+      reason_description: "Profile display test",
+      expires_on: "2026-09-15"
+    ).fetch(:event)
+
+    internal_login!(username: "csr-teller")
+    get branch_servicing_deposit_account_path(@account)
+    assert_response :success
+
+    recent_activity_section = response.body.split("Recent activity", 2).last.split("Statements", 2).first
+    operational_events_section = response.body.split("Operational events", 2).last
+
+    assert_includes recent_activity_section, "deposit.accepted"
+    assert_includes recent_activity_section, "Event: #{deposit_event.id}"
+    assert_not_includes recent_activity_section, "hold.placed"
+
+    assert_includes operational_events_section, "hold.placed"
+    assert_includes operational_events_section, "##{hold_event.id}"
+    assert_not_includes operational_events_section, "deposit.accepted"
+    assert_not_includes operational_events_section, "##{deposit_event.id}"
+  end
+
   test "branch customer and account views show current and historical account-party relationships" do
     former_party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Former", last_name: "Signer")
     Accounts::Models::DepositAccountParty.create!(
