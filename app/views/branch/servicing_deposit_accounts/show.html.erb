@@ -184,7 +184,7 @@
     <h2 class="text-xl font-semibold">Recent activity</h2>
     <%= link_to "Full activity", branch_account_activity_path(@account), class: "text-sm font-medium text-slate-700" %>
   </div>
-  <%= render "branch/shared/activity_table", line_items: @activity.line_items.take(10) %>
+  <%= render "branch/shared/activity_table", line_items: @recent_activity_line_items %>
 </section>
 
 <section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
