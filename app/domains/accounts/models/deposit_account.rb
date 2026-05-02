@@ -18,7 +18,9 @@ module Accounts
                                     inverse_of: :deposit_account,
                                     dependent: :restrict_with_exception
 
-      validates :account_number, presence: true, uniqueness: true
+      validates :account_number, presence: true, uniqueness: true,
+        format: { with: /\A1\d{11}\z/, message: "must be a 12-digit deposit account number" }
+      validate :account_number_luhn_check_digit
       validates :currency, presence: true
       validates :status, presence: true, inclusion: { in: [ STATUS_OPEN, STATUS_CLOSED ] }
       validates :product_code, presence: true
@@ -30,6 +32,13 @@ module Accounts
         return if deposit_product.nil?
 
         errors.add(:product_code, "must match deposit_product.product_code") if product_code != deposit_product.product_code
+      end
+
+      def account_number_luhn_check_digit
+        return if account_number.blank?
+        return if Accounts::Services::DepositAccountNumberGenerator.valid_luhn?(account_number)
+
+        errors.add(:account_number, "has an invalid check digit")
       end
     end
   end

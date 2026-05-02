@@ -92,7 +92,6 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
 
   test "ops support search finds ACH receipt items by reference and idempotency keys" do
     account = open_account!
-    account.update!(account_number: "001234567890")
     ach = Integration::Ach::Commands::IngestReceiptFile.call(
       file_id: "file-ops-ach-001",
       batches: [
@@ -101,7 +100,7 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
           items: [
             {
               item_id: "trace-ops-001",
-              account_number: "001234567890",
+              account_number: account.account_number,
               amount_minor_units: 12_500,
               currency: "USD"
             }
@@ -128,7 +127,6 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
 
   test "ops can preview and ingest structured ACH receipt upload" do
     account = open_account!
-    account.update!(account_number: "001234567890")
 
     internal_login!(username: "ops-user")
 
@@ -146,7 +144,7 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
           items: [
             {
               item_id: "trace-form-001",
-              account_number: "001234567890",
+              account_number: account.account_number,
               amount_minor_units: 12_500,
               currency: "USD"
             }

@@ -76,7 +76,7 @@ Rules:
 
 ### 2.4 Account lookup
 
-ACH item account lookup uses exact `deposit_accounts.account_number`.
+ACH item account lookup uses exact `deposit_accounts.account_number`. Deposit account numbers are 12-digit strings in the Accounts-owned `1YYMM######C` format; ACH ingestion treats them as strings and must not coerce them to integers.
 
 Rules:
 
@@ -169,7 +169,7 @@ Input item:
   "file_id": "file-20260425-001",
   "batch_id": "batch-1",
   "item_id": "trace-091000019-000001",
-  "account_number": "DAABC123",
+  "account_number": "126040000013",
   "amount_minor_units": 12500,
   "currency": "USD"
 }
