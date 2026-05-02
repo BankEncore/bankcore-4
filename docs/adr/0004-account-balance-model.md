@@ -334,7 +334,7 @@ This addendum closes [roadmap §12 “Available balance”](../roadmap.md): **co
 
 2. **Materialized projection (allowed, not default)** — §4.2–4.3 still apply: a stored **available** (or ledger) projection **may** be introduced for performance if it remains **derivable from posted journals + holds**, **rebuildable**, and **read-side only**—never authoritative for GL truth.
 
-3. **When to introduce projection** — Require a **dedicated ADR** (or major addendum) that specifies storage, **every invalidation path** (e.g. `PostEvent`, hold place/release, and any command that changes effective holds or policy), reconciliation/rebuild jobs, and **explicit product triggers** (e.g. p95/p99 authorization latency SLOs breached, or hot-account / high-QPS channel requirements). Do not add projection speculatively before metrics justify it.
+3. **When to introduce projection** — Require a **dedicated ADR** (or major addendum) that specifies storage, **every invalidation path** (e.g. `PostEvent`, hold place/release, and any command that changes effective holds or policy), reconciliation/rebuild jobs, and **explicit product triggers** (e.g. p95/p99 authorization latency SLOs breached, or hot-account / high-QPS channel requirements). Do not add projection speculatively before metrics justify it. The proposed implementation contract is [ADR-0038](0038-account-balance-projections-and-daily-snapshots.md).
 
 4. **Performance before projection** — Prefer query and index tuning (e.g. composite index on `journal_lines` matching the ledger filter for **2110** + `deposit_account_id`) and bounded read patterns; treat snapshot / running-balance patterns as **separate** ADRs when compute-on-read is no longer sufficient.
 
@@ -346,6 +346,7 @@ This addendum closes [roadmap §12 “Available balance”](../roadmap.md): **co
 * ADR-0002: Operational Event Model  
 * ADR-0003: Posting & Journal Architecture  
 * ADR-0013: Holds, available balance, and servicing operational events
+* ADR-0038: Account balance projections and daily snapshots
 
 ---
 
