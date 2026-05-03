@@ -5,6 +5,8 @@ module Accounts
     class DepositAccountBalanceProjection < ApplicationRecord
       self.table_name = "deposit_account_balance_projections"
 
+      CURRENT_CALCULATION_VERSION = 1
+
       belongs_to :deposit_account, class_name: "Accounts::Models::DepositAccount",
         inverse_of: :deposit_account_balance_projection
       belongs_to :last_journal_entry, class_name: "Core::Ledger::Models::JournalEntry", optional: true

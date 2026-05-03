@@ -119,6 +119,73 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
     assert_equal 5_000, Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: @account.id)
   end
 
+  test "projection drift query reports differences without correcting them" do
+    fund_account!(5_000)
+    projection = @account.deposit_account_balance_projection
+    projection.update!(
+      ledger_balance_minor_units: 4_000,
+      hold_balance_minor_units: 250,
+      available_balance_minor_units: 3_750,
+      stale: true,
+      stale_from_date: Date.new(2026, 5, 1)
+    )
+
+    drift = Accounts::Queries::DepositBalanceProjectionDrift.call(deposit_account_id: @account.id)
+
+    assert drift.drifted
+    assert drift.stale
+    assert_equal 5_000, drift.expected_ledger_balance_minor_units
+    assert_equal 0, drift.expected_hold_balance_minor_units
+    assert_equal 5_000, drift.expected_available_balance_minor_units
+    assert_equal(-1_000, drift.ledger_balance_drift_minor_units)
+    assert_equal 250, drift.hold_balance_drift_minor_units
+    assert_equal(-1_250, drift.available_balance_drift_minor_units)
+    assert_equal 4_000, projection.reload.ledger_balance_minor_units
+  end
+
+  test "rebuild command repairs projection from journal and hold truth" do
+    fund_account!(5_000)
+    place_hold!(amount: 1_500, key: "projection-rebuild-hold")
+    projection = @account.deposit_account_balance_projection
+    projection.update!(
+      ledger_balance_minor_units: 4_000,
+      hold_balance_minor_units: 250,
+      available_balance_minor_units: 3_750,
+      stale: true,
+      stale_from_date: Date.new(2026, 5, 1),
+      calculation_version: 2
+    )
+
+    rebuilt = Accounts::Commands::RebuildDepositBalanceProjection.call(
+      deposit_account_id: @account.id,
+      calculation_version: Accounts::Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION
+    )
+
+    assert_equal 5_000, rebuilt.ledger_balance_minor_units
+    assert_equal 1_500, rebuilt.hold_balance_minor_units
+    assert_equal 3_500, rebuilt.available_balance_minor_units
+    assert_not rebuilt.stale
+    assert_nil rebuilt.stale_from_date
+    assert_equal 1, rebuilt.calculation_version
+    assert_equal Date.new(2026, 5, 2), rebuilt.as_of_business_date
+
+    drift = Accounts::Queries::DepositBalanceProjectionDrift.call(deposit_account_id: @account.id)
+    assert_not drift.drifted
+  end
+
+  test "rebuild command creates a missing projection" do
+    fund_account!(5_000)
+    @account.deposit_account_balance_projection.destroy!
+
+    rebuilt = Accounts::Commands::RebuildDepositBalanceProjection.call(deposit_account_id: @account.id)
+
+    assert_equal @account.id, rebuilt.deposit_account_id
+    assert_equal 5_000, rebuilt.ledger_balance_minor_units
+    assert_equal 0, rebuilt.hold_balance_minor_units
+    assert_equal 5_000, rebuilt.available_balance_minor_units
+    assert_equal Date.new(2026, 5, 2), rebuilt.as_of_business_date
+  end
+
   private
 
   def fund_account!(amount)
