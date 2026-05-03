@@ -32,6 +32,8 @@ module Core
               raise Errors::EodNotReady.new("EOD readiness checks failed for #{closing_on.iso8601}", readiness)
             end
 
+            snapshot_result = Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: closing_on)
+
             next_on = closing_on + 1.day
             setting.update!(current_business_on: next_on)
 
@@ -44,7 +46,8 @@ module Core
             {
               setting: setting.reload,
               closed_on: closing_on,
-              previous_business_on: closing_on
+              previous_business_on: closing_on,
+              daily_balance_snapshots_materialized: snapshot_result.snapshots_materialized
             }
           end
         end

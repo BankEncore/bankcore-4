@@ -89,6 +89,17 @@ Rails.application.routes.draw do
     get "engine_runs", to: "engine_runs#index", as: :engine_runs
     get "engine_runs/:engine/new", to: "engine_runs#new", as: :new_engine_run
     post "engine_runs/:engine", to: "engine_runs#create", as: :engine_run
+    get "balance_projections", to: "balance_projections#index", as: :balance_projections
+    post "balance_projections/:deposit_account_id/mark_stale",
+      to: "balance_projections#mark_stale",
+      as: :mark_stale_balance_projection
+    post "balance_projections/:deposit_account_id/rebuild",
+      to: "balance_projections#rebuild",
+      as: :rebuild_balance_projection
+    get "balance_projections/bulk_repair",
+      to: "balance_projections#bulk_repair",
+      as: :balance_projection_bulk_repair
+    post "balance_projections/bulk_repair", to: "balance_projections#create_bulk_repair"
     get "ach_receipt_ingestions/new", to: "ach_receipt_ingestions#new", as: :new_ach_receipt_ingestion
     post "ach_receipt_ingestions", to: "ach_receipt_ingestions#create", as: :ach_receipt_ingestions
     resources :teller_variances, only: [ :index ] do

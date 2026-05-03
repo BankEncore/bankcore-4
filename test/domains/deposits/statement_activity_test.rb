@@ -97,6 +97,25 @@ class DepositsStatementActivityTest < ActiveSupport::TestCase
     assert servicing.all? { |line| line.fetch(:running_ledger_balance_minor_units).nil? }
   end
 
+  test "uses daily snapshots for closed-period opening and closing balances" do
+    snapshot!(account: @account, as_of_date: Date.new(2026, 3, 31), ledger: 1_000)
+
+    set_business_date(Date.new(2026, 4, 15))
+    post_event!(record_event!("deposit.accepted", amount: 5_000, source_account_id: @account.id))
+    snapshot!(account: @account, as_of_date: Date.new(2026, 4, 30), ledger: 6_000)
+
+    result = Deposits::Queries::StatementActivity.call(
+      deposit_account_id: @account.id,
+      period_start_on: Date.new(2026, 4, 1),
+      period_end_on: Date.new(2026, 4, 30)
+    )
+
+    assert_equal 1_000, result.opening_ledger_balance_minor_units
+    assert_equal 6_000, result.closing_ledger_balance_minor_units
+    assert_equal 5_000, result.total_credits_minor_units
+    assert_equal 6_000, result.line_items.sole.fetch(:running_ledger_balance_minor_units)
+  end
+
   private
 
   def set_business_date(date)
@@ -137,5 +156,19 @@ class DepositsStatementActivityTest < ActiveSupport::TestCase
   def post_event!(event)
     Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
     event.reload
+  end
+
+  def snapshot!(account:, as_of_date:, ledger:)
+    Reporting::Models::DailyBalanceSnapshot.create!(
+      account_domain: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_DOMAIN_DEPOSITS,
+      account_id: account.id,
+      account_type: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_TYPE_DEPOSIT_ACCOUNT,
+      as_of_date: as_of_date,
+      ledger_balance_minor_units: ledger,
+      hold_balance_minor_units: 0,
+      available_balance_minor_units: ledger,
+      source: Reporting::Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION,
+      calculation_version: Accounts::Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION
+    )
   end
 end

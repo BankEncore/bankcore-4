@@ -33,6 +33,14 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     credit = lines.find_by(side: "credit")
     assert_equal Core::Ledger::Models::GlAccount.find_by!(account_number: "2110").id, credit.gl_account_id
     assert_equal @account.id, credit.deposit_account_id
+
+    projection = @account.deposit_account_balance_projection
+    assert_equal 12_34, projection.ledger_balance_minor_units
+    assert_equal 12_34, projection.available_balance_minor_units
+    assert_equal entry.id, projection.last_journal_entry_id
+    assert_equal ev.id, projection.last_operational_event_id
+    assert_equal Date.new(2026, 4, 22), projection.as_of_business_date
+    assert projection.last_calculated_at
   end
 
   test "second post is idempotent" do
@@ -54,6 +62,29 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     cash.update_column(:account_number, prior)
     assert_equal "pending", ev.reload.status
     assert_equal 0, ev.posting_batches.count
+  end
+
+  test "rolls back journal lines when projection update fails after line creation" do
+    ev = create_pending_event!(amount: 300)
+    original_projector = Accounts::Services::DepositBalanceProjector.method(:apply_journal_entry!)
+    Accounts::Services::DepositBalanceProjector.define_singleton_method(:apply_journal_entry!) do |journal_entry:|
+      raise "projection failure"
+    end
+
+    begin
+      assert_raises(RuntimeError) do
+        Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+      end
+    ensure
+      Accounts::Services::DepositBalanceProjector.define_singleton_method(:apply_journal_entry!) do |journal_entry:|
+        original_projector.call(journal_entry: journal_entry)
+      end
+    end
+
+    assert_equal "pending", ev.reload.status
+    assert_equal 0, ev.posting_batches.count
+    assert_equal 0, Core::Ledger::Models::JournalEntry.joins(:posting_batch).where(posting_batches: { operational_event_id: ev.id }).count
+    assert_equal 0, @account.deposit_account_balance_projection.reload.ledger_balance_minor_units
   end
 
   test "not found raises" do
@@ -101,6 +132,7 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal @account.id, dr.deposit_account_id
     assert_equal "4510", cr.gl_account.account_number
     assert_nil cr.deposit_account_id
+    assert_equal 24_500, @account.deposit_account_balance_projection.reload.ledger_balance_minor_units
   end
 
   test "posts fee.waived as Dr 4510 Cr 2110" do
@@ -130,6 +162,63 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal "4510", dr.gl_account.account_number
     assert_equal "2110", cr.gl_account.account_number
     assert_equal @account.id, cr.deposit_account_id
+    assert_equal 30_000, @account.deposit_account_balance_projection.reload.ledger_balance_minor_units
+  end
+
+  test "updates projections for both sides of a transfer" do
+    destination_party = Party::Commands::CreateParty.call(party_type: "individual", first_name: "Dest", last_name: "Projection")
+    destination = Accounts::Commands::OpenAccount.call(party_record_id: destination_party.id)
+    fund_account!(10_000)
+    transfer = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "transfer.completed",
+      channel: "batch",
+      idempotency_key: "transfer-projection-#{SecureRandom.hex(4)}",
+      amount_minor_units: 2_500,
+      currency: "USD",
+      source_account_id: @account.id,
+      destination_account_id: destination.id
+    )[:event]
+
+    Core::Posting::Commands::PostEvent.call(operational_event_id: transfer.id)
+
+    assert_equal 7_500, @account.deposit_account_balance_projection.reload.ledger_balance_minor_units
+    assert_equal 2_500, destination.deposit_account_balance_projection.reload.ledger_balance_minor_units
+  end
+
+  test "recalculates available balance using active holds when posting updates projection" do
+    Accounts::Models::Hold.create!(
+      deposit_account: @account,
+      amount_minor_units: 300,
+      currency: "USD",
+      status: Accounts::Models::Hold::STATUS_ACTIVE,
+      hold_type: Accounts::Models::Hold::HOLD_TYPE_ADMINISTRATIVE,
+      reason_code: Accounts::Models::Hold::REASON_MANUAL_REVIEW,
+      expires_on: Date.new(2026, 4, 25)
+    )
+
+    ev = create_pending_event!(amount: 1_000)
+    Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+
+    projection = @account.deposit_account_balance_projection.reload
+    assert_equal 1_000, projection.ledger_balance_minor_units
+    assert_equal 300, projection.hold_balance_minor_units
+    assert_equal 700, projection.available_balance_minor_units
+  end
+
+  test "posting reversal updates deposit balance projection with mirrored 2110 lines" do
+    ev = create_pending_event!(amount: 1_200)
+    Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+    reversal = Core::OperationalEvents::Commands::RecordReversal.call(
+      original_operational_event_id: ev.id,
+      channel: "api",
+      idempotency_key: "projection-reversal-#{SecureRandom.hex(4)}"
+    )[:event]
+
+    Core::Posting::Commands::PostEvent.call(operational_event_id: reversal.id)
+
+    projection = @account.deposit_account_balance_projection.reload
+    assert_equal 0, projection.ledger_balance_minor_units
+    assert_equal reversal.id, projection.last_operational_event_id
   end
 
   test "posts cash shipment received as Dr 1110 Cr 1130" do
@@ -179,6 +268,9 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal "debit", lines.first.side
     assert_equal "1130", lines.second.gl_account.account_number
     assert_equal "credit", lines.second.side
+    projection = @account.reload.deposit_account_balance_projection
+    assert_equal 0, projection.ledger_balance_minor_units
+    assert_nil projection.last_journal_entry_id
   end
 
   private

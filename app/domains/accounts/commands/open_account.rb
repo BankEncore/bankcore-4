@@ -64,6 +64,13 @@ module Accounts
             )
           end
 
+          Models::DepositAccountBalanceProjection.create!(
+            deposit_account: account,
+            as_of_business_date: on_date,
+            last_calculated_at: Time.current,
+            calculation_version: Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION
+          )
+
           account.reload
         end
       end

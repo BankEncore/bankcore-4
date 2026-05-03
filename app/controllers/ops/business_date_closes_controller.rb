@@ -47,6 +47,7 @@ module Ops
     def load_preview
       @readiness = Teller::Queries::EodReadiness.call(business_date: @business_date)
       @trial_balance_rows = Core::Ledger::Queries::TrialBalanceForBusinessDate.call(business_date: @business_date)
+      @balance_projection_health = Accounts::Queries::DepositBalanceProjectionHealth.call
     rescue Core::BusinessDate::Errors::NotSet => e
       @error_message = e.message
     end

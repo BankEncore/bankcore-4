@@ -83,6 +83,12 @@ module Accounts
               expires_on: normalized_expires_on
             )
 
+            Accounts::Services::DepositBalanceProjector.refresh_available_balance!(
+              deposit_account_id: deposit_account_id,
+              operational_event: event,
+              as_of_business_date: on_date
+            )
+
             { outcome: :created, event: event, hold: hold }
           end
         rescue ActiveRecord::RecordNotUnique

@@ -1,0 +1,30 @@
+<% if daily_snapshots.any? %>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Date</th>
+          <th class="px-5 py-3 text-right">Ledger</th>
+          <th class="px-5 py-3 text-right">Available</th>
+          <th class="px-5 py-3">Source</th>
+          <th class="px-5 py-3">Version</th>
+          <th class="px-5 py-3">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% daily_snapshots.each do |snapshot| %>
+          <tr>
+            <td class="px-5 py-4"><%= snapshot.as_of_date.iso8601 %></td>
+            <td class="px-5 py-4 text-right"><%= ops_money(snapshot.ledger_balance_minor_units, signed: true) %></td>
+            <td class="px-5 py-4 text-right"><%= ops_money(snapshot.available_balance_minor_units, signed: true) %></td>
+            <td class="px-5 py-4"><%= snapshot.source.humanize %></td>
+            <td class="px-5 py-4"><%= snapshot.calculation_version %></td>
+            <td class="px-5 py-4"><%= ops_status_badge(snapshot.stale? ? "stale" : "current") %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <div class="p-5 text-sm text-slate-600">No daily snapshots recorded.</div>
+<% end %>

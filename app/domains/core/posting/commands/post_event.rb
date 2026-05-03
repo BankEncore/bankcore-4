@@ -63,6 +63,8 @@ module Core
               )
             end
 
+            Accounts::Services::DepositBalanceProjector.apply_journal_entry!(journal_entry: entry)
+
             ActiveRecord::Base.connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
 
             batch.update!(status: "posted")

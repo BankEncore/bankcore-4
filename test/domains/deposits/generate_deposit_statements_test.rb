@@ -32,6 +32,22 @@ class DepositsGenerateDepositStatementsTest < ActiveSupport::TestCase
     assert_equal [ "deposit.accepted" ], statement.line_items.map { |line| line.fetch("event_type") }
   end
 
+  test "generated statement uses daily snapshots for closed-period balances" do
+    snapshot!(account: @account, as_of_date: Date.new(2026, 3, 31), ledger: 1_000)
+    fund_account!(@account, 5_000)
+    snapshot!(account: @account, as_of_date: Date.new(2026, 4, 30), ledger: 6_000)
+
+    result = Deposits::Commands::GenerateDepositStatements.call(
+      business_date: Date.new(2026, 5, 1),
+      deposit_product_id: @product.id
+    )
+
+    statement = Deposits::Models::DepositStatement.find(result.outcomes.sole.fetch(:deposit_statement_id))
+    assert_equal 1_000, statement.opening_ledger_balance_minor_units
+    assert_equal 6_000, statement.closing_ledger_balance_minor_units
+    assert_equal 5_000, statement.total_credits_minor_units
+  end
+
   test "rerun is idempotent and reports already generated" do
     fund_account!(@account, 5_000)
 
@@ -125,5 +141,19 @@ class DepositsGenerateDepositStatementsTest < ActiveSupport::TestCase
     )[:event]
     Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
     event.reload
+  end
+
+  def snapshot!(account:, as_of_date:, ledger:)
+    Reporting::Models::DailyBalanceSnapshot.create!(
+      account_domain: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_DOMAIN_DEPOSITS,
+      account_id: account.id,
+      account_type: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_TYPE_DEPOSIT_ACCOUNT,
+      as_of_date: as_of_date,
+      ledger_balance_minor_units: ledger,
+      hold_balance_minor_units: 0,
+      available_balance_minor_units: ledger,
+      source: Reporting::Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION,
+      calculation_version: Accounts::Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION
+    )
   end
 end

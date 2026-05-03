@@ -35,6 +35,22 @@ class DepositAccountProfileTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 9, 2), result.current_business_date
   end
 
+  test "returns projection-backed current balances" do
+    party = create_party!("Projected", "Balance")
+    account = Accounts::Commands::OpenAccount.call(party_record_id: party.id, deposit_product_id: @product.id)
+    fund_account!(account, amount: 10_000)
+    account.deposit_account_balance_projection.update!(
+      ledger_balance_minor_units: 9_000,
+      hold_balance_minor_units: 2_000,
+      available_balance_minor_units: 7_000
+    )
+
+    result = Accounts::Queries::DepositAccountProfile.call(deposit_account_id: account.id)
+
+    assert_equal 9_000, result.ledger_balance_minor_units
+    assert_equal 7_000, result.available_balance_minor_units
+  end
+
   private
 
   def create_party!(first_name, last_name)

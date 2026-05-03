@@ -1,0 +1,42 @@
+<% content_for :title, "Balance Projection Bulk Repair - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Bulk balance repair</h1>
+  <p class="mt-2 text-slate-600">Preview counts before running version and stale repair actions. Operations reconciliation capability is required.</p>
+  <p class="mt-2"><%= link_to "Back to balance health", ops_balance_projections_path, class: "text-sm font-medium text-slate-700 underline" %></p>
+</section>
+
+<% if @error_message.present? %>
+  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    <%= @error_message %>
+  </section>
+<% end %>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <%= render "ops/eod/readiness_card", label: "Version mismatches", value: @health.projection_version_mismatch_count, state: @health.projection_version_mismatch_count.zero? %>
+  <%= render "ops/eod/readiness_card", label: "Stale projections", value: @health.stale_projection_count, state: @health.stale_projection_count.zero? %>
+  <%= render "ops/eod/readiness_card", label: "Stale snapshots", value: @health.stale_daily_snapshot_count, state: @health.stale_daily_snapshot_count.zero? %>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="text-xl font-semibold">Run bulk action</h2>
+  <p class="mt-1 text-sm text-slate-600">Use small batches for rebuild execution. Marking stale records evidence; rebuilding repairs stale projections.</p>
+  <%= form_with url: ops_balance_projection_bulk_repair_path, method: :post, scope: :bulk_repair, class: "mt-4 space-y-4" do |form| %>
+    <div>
+      <%= form.label :action_type, "Action", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.select :action_type,
+        [
+          [ "Mark projection version mismatches stale", "mark_projection_versions" ],
+          [ "Mark daily snapshot version mismatches stale", "mark_snapshot_versions" ],
+          [ "Rebuild stale projections", "rebuild_stale_projections" ]
+        ],
+        {},
+        class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <div>
+      <%= form.label :limit, "Batch limit for rebuilds", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.number_field :limit, value: 25, min: 1, max: 200, class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
+    </div>
+    <%= form.submit "Run bulk action", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+  <% end %>
+</section>
