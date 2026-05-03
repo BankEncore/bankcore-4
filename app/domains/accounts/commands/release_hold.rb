@@ -59,6 +59,12 @@ module Accounts
             released_by_operational_event: event
           )
 
+          Accounts::Services::DepositBalanceProjector.refresh_available_balance!(
+            deposit_account_id: hold.deposit_account_id,
+            operational_event: event,
+            as_of_business_date: on_date
+          )
+
           { outcome: :created, event: event, hold: hold.reload }
         end
       rescue ActiveRecord::RecordNotUnique
