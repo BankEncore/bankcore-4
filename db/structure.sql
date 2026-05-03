@@ -530,6 +530,48 @@ ALTER SEQUENCE public.core_business_date_settings_id_seq OWNED BY public.core_bu
 
 
 --
+-- Name: daily_balance_snapshots; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.daily_balance_snapshots (
+    id bigint NOT NULL,
+    account_domain character varying NOT NULL,
+    account_id bigint NOT NULL,
+    account_type character varying,
+    as_of_date date NOT NULL,
+    ledger_balance_minor_units bigint NOT NULL,
+    hold_balance_minor_units bigint DEFAULT 0 NOT NULL,
+    available_balance_minor_units bigint NOT NULL,
+    collected_balance_minor_units bigint,
+    source character varying NOT NULL,
+    calculation_version integer NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT chk_daily_balance_snapshots_calc_version_positive CHECK ((calculation_version > 0)),
+    CONSTRAINT chk_daily_balance_snapshots_hold_non_negative CHECK ((hold_balance_minor_units >= 0))
+);
+
+
+--
+-- Name: daily_balance_snapshots_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.daily_balance_snapshots_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: daily_balance_snapshots_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.daily_balance_snapshots_id_seq OWNED BY public.daily_balance_snapshots.id;
+
+
+--
 -- Name: deposit_account_balance_projections; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1749,6 +1791,13 @@ ALTER TABLE ONLY public.core_business_date_settings ALTER COLUMN id SET DEFAULT 
 
 
 --
+-- Name: daily_balance_snapshots id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_balance_snapshots ALTER COLUMN id SET DEFAULT nextval('public.daily_balance_snapshots_id_seq'::regclass);
+
+
+--
 -- Name: deposit_account_balance_projections id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2037,6 +2086,14 @@ ALTER TABLE ONLY public.core_business_date_close_events
 
 ALTER TABLE ONLY public.core_business_date_settings
     ADD CONSTRAINT core_business_date_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: daily_balance_snapshots daily_balance_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.daily_balance_snapshots
+    ADD CONSTRAINT daily_balance_snapshots_pkey PRIMARY KEY (id);
 
 
 --
@@ -2333,6 +2390,27 @@ CREATE UNIQUE INDEX idx_active_cash_drawer_identity ON public.cash_locations USI
 --
 
 CREATE INDEX idx_cash_movements_external_shipment_reference ON public.cash_movements USING btree (external_source, shipment_reference);
+
+
+--
+-- Name: idx_daily_balance_snapshots_account_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_daily_balance_snapshots_account_date ON public.daily_balance_snapshots USING btree (account_domain, account_id, as_of_date);
+
+
+--
+-- Name: idx_daily_balance_snapshots_as_of_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_daily_balance_snapshots_as_of_date ON public.daily_balance_snapshots USING btree (as_of_date);
+
+
+--
+-- Name: idx_daily_balance_snapshots_domain_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_daily_balance_snapshots_domain_date ON public.daily_balance_snapshots USING btree (account_domain, as_of_date);
 
 
 --
@@ -3866,6 +3944,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260502220000'),
 ('20260502215000'),
 ('20260502160000'),
 ('20260430120000'),
