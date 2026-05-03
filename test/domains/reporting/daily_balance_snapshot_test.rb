@@ -35,6 +35,43 @@ class ReportingDailyBalanceSnapshotTest < ActiveSupport::TestCase
     assert snapshot.valid?
   end
 
+  test "reserves loan snapshot account metadata without implementing loans" do
+    snapshot = Reporting::Models::DailyBalanceSnapshot.new(
+      account_domain: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_DOMAIN_LOANS,
+      account_id: 123,
+      account_type: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_TYPE_DEPOSIT_ACCOUNT,
+      as_of_date: Date.new(2026, 5, 2),
+      ledger_balance_minor_units: -10_000,
+      hold_balance_minor_units: 0,
+      available_balance_minor_units: -10_000,
+      source: Reporting::Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION,
+      calculation_version: 1
+    )
+
+    assert_not snapshot.valid?
+    assert_includes snapshot.errors[:account_type], "must be loan_account for loans snapshots"
+
+    snapshot.account_type = Reporting::Models::DailyBalanceSnapshot::ACCOUNT_TYPE_LOAN_ACCOUNT
+    assert snapshot.valid?
+  end
+
+  test "deposit snapshots must use deposit account metadata" do
+    snapshot = Reporting::Models::DailyBalanceSnapshot.new(
+      account_domain: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_DOMAIN_DEPOSITS,
+      account_id: @account.id,
+      account_type: Reporting::Models::DailyBalanceSnapshot::ACCOUNT_TYPE_LOAN_ACCOUNT,
+      as_of_date: Date.new(2026, 5, 2),
+      ledger_balance_minor_units: 0,
+      hold_balance_minor_units: 0,
+      available_balance_minor_units: 0,
+      source: Reporting::Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION,
+      calculation_version: 1
+    )
+
+    assert_not snapshot.valid?
+    assert_includes snapshot.errors[:account_type], "must be deposit_account for deposits snapshots"
+  end
+
   test "materializes deposit projections into daily balance snapshots" do
     fund_account!(5_000)
     place_hold!(amount: 1_500, key: "snapshot-hold")

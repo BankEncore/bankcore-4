@@ -159,6 +159,15 @@ collected_balance_minor_units
 
 Loan rows may later use loan-specific components. The design must preserve a clear component schema/version rather than storing one generic ambiguous `balance`.
 
+The implemented Reporting contract reserves account metadata for both current and future account domains:
+
+| Account domain | Account type | Component owner | Implementation status |
+| --- | --- | --- | --- |
+| `deposits` | `deposit_account` | `Accounts` projection + `Deposits` consumers | Implemented in this slice. |
+| `loans` | `loan_account` | Future `Loans` projection and servicing rules | Reserved only; no loan servicing implementation. |
+
+`daily_balance_snapshots` may identify future loan rows by domain/type, but BankCORE must not create production loan snapshots until a `Loans` implementation defines the loan projection components, calculation version, rebuild rules, and posting/servicing consumers. Deposit snapshot fields remain explicit in this slice; loan-specific principal, interest, escrow, fee, delinquency, and payoff components require a follow-up Loans ADR or ADR addendum before use.
+
 ---
 
 ## 8. EOD integration
@@ -269,6 +278,16 @@ payoff_balance_minor_units
 ```
 
 Those semantics belong to `Loans`; daily snapshots should carry typed/versioned components so ADB-style deposit calculations and loan payoff calculations do not share one formula.
+
+The reserved Reporting identity would be:
+
+```text
+account_domain = loans
+account_type   = loan_account
+account_id     = <future loan account id>
+```
+
+This identity is not enough to produce a loan balance. A future `Loans` slice must define the projection owner, component schema, materializer, reconciliation method, and consumer rules before any loan snapshot rows are used operationally.
 
 ---
 

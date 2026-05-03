@@ -6,9 +6,15 @@ module Reporting
       self.table_name = "daily_balance_snapshots"
 
       ACCOUNT_DOMAIN_DEPOSITS = "deposits"
+      ACCOUNT_DOMAIN_LOANS = "loans"
       ACCOUNT_TYPE_DEPOSIT_ACCOUNT = "deposit_account"
+      ACCOUNT_TYPE_LOAN_ACCOUNT = "loan_account"
       SOURCE_CURRENT_PROJECTION = "current_projection"
-      ACCOUNT_DOMAINS = [ ACCOUNT_DOMAIN_DEPOSITS ].freeze
+      ACCOUNT_DOMAINS = [ ACCOUNT_DOMAIN_DEPOSITS, ACCOUNT_DOMAIN_LOANS ].freeze
+      ACCOUNT_TYPES_BY_DOMAIN = {
+        ACCOUNT_DOMAIN_DEPOSITS => ACCOUNT_TYPE_DEPOSIT_ACCOUNT,
+        ACCOUNT_DOMAIN_LOANS => ACCOUNT_TYPE_LOAN_ACCOUNT
+      }.freeze
       SOURCES = [ SOURCE_CURRENT_PROJECTION ].freeze
 
       validates :account_domain, :as_of_date, :source, presence: true
@@ -26,6 +32,17 @@ module Reporting
         numericality: { only_integer: true, greater_than: 0 }
       validates :account_id,
         uniqueness: { scope: [ :account_domain, :as_of_date ] }
+      validate :account_type_matches_account_domain
+
+      private
+
+      def account_type_matches_account_domain
+        expected = ACCOUNT_TYPES_BY_DOMAIN[account_domain]
+        return if expected.nil?
+        return if account_type == expected
+
+        errors.add(:account_type, "must be #{expected} for #{account_domain} snapshots")
+      end
     end
   end
 end
