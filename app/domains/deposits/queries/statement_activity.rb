@@ -23,7 +23,7 @@ module Deposits
         raise ArgumentError, "period_start_on must be on or before period_end_on" if start_on > end_on
 
         dda = Core::Ledger::Models::GlAccount.find_by(account_number: GL_DDA)
-        opening = dda ? ledger_balance_before(dda, account.id, start_on) : 0
+        opening = opening_ledger_balance(dda, account.id, start_on)
         ledger_lines = dda ? ledger_line_items(dda, account.id, start_on, end_on) : []
         no_gl_lines = no_gl_line_items(account.id, start_on, end_on)
 
@@ -49,12 +49,32 @@ module Deposits
           period_start_on: start_on,
           period_end_on: end_on,
           opening_ledger_balance_minor_units: opening,
-          closing_ledger_balance_minor_units: running,
+          closing_ledger_balance_minor_units: closing_ledger_balance(account.id, end_on, running),
           total_debits_minor_units: total_debits,
           total_credits_minor_units: total_credits,
           line_items: lines
         )
       end
+
+      def self.opening_ledger_balance(dda, deposit_account_id, start_on)
+        snapshot_balance = Reporting::Queries::DepositDailyBalanceSnapshot.ledger_balance_minor_units(
+          deposit_account_id: deposit_account_id,
+          as_of_date: start_on - 1.day
+        )
+        return snapshot_balance unless snapshot_balance.nil?
+        return 0 if dda.nil?
+
+        ledger_balance_before(dda, deposit_account_id, start_on)
+      end
+      private_class_method :opening_ledger_balance
+
+      def self.closing_ledger_balance(deposit_account_id, end_on, running_balance)
+        Reporting::Queries::DepositDailyBalanceSnapshot.ledger_balance_minor_units(
+          deposit_account_id: deposit_account_id,
+          as_of_date: end_on
+        ) || running_balance
+      end
+      private_class_method :closing_ledger_balance
 
       def self.ledger_balance_before(dda, deposit_account_id, before_date)
         scope = Core::Ledger::Models::JournalLine
