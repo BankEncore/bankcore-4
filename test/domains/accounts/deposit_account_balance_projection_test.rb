@@ -97,6 +97,28 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
     assert_equal result.fetch(:event).id, projection.last_operational_event_id
   end
 
+  test "available balance facade reads projection while preserving journal truth method" do
+    fund_account!(5_000)
+    projection = @account.deposit_account_balance_projection
+    projection.update!(
+      ledger_balance_minor_units: 4_000,
+      hold_balance_minor_units: 750,
+      available_balance_minor_units: 3_250
+    )
+
+    assert_equal 4_000, Accounts::Services::AvailableBalanceMinorUnits.ledger_balance_minor_units(deposit_account_id: @account.id)
+    assert_equal 3_250, Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: @account.id)
+    assert_equal 5_000, Accounts::Services::AvailableBalanceMinorUnits.journal_ledger_balance_minor_units(deposit_account_id: @account.id)
+  end
+
+  test "available balance facade falls back to journal when projection is missing" do
+    fund_account!(5_000)
+    @account.deposit_account_balance_projection.destroy!
+
+    assert_equal 5_000, Accounts::Services::AvailableBalanceMinorUnits.ledger_balance_minor_units(deposit_account_id: @account.id)
+    assert_equal 5_000, Accounts::Services::AvailableBalanceMinorUnits.call(deposit_account_id: @account.id)
+  end
+
   private
 
   def fund_account!(amount)

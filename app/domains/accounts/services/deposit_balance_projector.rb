@@ -53,7 +53,7 @@ module Accounts
       end
 
       def self.rebuild_projection!(projection, journal_entry: nil, operational_event: nil, as_of_business_date: nil)
-        resolved = AvailableBalanceResolver.call(deposit_account_id: projection.deposit_account_id)
+        resolved = AvailableBalanceResolver.from_journal(deposit_account_id: projection.deposit_account_id)
         projection.update!(
           ledger_balance_minor_units: resolved.ledger_balance_minor_units,
           hold_balance_minor_units: resolved.hold_balance_minor_units,
