@@ -12,6 +12,10 @@ module Accounts
         inverse_of: :deposit_account
       has_many :account_restrictions, class_name: "Accounts::Models::AccountRestriction", dependent: :restrict_with_exception
       has_many :account_lifecycle_events, class_name: "Accounts::Models::AccountLifecycleEvent", dependent: :restrict_with_exception
+      has_one :deposit_account_balance_projection,
+        class_name: "Accounts::Models::DepositAccountBalanceProjection",
+        dependent: :restrict_with_exception,
+        inverse_of: :deposit_account
 
       belongs_to :deposit_product, class_name: "Products::Models::DepositProduct"
       has_many :deposit_statements, class_name: "Deposits::Models::DepositStatement",

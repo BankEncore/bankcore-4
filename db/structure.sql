@@ -530,6 +530,50 @@ ALTER SEQUENCE public.core_business_date_settings_id_seq OWNED BY public.core_bu
 
 
 --
+-- Name: deposit_account_balance_projections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_account_balance_projections (
+    id bigint NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    ledger_balance_minor_units bigint DEFAULT 0 NOT NULL,
+    hold_balance_minor_units bigint DEFAULT 0 NOT NULL,
+    available_balance_minor_units bigint DEFAULT 0 NOT NULL,
+    collected_balance_minor_units bigint,
+    last_journal_entry_id bigint,
+    last_operational_event_id bigint,
+    as_of_business_date date,
+    last_calculated_at timestamp(6) without time zone,
+    stale boolean DEFAULT false NOT NULL,
+    stale_from_date date,
+    calculation_version integer DEFAULT 1 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT chk_deposit_balance_proj_calculation_version_positive CHECK ((calculation_version > 0)),
+    CONSTRAINT chk_deposit_balance_proj_hold_non_negative CHECK ((hold_balance_minor_units >= 0))
+);
+
+
+--
+-- Name: deposit_account_balance_projections_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_account_balance_projections_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_account_balance_projections_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_account_balance_projections_id_seq OWNED BY public.deposit_account_balance_projections.id;
+
+
+--
 -- Name: deposit_account_number_allocations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1705,6 +1749,13 @@ ALTER TABLE ONLY public.core_business_date_settings ALTER COLUMN id SET DEFAULT 
 
 
 --
+-- Name: deposit_account_balance_projections id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_balance_projections ALTER COLUMN id SET DEFAULT nextval('public.deposit_account_balance_projections_id_seq'::regclass);
+
+
+--
 -- Name: deposit_account_number_allocations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1986,6 +2037,14 @@ ALTER TABLE ONLY public.core_business_date_close_events
 
 ALTER TABLE ONLY public.core_business_date_settings
     ADD CONSTRAINT core_business_date_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deposit_account_balance_projections deposit_account_balance_projections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_balance_projections
+    ADD CONSTRAINT deposit_account_balance_projections_pkey PRIMARY KEY (id);
 
 
 --
@@ -2288,6 +2347,41 @@ CREATE UNIQUE INDEX idx_dap_maintenance_audits_idempotency ON public.deposit_acc
 --
 
 CREATE INDEX idx_dap_maintenance_audits_on_relationship_id ON public.deposit_account_party_maintenance_audits USING btree (deposit_account_party_id);
+
+
+--
+-- Name: idx_deposit_balance_proj_account_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_deposit_balance_proj_account_unique ON public.deposit_account_balance_projections USING btree (deposit_account_id);
+
+
+--
+-- Name: idx_deposit_balance_proj_as_of_business_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_proj_as_of_business_date ON public.deposit_account_balance_projections USING btree (as_of_business_date);
+
+
+--
+-- Name: idx_deposit_balance_proj_last_journal_entry; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_proj_last_journal_entry ON public.deposit_account_balance_projections USING btree (last_journal_entry_id);
+
+
+--
+-- Name: idx_deposit_balance_proj_last_operational_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_proj_last_operational_event ON public.deposit_account_balance_projections USING btree (last_operational_event_id);
+
+
+--
+-- Name: idx_deposit_balance_proj_stale_from_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_proj_stale_from_date ON public.deposit_account_balance_projections USING btree (stale, stale_from_date);
 
 
 --
@@ -3470,6 +3564,14 @@ ALTER TABLE ONLY public.deposit_product_statement_profiles
 
 
 --
+-- Name: deposit_account_balance_projections fk_rails_863cf2fee9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_balance_projections
+    ADD CONSTRAINT fk_rails_863cf2fee9 FOREIGN KEY (last_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
 -- Name: teller_sessions fk_rails_86b8203f6d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3483,6 +3585,14 @@ ALTER TABLE ONLY public.teller_sessions
 
 ALTER TABLE ONLY public.teller_sessions
     ADD CONSTRAINT fk_rails_896b8b6be7 FOREIGN KEY (operating_unit_id) REFERENCES public.operating_units(id);
+
+
+--
+-- Name: deposit_account_balance_projections fk_rails_8a9a42a884; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_balance_projections
+    ADD CONSTRAINT fk_rails_8a9a42a884 FOREIGN KEY (last_journal_entry_id) REFERENCES public.journal_entries(id);
 
 
 --
@@ -3587,6 +3697,14 @@ ALTER TABLE ONLY public.cash_locations
 
 ALTER TABLE ONLY public.cash_movements
     ADD CONSTRAINT fk_rails_accd708689 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: deposit_account_balance_projections fk_rails_b59f66f0ab; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_account_balance_projections
+    ADD CONSTRAINT fk_rails_b59f66f0ab FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
 
 
 --
@@ -3748,6 +3866,7 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260502215000'),
 ('20260502160000'),
 ('20260430120000'),
 ('20260429223000'),
