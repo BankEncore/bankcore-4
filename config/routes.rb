@@ -6,11 +6,15 @@ Rails.application.routes.draw do
   get "internal", to: "internal/dashboard#index", as: :internal
   get "branch", to: "branch/dashboard#index", as: :branch
   scope path: "branch", module: :branch, as: :branch do
+    get "teller", to: "dashboard#teller", as: :teller
+    get "approvals", to: "dashboard#approvals", as: :approvals
+    get "servicing", to: redirect("/branch/customers")
     resources :customers, only: [ :index, :show ]
     resources :parties, only: [ :new, :create ]
     get "customers/:party_record_id/contacts/new", to: "party_contacts#new", as: :new_party_contact
     post "customers/:party_record_id/contacts", to: "party_contacts#create", as: :party_contacts
     resources :deposit_accounts, only: [ :new, :create ]
+    resources :accounts, controller: "servicing_deposit_accounts", only: [ :show ]
     get "deposit_accounts/:id", to: "servicing_deposit_accounts#show", as: :servicing_deposit_account
     get "deposit_accounts/:deposit_account_id/activity", to: "account_activities#show", as: :account_activity
     get "deposit_accounts/:deposit_account_id/authorized_signers/new",
@@ -75,6 +79,9 @@ Rails.application.routes.draw do
     end
     resources :reversals, only: [ :new, :create ]
     resources :overrides, only: [ :new, :create ]
+    resources :events, controller: "operational_events", only: [ :index, :show ]
+    get "events/:id/receipt", to: "operational_events#receipt", as: :event_receipt
+    post "events/:id/post", to: "operational_event_posts#create", as: :event_post
     resources :operational_events, only: [ :index, :show ]
     get "operational_events/:id/receipt", to: "operational_events#receipt", as: :operational_event_receipt
     post "operational_events/:id/post", to: "operational_event_posts#create", as: :operational_event_post

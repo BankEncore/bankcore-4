@@ -49,6 +49,35 @@ class BranchAuthorizedSurfacesTest < ActionDispatch::IntegrationTest
     assert_equal "closed", Teller::Models::TellerSession.find(sid).status
   end
 
+  test "branch durable lane urls preserve branch authorization and nav state hooks" do
+    internal_login!(username: "branch-surf-teller")
+
+    get branch_teller_path
+    assert_response :success
+    assert_includes response.body, 'href="/branch/teller"'
+    assert_includes response.body, 'href="/branch/approvals"'
+    assert_select "a[data-surface-tab='teller'][aria-current='true']", "Teller"
+    assert_operator response.body.index("Teller — line operations"), :<, response.body.index("CSR — customer servicing")
+
+    get branch_approvals_path
+    assert_response :success
+    assert_select "a[data-surface-tab='supervisor'][aria-current='true']", "Supervisor"
+    assert_operator response.body.index("Supervisor — approvals"), :<, response.body.index("CSR — customer servicing")
+    assert_includes response.body, "Supervisor"
+
+    get "/branch/servicing"
+    assert_redirected_to "/branch/customers"
+
+    delete "/logout"
+
+    create_operator_with_credential!(role: "operations", username: "branch-surf-ops")
+    internal_login!(username: "branch-surf-ops")
+    get branch_teller_path
+    assert_response :forbidden
+    get branch_approvals_path
+    assert_response :forbidden
+  end
+
   test "teller cannot approve session variance via branch HTML" do
     internal_login!(username: "branch-surf-teller")
     post "/branch/teller_sessions", params: { teller_session: { drawer_code: "surf-d2" } }

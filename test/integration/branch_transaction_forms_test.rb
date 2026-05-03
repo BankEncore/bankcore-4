@@ -274,8 +274,8 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_equal @teller.default_operating_unit_id, event.operating_unit_id
     assert_includes response.body, "Post event"
 
-    post "/branch/operational_events/#{event.id}/post"
-    assert_redirected_to "/branch/operational_events/#{event.id}"
+    post branch_event_post_path(event)
+    assert_redirected_to branch_event_path(event)
     assert_equal "posted", event.reload.status
   end
 

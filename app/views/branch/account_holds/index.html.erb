@@ -20,7 +20,7 @@
     <%= link_to "Account profile", branch_servicing_deposit_account_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
     <%= link_to "Review transactions", branch_account_activity_path(@account, customer_return_params), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
     <% if branch_operator_can?(Workspace::Authorization::CapabilityRegistry::OPERATIONAL_EVENT_VIEW) %>
-      <%= link_to "View events", branch_operational_events_path(source_account_id: @account.id), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+      <%= link_to "View events", branch_events_path(source_account_id: @account.id), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
     <% end %>
   </div>
 </section>

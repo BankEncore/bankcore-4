@@ -33,8 +33,34 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get branch_servicing_deposit_account_path(@account)
     assert_response :success
+    assert_select "a[data-surface-tab='csr'][aria-current='true']", "CSR"
     assert_includes response.body, "Available balance"
     assert_includes response.body, "Operational events"
+  end
+
+  test "branch html aliases expose account profile and operational event trace surfaces" do
+    event = fund_account!(amount: 5_000, key: "branch-html-alias-deposit")
+    internal_login!(username: "csr-teller")
+
+    get branch_account_path(@account)
+    assert_response :success
+    assert_select "a[data-surface-tab='csr'][aria-current='true']", "CSR"
+    assert_includes response.body, "Available balance"
+
+    get branch_events_path(source_account_id: @account.id)
+    assert_response :success
+    assert_select "a[data-surface-tab='events'][aria-current='true']", "Events"
+    assert_includes response.body, "Branch operational events"
+    assert_includes response.body, "##{event.id}"
+
+    get branch_event_path(event)
+    assert_response :success
+    assert_select "a[data-surface-tab='events'][aria-current='true']", "Events"
+    assert_includes response.body, "Operational event ##{event.id}"
+
+    get branch_event_receipt_path(event)
+    assert_response :success
+    assert_includes response.body, "Trace receipt"
   end
 
   test "account profile separates balance activity from other operational events" do
@@ -277,7 +303,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_equal Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED, manual_fee.status
     assert_includes response.body, "Trace receipt"
 
-    get branch_operational_event_receipt_path(manual_fee)
+    get branch_event_receipt_path(manual_fee)
     assert_response :success
     assert_includes response.body, "Trace receipt"
     assert_includes response.body, "manual-service-fee"

@@ -18,7 +18,7 @@
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
 <section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
-  <%= form_with url: branch_operational_events_path, method: :get, class: "grid gap-4 md:grid-cols-4" do |form| %>
+  <%= form_with url: branch_events_path, method: :get, class: "grid gap-4 md:grid-cols-4" do |form| %>
     <div>
       <%= form.label :business_date, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :business_date, value: @query_params&.fetch(:business_date, nil), placeholder: "YYYY-MM-DD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
@@ -33,7 +33,7 @@
     </div>
     <div class="self-end">
       <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Clear filters", branch_operational_events_path, class: "ml-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Clear filters", branch_events_path, class: "ml-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     </div>
   <% end %>
 </section>
@@ -57,7 +57,7 @@
         <% @event_search[:rows].each do |event| %>
           <tr class="focus-within:bg-slate-50 hover:bg-slate-50">
             <td class="px-5 py-4">
-              <%= link_to "##{event.id}", branch_operational_event_path(event), class: "font-semibold text-slate-950 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500" %>
+              <%= link_to "##{event.id}", branch_event_path(event), class: "font-semibold text-slate-950 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500" %>
               <div class="text-xs text-slate-500">Primary action: view details</div>
             </td>
             <td class="px-5 py-4"><%= event.created_at&.in_time_zone&.strftime("%Y-%m-%d %H:%M") || "Not recorded" %></td>
@@ -67,7 +67,7 @@
             <td class="px-5 py-4 text-right"><%= branch_money(event.amount_minor_units) %> <%= event.currency %></td>
             <td class="px-5 py-4">
               <% if event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
-                <%= button_to "Post", branch_operational_event_post_path(event), method: :post, class: "rounded bg-slate-900 px-3 py-1 text-white" %>
+                <%= button_to "Post", branch_event_post_path(event), method: :post, class: "rounded bg-slate-900 px-3 py-1 text-white" %>
               <% else %>
                 <span class="text-slate-500">No action</span>
               <% end %>
@@ -81,8 +81,8 @@
     <div class="p-6 text-sm text-slate-600">
       <p>No operational events found.</p>
       <div class="mt-4 flex flex-wrap gap-2">
-        <%= link_to "Clear filters", branch_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
-        <%= link_to "Try broader date range", branch_operational_events_path(request.query_parameters.merge(business_date: nil)), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+        <%= link_to "Clear filters", branch_events_path, class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+        <%= link_to "Try broader date range", branch_events_path(request.query_parameters.merge(business_date: nil)), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
       </div>
     </div>
   <% end %>

@@ -1,9 +1,11 @@
-<nav class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-4 text-sm" aria-label="Branch surface navigation" data-surface-nav>
+<% current_surface = @branch_surface.presence || branch_surface_for_path %>
+<nav class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-4 text-sm" aria-label="Branch surface navigation" data-surface-nav data-current-surface="<%= current_surface %>">
   <% tab_class = "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-800 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 aria-[current=true]:border-slate-900 aria-[current=true]:bg-slate-900 aria-[current=true]:text-white aria-[current=true]:hover:bg-slate-900" %>
 
-  <%= link_to "CSR", "#{branch_path}#csr", class: tab_class, data: { surface_tab: "csr" } %>
-  <%= link_to "Teller", "#{branch_path}#teller", class: tab_class, data: { surface_tab: "teller" } %>
-  <%= link_to "Supervisor", "#{branch_path}#supervisor", class: tab_class, data: { surface_tab: "supervisor" } %>
+  <%= link_to "CSR", branch_customers_path, class: tab_class, data: { surface_tab: "csr" }, aria: { current: ("true" if current_surface == "csr") } %>
+  <%= link_to "Teller", branch_teller_path, class: tab_class, data: { surface_tab: "teller" }, aria: { current: ("true" if current_surface == "teller") } %>
+  <%= link_to "Supervisor", branch_approvals_path, class: tab_class, data: { surface_tab: "supervisor" }, aria: { current: ("true" if current_surface == "supervisor") } %>
+  <%= link_to "Events", branch_events_path, class: tab_class, data: { surface_tab: "events" }, aria: { current: ("true" if current_surface == "events") } %>
 </nav>
 
 <script>
@@ -12,10 +14,15 @@
     if (!nav) return;
 
     const tabs = Array.from(nav.querySelectorAll("[data-surface-tab]"));
+    const currentSurface = () => {
+      const hashSurface = window.location.hash.replace("#", "");
+      return hashSurface || nav.dataset.currentSurface || "csr";
+    };
+
     const applyActiveState = () => {
-      const hash = (window.location.hash || "#csr").replace("#", "");
+      const surface = currentSurface();
       tabs.forEach((tab) => {
-        const isActive = tab.dataset.surfaceTab === hash;
+        const isActive = tab.dataset.surfaceTab === surface;
         if (isActive) {
           tab.setAttribute("aria-current", "true");
         } else {

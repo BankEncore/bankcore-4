@@ -31,7 +31,7 @@
       <%= link_to "Cash position", branch_cash_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
       <% if @movement.operational_event_id.present? %>
         <%= link_to "Event detail", branch_operational_event_path(@movement.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-        <%= link_to "Trace receipt", branch_operational_event_receipt_path(@movement.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <%= link_to "Trace receipt", branch_event_receipt_path(@movement.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
       <% end %>
     </div>
   <% elsif @cash_result_type == "count" && @count.present? %>
@@ -59,7 +59,7 @@
       <%= link_to "Cash position", branch_cash_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
       <% if @count.operational_event_id.present? %>
         <%= link_to "Event detail", branch_operational_event_path(@count.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-        <%= link_to "Trace receipt", branch_operational_event_receipt_path(@count.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <%= link_to "Trace receipt", branch_event_receipt_path(@count.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
       <% end %>
     </div>
   <% end %>
