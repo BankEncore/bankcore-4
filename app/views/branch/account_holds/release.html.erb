@@ -1,14 +1,12 @@
 <% content_for :title, "Release Hold - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Release account hold</h1>
-  <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
-</section>
+<%= render "branch/shared/account_context", active_tab: "holds", show_actions: false %>
 
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
 <section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <h2 class="text-xl font-semibold">Hold #<%= @hold_record.id %></h2>
+  <h1 class="text-3xl font-semibold">Release account hold</h1>
+  <p class="mt-2 text-slate-600">Release hold #<%= @hold_record.id %> from this account.</p>
   <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
     <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @hold_record.status %></dd></div>
     <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@hold_record.amount_minor_units) %> <%= @hold_record.currency %></dd></div>
@@ -25,8 +23,9 @@
       <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :idempotency_key, value: @hold_release["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
-    <div class="self-end">
+    <div class="self-end flex gap-3">
       <%= form.submit "Release hold", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= link_to "Cancel", branch_account_holds_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     </div>
   <% end %>
 </section>

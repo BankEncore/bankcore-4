@@ -2,7 +2,7 @@
 
 module Branch
   class AccountClosesController < ApplicationController
-    before_action :load_account
+    before_action :load_account_context
     before_action :require_account_maintain_capability!
 
     def new
@@ -29,8 +29,8 @@ module Branch
 
     private
 
-    def load_account
-      @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])
+    def load_account_context
+      load_account_context!(deposit_account_id: params[:deposit_account_id])
     end
 
     def require_account_maintain_capability!

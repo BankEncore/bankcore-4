@@ -1,14 +1,12 @@
 <% content_for :title, "Add Authorized Signer - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Add authorized signer</h1>
-  <p class="mt-2 text-slate-600">Account <%= @account.account_number %></p>
-</section>
+<%= render "branch/shared/account_context", active_tab: "overview", show_actions: false %>
 
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
 <section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <p class="text-sm text-slate-600">Supervisor-only maintenance. This grants signer authority only; it does not add ownership, tax, statement, or beneficial-owner rights.</p>
+  <h1 class="text-3xl font-semibold">Add authorized signer</h1>
+  <p class="mt-2 text-sm text-slate-600">Supervisor-only maintenance. This grants signer authority only; it does not add ownership, tax, statement, or beneficial-owner rights.</p>
 
   <%= form_with url: branch_account_authorized_signers_path(@account), scope: :authorized_signer, class: "mt-6 grid gap-4 md:grid-cols-2" do |form| %>
     <div>
@@ -25,7 +23,7 @@
     </div>
     <div class="md:col-span-2 flex gap-3">
       <%= form.submit "Add authorized signer", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Cancel", branch_servicing_deposit_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Cancel", branch_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     </div>
   <% end %>
 </section>

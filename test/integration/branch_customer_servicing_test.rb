@@ -165,6 +165,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_new_account_authorized_signer_path(@account)
     assert_response :success
     assert_includes response.body, "Add authorized signer"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
 
     post branch_account_authorized_signers_path(@account), params: {
       authorized_signer: {
@@ -191,6 +192,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Auth Signer"
     assert_includes response.body, "End signer"
 
+    get branch_end_account_authorized_signer_path(@account, relationship)
+    assert_response :success
+    assert_includes response.body, "End authorized signer"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
+
     post branch_end_account_authorized_signer_path(@account, relationship), params: {
       authorized_signer_end: {
         ended_on: "2026-09-10",
@@ -215,6 +221,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Advisory preview"
     assert_includes response.body, "Source account available"
+
+    get branch_new_account_hold_path(@account)
+    assert_response :success
+    assert_account_form_context(active_tab: "holds", cancel_path: branch_account_holds_path(@account))
+    assert_includes response.body, "Place account hold"
 
     post branch_account_hold_placements_path(@account), params: {
       hold: {
@@ -258,6 +269,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     }
     assert_response :unprocessable_entity
     assert_includes response.body, "idempotency replay mismatch"
+    assert_account_form_context(active_tab: "holds", cancel_path: branch_account_holds_path(@account))
 
     hold = Accounts::Models::Hold.find_by!(placed_by_operational_event: hold_event)
     assert_equal "legal", hold.hold_type
@@ -270,6 +282,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     delete logout_path
 
     internal_login!(username: "csr-supervisor")
+    get branch_release_account_hold_path(@account, hold)
+    assert_response :success
+    assert_account_form_context(active_tab: "holds", cancel_path: branch_account_holds_path(@account))
+    assert_includes response.body, "Release account hold"
+
     post branch_release_account_hold_path(@account, hold), params: {
       hold_release: { idempotency_key: "csr-release-hold" }
     }
@@ -346,6 +363,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
       key: "csr-fee-assessed"
     )
 
+    get branch_new_fee_waiver_path(@account, fee_assessment_event_id: fee_event.id)
+    assert_response :success
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
+    assert_includes response.body, "Waive fee"
+
     post branch_fee_waivers_path(@account), params: {
       fee_waiver: {
         fee_assessment_event_id: fee_event.id,
@@ -400,6 +422,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_new_account_restriction_path(@account)
     assert_response :success
     assert_includes response.body, "Restrict account"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
 
     post branch_account_restrictions_path(@account), params: {
       restriction: {
@@ -428,6 +451,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_close_account_path(@account)
     assert_response :success
     assert_includes response.body, "Close account"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
 
     post branch_close_account_path(@account), params: {
       account_close: {
@@ -506,5 +530,12 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{branch_account_statements_path(@account)}']", "Statements"
     assert_select "a[data-account-tab='events']", "Events"
     assert_includes response.body, "href=\"#{branch_events_path(source_account_id: @account.id)}\""
+  end
+
+  def assert_account_form_context(active_tab:, cancel_path:)
+    assert_account_context(active_tab: active_tab)
+    assert_select "a", text: "Find customer", count: 0
+    assert_select "a", text: "Back to search", count: 0
+    assert_select "a[href='#{cancel_path}']", "Cancel"
   end
 end

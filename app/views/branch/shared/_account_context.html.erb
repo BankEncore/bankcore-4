@@ -1,4 +1,5 @@
 <% active_tab = local_assigns.fetch(:active_tab) %>
+<% show_actions = local_assigns.fetch(:show_actions, true) %>
 <% return_params = @customer_return_params.presence || {} %>
 <% tab_class = "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm hover:bg-slate-50 aria-[current=page]:border-slate-900 aria-[current=page]:bg-slate-900 aria-[current=page]:text-white" %>
 
@@ -12,25 +13,27 @@
       </p>
     </div>
 
-    <nav class="flex flex-wrap gap-2 text-sm" aria-label="Account actions">
-      <% if return_params.present? %>
-        <%= link_to "Back to search", branch_customers_path(return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <% else %>
-        <%= link_to "Find customer", branch_customers_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <% end %>
-      <% if can_place_servicing_hold? %>
-        <%= link_to "Place hold", branch_new_account_hold_path(@account, return_params), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <% end %>
-      <% if can_waive_fee? %>
-        <%= link_to "Post fee waiver", branch_new_fee_waiver_path(@account, return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <% end %>
-      <% if can_maintain_account? %>
-        <%= link_to "Restrict account", branch_new_account_restriction_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-        <% if @account.status == Accounts::Models::DepositAccount::STATUS_OPEN %>
-          <%= link_to "Close account", branch_close_account_path(@account), class: "rounded border border-red-300 px-4 py-2 font-medium text-red-700" %>
+    <% if show_actions %>
+      <nav class="flex flex-wrap gap-2 text-sm" aria-label="Account actions">
+        <% if return_params.present? %>
+          <%= link_to "Back to search", branch_customers_path(return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% else %>
+          <%= link_to "Find customer", branch_customers_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
         <% end %>
-      <% end %>
-    </nav>
+        <% if can_place_servicing_hold? %>
+          <%= link_to "Place hold", branch_new_account_hold_path(@account, return_params), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+        <% end %>
+        <% if can_waive_fee? %>
+          <%= link_to "Post fee waiver", branch_new_fee_waiver_path(@account, return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% end %>
+        <% if can_maintain_account? %>
+          <%= link_to "Restrict account", branch_new_account_restriction_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+          <% if @account.status == Accounts::Models::DepositAccount::STATUS_OPEN %>
+            <%= link_to "Close account", branch_close_account_path(@account), class: "rounded border border-red-300 px-4 py-2 font-medium text-red-700" %>
+          <% end %>
+        <% end %>
+      </nav>
+    <% end %>
   </div>
 
   <dl class="mt-6 grid gap-4 text-sm md:grid-cols-4">
