@@ -5,7 +5,7 @@ module Branch
     DEFAULT_SPAN_DAYS = 30
 
     def show
-      @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])
+      load_account_context!(deposit_account_id: params[:deposit_account_id])
       @period_start_on, @period_end_on = activity_range
       @activity = Deposits::Queries::StatementActivity.call(
         deposit_account_id: @account.id,

@@ -38,6 +38,38 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Operational events"
   end
 
+  test "account servicing pages share persistent account context and local navigation" do
+    internal_login!(username: "csr-teller")
+
+    [
+      [ branch_account_path(@account), "overview" ],
+      [ branch_account_activity_path(@account), "activity" ],
+      [ branch_account_holds_path(@account), "holds" ],
+      [ branch_account_statements_path(@account), "statements" ]
+    ].each do |path, active_tab|
+      get path
+      assert_response :success
+      assert_account_context(active_tab: active_tab)
+    end
+
+    get branch_account_activity_path(@account, query: "Member")
+    assert_response :success
+    assert_select "a", "Back to search"
+    assert_includes response.body, "href=\"#{branch_customers_path(query: "Member")}\""
+  end
+
+  test "account context keeps shared actions conservative and capability gated" do
+    internal_login!(username: "csr-supervisor")
+
+    get branch_account_path(@account)
+    assert_response :success
+    assert_select "a", text: "Place hold", count: 1
+    assert_select "a", text: "Post fee waiver", count: 1
+    assert_select "a", text: "Restrict account", count: 1
+    assert_select "a", text: "Close account", count: 1
+    assert_select "a", text: "Assess fee", count: 0
+  end
+
   test "branch html aliases expose account profile and operational event trace surfaces" do
     event = fund_account!(amount: 5_000, key: "branch-html-alias-deposit")
     internal_login!(username: "csr-teller")
@@ -456,5 +488,23 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     )[:event]
     Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
     event.reload
+  end
+
+  def assert_account_context(active_tab:)
+    assert_select "[data-account-context]"
+    assert_includes response.body, @account.account_number
+    assert_includes response.body, @product.product_code
+    assert_includes response.body, @product.name
+    assert_includes response.body, "Ledger balance"
+    assert_includes response.body, "Available balance"
+    assert_includes response.body, "Active holds"
+    assert_includes response.body, @account.status
+    assert_select "a[data-account-tab='#{active_tab}'][aria-current='page']", 1
+    assert_select "a[href='#{branch_account_path(@account)}']", "Overview"
+    assert_select "a[href='#{branch_account_activity_path(@account)}']", "Activity"
+    assert_select "a[href='#{branch_account_holds_path(@account)}']", "Holds"
+    assert_select "a[href='#{branch_account_statements_path(@account)}']", "Statements"
+    assert_select "a[data-account-tab='events']", "Events"
+    assert_includes response.body, "href=\"#{branch_events_path(source_account_id: @account.id)}\""
   end
 end

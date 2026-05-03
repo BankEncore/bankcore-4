@@ -2,7 +2,8 @@
 
 module Branch
   class AccountHoldsController < ApplicationController
-    before_action :load_account
+    before_action :load_index_account_context, only: :index
+    before_action :load_account, except: :index
     before_action :require_hold_release_capability!, only: %i[release create_release]
 
     def index
@@ -78,6 +79,10 @@ module Branch
 
     def load_account
       @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])
+    end
+
+    def load_index_account_context
+      load_account_context!(deposit_account_id: params[:deposit_account_id])
     end
 
     def default_hold_params(prefix)

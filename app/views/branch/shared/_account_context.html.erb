@@ -1,0 +1,62 @@
+<% active_tab = local_assigns.fetch(:active_tab) %>
+<% return_params = @customer_return_params.presence || {} %>
+<% tab_class = "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm hover:bg-slate-50 aria-[current=page]:border-slate-900 aria-[current=page]:bg-slate-900 aria-[current=page]:text-white" %>
+
+<section class="rounded border border-slate-200 bg-white p-6 shadow-sm" data-account-context>
+  <div class="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-wide text-slate-500">Account context</p>
+      <h1 class="mt-1 text-3xl font-semibold">Account <%= @account.account_number %></h1>
+      <p class="mt-2 text-slate-600">
+        <%= @profile.product.product_code %> · <%= @profile.product.name %> · <%= @account.status %>
+      </p>
+    </div>
+
+    <nav class="flex flex-wrap gap-2 text-sm" aria-label="Account actions">
+      <% if return_params.present? %>
+        <%= link_to "Back to search", branch_customers_path(return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <% else %>
+        <%= link_to "Find customer", branch_customers_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <% end %>
+      <% if can_place_servicing_hold? %>
+        <%= link_to "Place hold", branch_new_account_hold_path(@account, return_params), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <% end %>
+      <% if can_waive_fee? %>
+        <%= link_to "Post fee waiver", branch_new_fee_waiver_path(@account, return_params), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <% end %>
+      <% if can_maintain_account? %>
+        <%= link_to "Restrict account", branch_new_account_restriction_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+        <% if @account.status == Accounts::Models::DepositAccount::STATUS_OPEN %>
+          <%= link_to "Close account", branch_close_account_path(@account), class: "rounded border border-red-300 px-4 py-2 font-medium text-red-700" %>
+        <% end %>
+      <% end %>
+    </nav>
+  </div>
+
+  <dl class="mt-6 grid gap-4 text-sm md:grid-cols-4">
+    <div class="rounded border border-slate-200 bg-slate-50 p-4">
+      <dt class="font-medium text-slate-500">Ledger balance</dt>
+      <dd class="mt-2 text-2xl font-semibold text-slate-950"><%= branch_money(@profile.ledger_balance_minor_units) %></dd>
+    </div>
+    <div class="rounded border border-slate-200 bg-slate-50 p-4">
+      <dt class="font-medium text-slate-500">Available balance</dt>
+      <dd class="mt-2 text-2xl font-semibold text-slate-950"><%= branch_money(@profile.available_balance_minor_units) %></dd>
+    </div>
+    <div class="rounded border border-slate-200 bg-slate-50 p-4">
+      <dt class="font-medium text-slate-500">Active holds</dt>
+      <dd class="mt-2 text-2xl font-semibold text-slate-950"><%= branch_money(@profile.active_hold_total_minor_units) %></dd>
+    </div>
+    <div class="rounded border border-slate-200 bg-slate-50 p-4">
+      <dt class="font-medium text-slate-500">Status</dt>
+      <dd class="mt-2 text-2xl font-semibold text-slate-950"><%= @account.status %></dd>
+    </div>
+  </dl>
+
+  <nav class="mt-6 flex flex-wrap gap-2 border-t border-slate-200 pt-4 text-sm" aria-label="Account sections">
+    <%= link_to "Overview", branch_account_path(@account, return_params), class: tab_class, data: { account_tab: "overview" }, aria: { current: ("page" if active_tab == "overview") } %>
+    <%= link_to "Activity", branch_account_activity_path(@account, return_params), class: tab_class, data: { account_tab: "activity" }, aria: { current: ("page" if active_tab == "activity") } %>
+    <%= link_to "Holds", branch_account_holds_path(@account, return_params), class: tab_class, data: { account_tab: "holds" }, aria: { current: ("page" if active_tab == "holds") } %>
+    <%= link_to "Statements", branch_account_statements_path(@account, return_params), class: tab_class, data: { account_tab: "statements" }, aria: { current: ("page" if active_tab == "statements") } %>
+    <%= link_to "Events", branch_events_path(source_account_id: @account.id), class: tab_class, data: { account_tab: "events" } %>
+  </nav>
+</section>

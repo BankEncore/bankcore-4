@@ -8,8 +8,7 @@ module Branch
     OPERATIONAL_EVENTS_DISPLAY_LIMIT = 10
 
     def show
-      @profile = Accounts::Queries::DepositAccountProfile.call(deposit_account_id: params[:id])
-      @account = @profile.account
+      load_account_context!(deposit_account_id: params[:id])
       @account_relationships = Accounts::Queries::DepositAccountPartyTimeline.call(deposit_account_id: @account.id)
       @holds = Accounts::Queries::ListHoldsForAccount.call(deposit_account_id: @account.id, limit: 10)
       @statements = Deposits::Queries::ListDepositStatements.call(deposit_account_id: @account.id, limit: 5)

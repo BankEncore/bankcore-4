@@ -76,6 +76,12 @@ module Branch
         current_operator.has_capability?(capability_code, scope: current_operating_unit)
     end
 
+    def load_account_context!(deposit_account_id:)
+      @profile = Accounts::Queries::DepositAccountProfile.call(deposit_account_id: deposit_account_id)
+      @account = @profile.account
+      @customer_return_params = params[:query].present? ? { query: params[:query] } : {}
+    end
+
     def branch_surface_for_path(path = request.path)
       case path
       when %r{\A/branch/events(?:/|\z)}, %r{\A/branch/operational_events(?:/|\z)}
