@@ -31,7 +31,7 @@ module Reporting
       validates :calculation_version,
         numericality: { only_integer: true, greater_than: 0 }
       validates :account_id,
-        uniqueness: { scope: [ :account_domain, :as_of_date ] }
+        uniqueness: { scope: [ :account_domain, :as_of_date, :source, :calculation_version ] }
       validate :account_type_matches_account_domain
 
       private

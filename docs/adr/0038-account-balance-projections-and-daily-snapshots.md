@@ -204,6 +204,16 @@ Required services for implementation:
 
 Reconciliation must report drift. Automatic correction should be an explicit rebuild command, not a silent side effect of ordinary reads.
 
+Implementation hardening:
+
+- `Accounts::Queries::DepositBalanceProjectionDrift` remains a read-only report.
+- `Accounts::Commands::MarkDepositBalanceProjectionStale` is the explicit drift response: it marks the projection stale and creates `deposit_balance_rebuild_requests` evidence.
+- `Accounts::Commands::RebuildDepositBalanceProjection` repairs the projection and records completed rebuild evidence.
+- `Accounts::Commands::MarkDepositBalanceProjectionsStaleForVersion` marks projections stale when their `calculation_version` no longer matches the active formula version.
+- New deposit accounts create a zero-balance projection during account opening; first posting and EOD materialization still retain create-under-lock fallbacks for legacy/missing rows.
+- `Reporting::Commands::MarkDailyBalanceSnapshotsStaleForVersion` marks historical snapshots stale when their formula version is no longer current.
+- `daily_balance_snapshots` are idempotent by account domain, account id, date, source, and calculation version so a future formula version can materialize a distinct row instead of overwriting historical evidence.
+
 ---
 
 ## 10. Worked examples

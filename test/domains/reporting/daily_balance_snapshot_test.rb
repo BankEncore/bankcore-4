@@ -96,7 +96,8 @@ class ReportingDailyBalanceSnapshotTest < ActiveSupport::TestCase
   end
 
   test "materialization creates missing zero balance projection for open accounts" do
-    assert_nil @account.deposit_account_balance_projection
+    @account.deposit_account_balance_projection.destroy!
+    assert_nil @account.reload.deposit_account_balance_projection
 
     result = Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: Date.new(2026, 5, 2))
 
@@ -106,6 +107,25 @@ class ReportingDailyBalanceSnapshotTest < ActiveSupport::TestCase
     assert_equal 0, snapshot.ledger_balance_minor_units
     assert_equal 0, snapshot.hold_balance_minor_units
     assert_equal 0, snapshot.available_balance_minor_units
+  end
+
+  test "materialization keys snapshots by source and calculation version" do
+    fund_account!(5_000)
+    Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: Date.new(2026, 5, 2))
+    fund_account!(1_000)
+    projection = @account.deposit_account_balance_projection
+    projection.update!(
+      calculation_version: 2
+    )
+
+    Reporting::Commands::MaterializeDailyBalanceSnapshots.call(
+      as_of_date: Date.new(2026, 5, 2),
+      expected_calculation_version: 2
+    )
+
+    snapshots = Reporting::Models::DailyBalanceSnapshot.where(account_id: @account.id).order(:calculation_version)
+    assert_equal [ 1, 2 ], snapshots.map(&:calculation_version)
+    assert_equal [ 5_000, 6_000 ], snapshots.map(&:ledger_balance_minor_units)
   end
 
   test "materialization refuses stale or drifted projections" do
@@ -132,6 +152,20 @@ class ReportingDailyBalanceSnapshotTest < ActiveSupport::TestCase
     snapshot.reload
     assert_equal 5_000, snapshot.ledger_balance_minor_units
     assert_equal 5_000, snapshot.available_balance_minor_units
+  end
+
+  test "formula version marking stales old daily snapshots" do
+    fund_account!(5_000)
+    Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: Date.new(2026, 5, 2))
+    snapshot = Reporting::Models::DailyBalanceSnapshot.sole
+    snapshot.update!(calculation_version: 99)
+
+    result = Reporting::Commands::MarkDailyBalanceSnapshotsStaleForVersion.call(expected_calculation_version: 1)
+
+    assert_equal 1, result.marked_count
+    snapshot.reload
+    assert snapshot.stale
+    assert_equal snapshot.as_of_date, snapshot.stale_from_date
   end
 
   private

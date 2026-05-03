@@ -3,13 +3,18 @@
 module Accounts
   module Commands
     class RebuildDepositBalanceProjection
-      def self.call(deposit_account_id:, calculation_version: Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION)
-        new(deposit_account_id: deposit_account_id, calculation_version: calculation_version).call
+      def self.call(
+        deposit_account_id:,
+        calculation_version: Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION,
+        reason: Models::DepositBalanceRebuildRequest::REASON_MANUAL_REBUILD
+      )
+        new(deposit_account_id: deposit_account_id, calculation_version: calculation_version, reason: reason).call
       end
 
-      def initialize(deposit_account_id:, calculation_version:)
+      def initialize(deposit_account_id:, calculation_version:, reason:)
         @deposit_account_id = deposit_account_id
         @calculation_version = calculation_version
+        @reason = reason
       end
 
       def call
@@ -29,13 +34,14 @@ module Accounts
             stale_from_date: nil,
             calculation_version: calculation_version
           )
+          record_rebuild_completed!
           projection
         end
       end
 
       private
 
-      attr_reader :deposit_account_id, :calculation_version
+      attr_reader :deposit_account_id, :calculation_version, :reason
 
       def locked_projection
         projection = Models::DepositAccountBalanceProjection.lock.find_by(deposit_account_id: deposit_account_id)
@@ -66,6 +72,18 @@ module Accounts
 
       def dda_account
         @dda_account ||= Core::Ledger::Models::GlAccount.find_by(account_number: Services::AvailableBalanceResolver::GL_DDA)
+      end
+
+      def record_rebuild_completed!
+        Models::DepositBalanceRebuildRequest.create!(
+          deposit_account_id: deposit_account_id,
+          rebuild_type: Models::DepositBalanceRebuildRequest::REBUILD_TYPE_PROJECTION,
+          reason: reason,
+          status: Models::DepositBalanceRebuildRequest::STATUS_COMPLETED,
+          calculation_version: calculation_version,
+          requested_at: Time.current,
+          processed_at: Time.current
+        )
       end
     end
   end

@@ -29,6 +29,23 @@
     <%= render "ops/eod/readiness_card", label: "Posting day closed", value: @readiness[:posting_day_closed] ? "Yes" : "No", state: !@readiness[:posting_day_closed] %>
   </section>
 
+  <% if @balance_projection_health.present? %>
+    <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-semibold">Balance projection health</h2>
+          <p class="mt-1 text-sm text-slate-600">Projection and snapshot health before close snapshot materialization.</p>
+        </div>
+        <%= link_to "Open balance health", ops_balance_projections_path, class: "rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700" %>
+      </div>
+      <div class="mt-5 grid gap-4 md:grid-cols-3">
+        <%= render "ops/eod/readiness_card", label: "Stale projections", value: @balance_projection_health.stale_projection_count, state: @balance_projection_health.stale_projection_count.zero? %>
+        <%= render "ops/eod/readiness_card", label: "Version mismatches", value: @balance_projection_health.projection_version_mismatch_count, state: @balance_projection_health.projection_version_mismatch_count.zero? %>
+        <%= render "ops/eod/readiness_card", label: "Pending rebuilds", value: @balance_projection_health.pending_rebuild_request_count, state: @balance_projection_health.pending_rebuild_request_count.zero? %>
+      </div>
+    </section>
+  <% end %>
+
   <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
     <h2 class="text-xl font-semibold">Confirmation</h2>
     <% if @readiness[:eod_ready] %>

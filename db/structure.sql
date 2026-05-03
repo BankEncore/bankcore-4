@@ -547,6 +547,8 @@ CREATE TABLE public.daily_balance_snapshots (
     calculation_version integer NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
+    stale boolean DEFAULT false NOT NULL,
+    stale_from_date date,
     CONSTRAINT chk_daily_balance_snapshots_calc_version_positive CHECK ((calculation_version > 0)),
     CONSTRAINT chk_daily_balance_snapshots_hold_non_negative CHECK ((hold_balance_minor_units >= 0))
 );
@@ -762,6 +764,47 @@ CREATE SEQUENCE public.deposit_accounts_id_seq
 --
 
 ALTER SEQUENCE public.deposit_accounts_id_seq OWNED BY public.deposit_accounts.id;
+
+
+--
+-- Name: deposit_balance_rebuild_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deposit_balance_rebuild_requests (
+    id bigint NOT NULL,
+    deposit_account_id bigint NOT NULL,
+    rebuild_type character varying NOT NULL,
+    reason character varying NOT NULL,
+    status character varying NOT NULL,
+    rebuild_from_date date,
+    rebuild_through_date date,
+    source_operational_event_id bigint,
+    calculation_version integer NOT NULL,
+    requested_at timestamp(6) without time zone NOT NULL,
+    processed_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT chk_deposit_balance_rebuild_requests_calc_version_positive CHECK ((calculation_version > 0))
+);
+
+
+--
+-- Name: deposit_balance_rebuild_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.deposit_balance_rebuild_requests_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: deposit_balance_rebuild_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.deposit_balance_rebuild_requests_id_seq OWNED BY public.deposit_balance_rebuild_requests.id;
 
 
 --
@@ -1833,6 +1876,13 @@ ALTER TABLE ONLY public.deposit_accounts ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: deposit_balance_rebuild_requests id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_balance_rebuild_requests ALTER COLUMN id SET DEFAULT nextval('public.deposit_balance_rebuild_requests_id_seq'::regclass);
+
+
+--
 -- Name: deposit_product_fee_rules id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2137,6 +2187,14 @@ ALTER TABLE ONLY public.deposit_accounts
 
 
 --
+-- Name: deposit_balance_rebuild_requests deposit_balance_rebuild_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_balance_rebuild_requests
+    ADD CONSTRAINT deposit_balance_rebuild_requests_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: deposit_product_fee_rules deposit_product_fee_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2393,10 +2451,10 @@ CREATE INDEX idx_cash_movements_external_shipment_reference ON public.cash_movem
 
 
 --
--- Name: idx_daily_balance_snapshots_account_date; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_daily_balance_snapshots_account_date_source_version; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_daily_balance_snapshots_account_date ON public.daily_balance_snapshots USING btree (account_domain, account_id, as_of_date);
+CREATE UNIQUE INDEX idx_daily_balance_snapshots_account_date_source_version ON public.daily_balance_snapshots USING btree (account_domain, account_id, as_of_date, source, calculation_version);
 
 
 --
@@ -2411,6 +2469,13 @@ CREATE INDEX idx_daily_balance_snapshots_as_of_date ON public.daily_balance_snap
 --
 
 CREATE INDEX idx_daily_balance_snapshots_domain_date ON public.daily_balance_snapshots USING btree (account_domain, as_of_date);
+
+
+--
+-- Name: idx_daily_balance_snapshots_stale_from_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_daily_balance_snapshots_stale_from_date ON public.daily_balance_snapshots USING btree (stale, stale_from_date);
 
 
 --
@@ -2460,6 +2525,34 @@ CREATE INDEX idx_deposit_balance_proj_last_operational_event ON public.deposit_a
 --
 
 CREATE INDEX idx_deposit_balance_proj_stale_from_date ON public.deposit_account_balance_projections USING btree (stale, stale_from_date);
+
+
+--
+-- Name: idx_deposit_balance_rebuild_requests_account; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_rebuild_requests_account ON public.deposit_balance_rebuild_requests USING btree (deposit_account_id);
+
+
+--
+-- Name: idx_deposit_balance_rebuild_requests_account_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_rebuild_requests_account_status ON public.deposit_balance_rebuild_requests USING btree (deposit_account_id, status);
+
+
+--
+-- Name: idx_deposit_balance_rebuild_requests_source_event; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_rebuild_requests_source_event ON public.deposit_balance_rebuild_requests USING btree (source_operational_event_id);
+
+
+--
+-- Name: idx_deposit_balance_rebuild_requests_status_requested; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_deposit_balance_rebuild_requests_status_requested ON public.deposit_balance_rebuild_requests USING btree (status, requested_at);
 
 
 --
@@ -3626,11 +3719,27 @@ ALTER TABLE ONLY public.cash_balances
 
 
 --
+-- Name: deposit_balance_rebuild_requests fk_rails_7bf5a65c95; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_balance_rebuild_requests
+    ADD CONSTRAINT fk_rails_7bf5a65c95 FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
 -- Name: journal_entries fk_rails_7f9a73cda9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.journal_entries
     ADD CONSTRAINT fk_rails_7f9a73cda9 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: deposit_balance_rebuild_requests fk_rails_7fb3d9c729; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deposit_balance_rebuild_requests
+    ADD CONSTRAINT fk_rails_7fb3d9c729 FOREIGN KEY (source_operational_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -3944,6 +4053,8 @@ ALTER TABLE ONLY public.operational_events
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260502222000'),
+('20260502221000'),
 ('20260502220000'),
 ('20260502215000'),
 ('20260502160000'),

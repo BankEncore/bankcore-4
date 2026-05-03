@@ -1,0 +1,30 @@
+<% if rebuild_requests.any? %>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Request</th>
+          <th class="px-5 py-3">Account</th>
+          <th class="px-5 py-3">Reason</th>
+          <th class="px-5 py-3">Status</th>
+          <th class="px-5 py-3">Version</th>
+          <th class="px-5 py-3">Requested</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% rebuild_requests.each do |request| %>
+          <tr>
+            <td class="px-5 py-4">#<%= request.id %></td>
+            <td class="px-5 py-4"><%= request.deposit_account&.account_number || "##{request.deposit_account_id}" %></td>
+            <td class="px-5 py-4"><%= request.reason.humanize %></td>
+            <td class="px-5 py-4"><%= ops_status_badge(request.status) %></td>
+            <td class="px-5 py-4"><%= request.calculation_version %></td>
+            <td class="px-5 py-4"><%= ops_time(request.requested_at) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <div class="p-5 text-sm text-slate-600">No rebuild evidence recorded.</div>
+<% end %>

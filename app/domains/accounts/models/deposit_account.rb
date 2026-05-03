@@ -16,6 +16,10 @@ module Accounts
         class_name: "Accounts::Models::DepositAccountBalanceProjection",
         dependent: :restrict_with_exception,
         inverse_of: :deposit_account
+      has_many :deposit_balance_rebuild_requests,
+        class_name: "Accounts::Models::DepositBalanceRebuildRequest",
+        dependent: :restrict_with_exception,
+        inverse_of: :deposit_account
 
       belongs_to :deposit_product, class_name: "Products::Models::DepositProduct"
       has_many :deposit_statements, class_name: "Deposits::Models::DepositStatement",

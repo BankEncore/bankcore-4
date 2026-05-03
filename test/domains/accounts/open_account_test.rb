@@ -26,6 +26,12 @@ class AccountsOpenAccountTest < ActiveSupport::TestCase
     assert_equal Accounts::Models::DepositAccountParty::STATUS_ACTIVE, row.status
     assert_equal Date.new(2026, 4, 21), row.effective_on
     assert_nil row.ended_on
+    projection = account.deposit_account_balance_projection
+    assert_equal 0, projection.ledger_balance_minor_units
+    assert_equal 0, projection.hold_balance_minor_units
+    assert_equal 0, projection.available_balance_minor_units
+    assert_equal Date.new(2026, 4, 21), projection.as_of_business_date
+    assert_equal Accounts::Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION, projection.calculation_version
   end
 
   test "uses explicit effective_on when provided" do

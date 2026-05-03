@@ -64,6 +64,29 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal 0, ev.posting_batches.count
   end
 
+  test "rolls back journal lines when projection update fails after line creation" do
+    ev = create_pending_event!(amount: 300)
+    original_projector = Accounts::Services::DepositBalanceProjector.method(:apply_journal_entry!)
+    Accounts::Services::DepositBalanceProjector.define_singleton_method(:apply_journal_entry!) do |journal_entry:|
+      raise "projection failure"
+    end
+
+    begin
+      assert_raises(RuntimeError) do
+        Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+      end
+    ensure
+      Accounts::Services::DepositBalanceProjector.define_singleton_method(:apply_journal_entry!) do |journal_entry:|
+        original_projector.call(journal_entry: journal_entry)
+      end
+    end
+
+    assert_equal "pending", ev.reload.status
+    assert_equal 0, ev.posting_batches.count
+    assert_equal 0, Core::Ledger::Models::JournalEntry.joins(:posting_batch).where(posting_batches: { operational_event_id: ev.id }).count
+    assert_equal 0, @account.deposit_account_balance_projection.reload.ledger_balance_minor_units
+  end
+
   test "not found raises" do
     assert_raises(Core::Posting::Commands::PostEvent::NotFound) do
       Core::Posting::Commands::PostEvent.call(operational_event_id: 0)
@@ -245,7 +268,9 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     assert_equal "debit", lines.first.side
     assert_equal "1130", lines.second.gl_account.account_number
     assert_equal "credit", lines.second.side
-    assert_nil @account.reload.deposit_account_balance_projection
+    projection = @account.reload.deposit_account_balance_projection
+    assert_equal 0, projection.ledger_balance_minor_units
+    assert_nil projection.last_journal_entry_id
   end
 
   private

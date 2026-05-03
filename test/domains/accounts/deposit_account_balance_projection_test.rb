@@ -12,7 +12,7 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
   end
 
   test "stores one projection per deposit account with default zero balances" do
-    projection = Accounts::Models::DepositAccountBalanceProjection.create!(deposit_account: @account)
+    projection = @account.deposit_account_balance_projection
 
     assert_equal 0, projection.ledger_balance_minor_units
     assert_equal 0, projection.hold_balance_minor_units
@@ -23,6 +23,7 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
   end
 
   test "allows negative ledger and available balances but not negative hold totals" do
+    @account.deposit_account_balance_projection.destroy!
     projection = Accounts::Models::DepositAccountBalanceProjection.new(
       deposit_account: @account,
       ledger_balance_minor_units: -1_00,
@@ -48,8 +49,6 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
   end
 
   test "enforces uniqueness by deposit account" do
-    Accounts::Models::DepositAccountBalanceProjection.create!(deposit_account: @account)
-
     duplicate = Accounts::Models::DepositAccountBalanceProjection.new(deposit_account: @account)
     assert_not duplicate.valid?
     assert_includes duplicate.errors[:deposit_account], "has already been taken"
@@ -143,6 +142,22 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
     assert_equal 4_000, projection.reload.ledger_balance_minor_units
   end
 
+  test "stale marking command records rebuild evidence for projection drift" do
+    fund_account!(5_000)
+    projection = @account.deposit_account_balance_projection
+    projection.update!(ledger_balance_minor_units: 4_000, available_balance_minor_units: 4_000)
+
+    result = Accounts::Commands::MarkDepositBalanceProjectionStale.call(deposit_account_id: @account.id)
+
+    assert result.fetch(:drift).drifted
+    assert result.fetch(:projection).stale
+    request = result.fetch(:rebuild_request)
+    assert_equal @account.id, request.deposit_account_id
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::STATUS_REQUESTED, request.status
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::REASON_DRIFT_DETECTED, request.reason
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::REBUILD_TYPE_PROJECTION, request.rebuild_type
+  end
+
   test "rebuild command repairs projection from journal and hold truth" do
     fund_account!(5_000)
     place_hold!(amount: 1_500, key: "projection-rebuild-hold")
@@ -171,6 +186,9 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
 
     drift = Accounts::Queries::DepositBalanceProjectionDrift.call(deposit_account_id: @account.id)
     assert_not drift.drifted
+    request = Accounts::Models::DepositBalanceRebuildRequest.order(:id).last
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::STATUS_COMPLETED, request.status
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::REASON_MANUAL_REBUILD, request.reason
   end
 
   test "rebuild command creates a missing projection" do
@@ -184,6 +202,20 @@ class AccountsDepositAccountBalanceProjectionTest < ActiveSupport::TestCase
     assert_equal 0, rebuilt.hold_balance_minor_units
     assert_equal 5_000, rebuilt.available_balance_minor_units
     assert_equal Date.new(2026, 5, 2), rebuilt.as_of_business_date
+  end
+
+  test "formula version marking stales old projections and records rebuild evidence" do
+    projection = @account.deposit_account_balance_projection
+    projection.update!(calculation_version: 99, stale: false)
+
+    result = Accounts::Commands::MarkDepositBalanceProjectionsStaleForVersion.call(expected_calculation_version: 1)
+
+    assert_equal 1, result.marked_count
+    assert_equal 1, result.rebuild_requests_created
+    assert @account.deposit_account_balance_projection.reload.stale
+    request = Accounts::Models::DepositBalanceRebuildRequest.sole
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::REASON_FORMULA_VERSION_CHANGE, request.reason
+    assert_equal Accounts::Models::DepositBalanceRebuildRequest::STATUS_REQUESTED, request.status
   end
 
   private

@@ -14,13 +14,18 @@ module Reporting
 
       Result = Data.define(:as_of_date, :snapshots_materialized)
 
-      def self.call(as_of_date:, source: Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION)
-        new(as_of_date: as_of_date, source: source).call
+      def self.call(
+        as_of_date:,
+        source: Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION,
+        expected_calculation_version: Accounts::Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION
+      )
+        new(as_of_date: as_of_date, source: source, expected_calculation_version: expected_calculation_version).call
       end
 
-      def initialize(as_of_date:, source:)
+      def initialize(as_of_date:, source:, expected_calculation_version:)
         @as_of_date = Date.iso8601(as_of_date.to_s)
         @source = source
+        @expected_calculation_version = expected_calculation_version
       end
 
       def call
@@ -39,7 +44,7 @@ module Reporting
 
       private
 
-      attr_reader :as_of_date, :source
+      attr_reader :as_of_date, :source, :expected_calculation_version
 
       def deposit_accounts
         Accounts::Models::DepositAccount
@@ -53,7 +58,10 @@ module Reporting
       end
 
       def assert_projection_current!(account)
-        drift = Accounts::Queries::DepositBalanceProjectionDrift.call(deposit_account_id: account.id)
+        drift = Accounts::Queries::DepositBalanceProjectionDrift.call(
+          deposit_account_id: account.id,
+          expected_calculation_version: expected_calculation_version
+        )
         raise ProjectionDriftDetected, drift if drift.drifted
       end
 
@@ -61,7 +69,9 @@ module Reporting
         snapshot = Models::DailyBalanceSnapshot.find_or_initialize_by(
           account_domain: Models::DailyBalanceSnapshot::ACCOUNT_DOMAIN_DEPOSITS,
           account_id: projection.deposit_account_id,
-          as_of_date: as_of_date
+          as_of_date: as_of_date,
+          source: source,
+          calculation_version: projection.calculation_version
         )
         snapshot.assign_attributes(
           account_type: Models::DailyBalanceSnapshot::ACCOUNT_TYPE_DEPOSIT_ACCOUNT,
@@ -69,8 +79,8 @@ module Reporting
           hold_balance_minor_units: projection.hold_balance_minor_units,
           available_balance_minor_units: projection.available_balance_minor_units,
           collected_balance_minor_units: projection.collected_balance_minor_units,
-          source: source,
-          calculation_version: projection.calculation_version
+          stale: false,
+          stale_from_date: nil
         )
         snapshot.save!
         snapshot
