@@ -3,6 +3,15 @@
 module Reporting
   module Commands
     class MaterializeDailyBalanceSnapshots
+      class ProjectionDriftDetected < StandardError
+        attr_reader :drift
+
+        def initialize(drift)
+          @drift = drift
+          super("deposit balance projection drift detected for deposit_account_id=#{drift.deposit_account_id}")
+        end
+      end
+
       Result = Data.define(:as_of_date, :snapshots_materialized)
 
       def self.call(as_of_date:, source: Models::DailyBalanceSnapshot::SOURCE_CURRENT_PROJECTION)
@@ -17,8 +26,10 @@ module Reporting
       def call
         count = 0
         Models::DailyBalanceSnapshot.transaction do
-          deposit_projections.find_each do |projection|
-            materialize_projection!(projection)
+          deposit_accounts.find_each do |account|
+            projection = projection_for(account)
+            assert_projection_current!(account)
+            materialize_projection!(projection.reload)
             count += 1
           end
         end
@@ -30,8 +41,20 @@ module Reporting
 
       attr_reader :as_of_date, :source
 
-      def deposit_projections
-        Accounts::Models::DepositAccountBalanceProjection.order(:deposit_account_id)
+      def deposit_accounts
+        Accounts::Models::DepositAccount
+          .where(status: Accounts::Models::DepositAccount::STATUS_OPEN)
+          .order(:id)
+      end
+
+      def projection_for(account)
+        account.deposit_account_balance_projection ||
+          Accounts::Commands::RebuildDepositBalanceProjection.call(deposit_account_id: account.id)
+      end
+
+      def assert_projection_current!(account)
+        drift = Accounts::Queries::DepositBalanceProjectionDrift.call(deposit_account_id: account.id)
+        raise ProjectionDriftDetected, drift if drift.drifted
       end
 
       def materialize_projection!(projection)

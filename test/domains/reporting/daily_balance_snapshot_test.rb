@@ -58,6 +58,30 @@ class ReportingDailyBalanceSnapshotTest < ActiveSupport::TestCase
     assert_equal Accounts::Models::DepositAccountBalanceProjection::CURRENT_CALCULATION_VERSION, snapshot.calculation_version
   end
 
+  test "materialization creates missing zero balance projection for open accounts" do
+    assert_nil @account.deposit_account_balance_projection
+
+    result = Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: Date.new(2026, 5, 2))
+
+    assert_equal 1, result.snapshots_materialized
+    assert_equal 0, @account.reload.deposit_account_balance_projection.ledger_balance_minor_units
+    snapshot = Reporting::Models::DailyBalanceSnapshot.find_by!(account_id: @account.id)
+    assert_equal 0, snapshot.ledger_balance_minor_units
+    assert_equal 0, snapshot.hold_balance_minor_units
+    assert_equal 0, snapshot.available_balance_minor_units
+  end
+
+  test "materialization refuses stale or drifted projections" do
+    fund_account!(5_000)
+    @account.deposit_account_balance_projection.update!(stale: true, stale_from_date: Date.new(2026, 5, 1))
+
+    assert_raises(Reporting::Commands::MaterializeDailyBalanceSnapshots::ProjectionDriftDetected) do
+      Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: Date.new(2026, 5, 2))
+    end
+
+    assert_equal 0, Reporting::Models::DailyBalanceSnapshot.count
+  end
+
   test "materialization is idempotent and refreshes existing snapshot values" do
     fund_account!(5_000)
     Reporting::Commands::MaterializeDailyBalanceSnapshots.call(as_of_date: Date.new(2026, 5, 2))
