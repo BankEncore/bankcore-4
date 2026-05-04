@@ -35,7 +35,7 @@ Phase 3.5 uses these internal HTML workspace namespaces:
 | Namespace | Purpose |
 | --- | --- |
 | `branch` | Branch-local internal workspace. First screens wrap teller session and transaction workflows, but the namespace leaves room for broader branch operations. |
-| `ops` | Centralized operations workspace for EOD readiness, trial balance, operational event search, event detail, close packages, and exception review. |
+| `ops` | Centralized operations workspace. **Close package** (`/ops/close_package`) is the primary **EOD hub** (readiness, derived classification, trial balance, guarded business-date close). Legacy screens **EOD readiness** (`/ops/eod`, trial-balance-focused) and **business date close** (`/ops/business_date_close`) remain; close POST redirects back to Close package. Also: operational event search/detail and exception review. |
 | `admin` | Product/configuration workspace for product rules and other internal configuration surfaces. |
 
 A shared internal base controller/layout may live under `internal` if useful for authentication, navigation, flash, current business date, and role-aware links. Concrete feature routes should still remain under `branch`, `ops`, or `admin`.
@@ -68,10 +68,10 @@ Phase 3.5 should proceed as reviewable workorders:
 1. **WO1 documentation**: this ADR, roadmap notes, and contributor guidance.
 2. **WO2 shell/auth**: shared internal layout, session-backed operator auth, navigation, current business date, flash, and role-aware links.
 3. **WO3 branch session UI**: branch dashboard, open/close teller session, and supervisor variance approval.
-4. **WO4 ops EOD/event UI**: EOD readiness, trial balance, operational event search, and event detail views.
+4. **WO4 ops EOD/event UI**: Close package as canonical EOD workspace; legacy EOD readiness and standalone close preview; trial balance; operational event search and event detail views.
 5. **WO5 admin product read-only UI**: product, fee-rule, overdraft-policy, and statement-profile inspection.
 6. **WO6 branch transaction forms**: deposit, withdrawal, transfer, holds, posting, and reversal forms over existing commands.
-7. **WO7 admin/ops controls**: guarded product config edits, engine runs, exception queues, and close packages.
+7. **WO7 admin/ops controls**: guarded product config edits, engine runs, exception queues, and close-package/EOD hardening (classification, redirects, dashboard entry points).
 
 WO3, WO4, and WO5 may be planned independently after WO2 establishes shared auth and layout conventions.
 

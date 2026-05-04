@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-04-22  
-**Aligns with:** [ADR-0016](0016-trial-balance-and-eod-readiness.md) (EOD readiness composition), [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) (business date for participation and events), [roadmap Phase 2](../roadmap.md) “Business date close”, [module catalog](../architecture/bankcore-module-catalog.md) §6.4
+**Aligns with:** [ADR-0016](0016-trial-balance-and-eod-readiness.md) (EOD readiness composition), [ADR-0041](0041-close-package-and-eod-classification-taxonomy.md) (Ops HTML close workflow and redirects around the same gate), [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) (business date for participation and events), [roadmap Phase 2](../roadmap.md) “Business date close”, [module catalog](../architecture/bankcore-module-catalog.md) §6.4
 
 ---
 
@@ -45,6 +45,10 @@ Phase 2 needs a **supervised close** that advances the calendar **only** when AD
 
 - **`Teller::Queries::EodReadiness`** adds **`current_business_on`** (ISO string) and **`posting_day_closed`**: **true** when the requested **`business_date` < current** open day (historical day—posting is no longer open for that calendar date under the singleton model). No change to ADR-0016 supervisor policy on **GET** reports.
 
+### 2.6 Internal Ops workspace (HTML)
+
+- **`POST /ops/business_date_close`** ([ADR-0025](0025-internal-workspace-ui.md), [ADR-0037](0037-internal-staff-authorized-surfaces.md)) invokes the same **`CloseBusinessDate`** command and **`business_date.close`** capability gate as JSON teller close; success and failure responses **redirect** operators to **`GET /ops/close_package`** with flash ([ADR-0041](0041-close-package-and-eod-classification-taxonomy.md) §8). This ADR’s **EOD gate composition** is unchanged.
+
 ---
 
 ## 3. Non-goals
@@ -64,5 +68,6 @@ Multi-branch business dates, day **reopen**, GL **period** locks beyond this inv
 ## 5. Related ADRs
 
 - [ADR-0016](0016-trial-balance-and-eod-readiness.md) — readiness definition  
+- [ADR-0041](0041-close-package-and-eod-classification-taxonomy.md) — Ops Close package, derived classification, and redirects after internal close attempts  
 - [ADR-0011](0011-accounts-deposit-vertical-slice-mvp.md) — **`CurrentBusinessDate`** defaults  
 - [ADR-0015](0015-teller-workspace-authentication.md) — operator headers and supervisor role

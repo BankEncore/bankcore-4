@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-04-24  
-**Aligns with:** [roadmap.md](../roadmap.md) Phase 1F, [module catalog](../architecture/bankcore-module-catalog.md) §6.3–6.4, [ADR-0010](0010-ledger-persistence-and-seeded-coa.md), [ADR-0003](0003-posting-journal-architecture.md)
+**Aligns with:** [roadmap.md](../roadmap.md) Phase 1F, [module catalog](../architecture/bankcore-module-catalog.md) §6.3–6.4, [ADR-0010](0010-ledger-persistence-and-seeded-coa.md), [ADR-0003](0003-posting-journal-architecture.md), [ADR-0041](0041-close-package-and-eod-classification-taxonomy.md) (Ops close-package read model consumes this ADR’s readiness shape; **`eod_ready`** remains defined here only)
 
 ---
 
@@ -41,6 +41,7 @@ Phase 1 needs **read-only** visibility into whether **GL activity for a business
 
 - Reporting remains **read-only**; no new write paths to `journal_entries` / `journal_lines`.
 - An index on **`journal_entries.business_date`** supports aggregates at modest volume.
+- **Ops Close package** ([ADR-0041](0041-close-package-and-eod-classification-taxonomy.md) §8) builds operator-facing blockers, warnings, and bucket summaries by **passthrough** of `Teller::Queries::EodReadiness` via `Teller::Queries::ClosePackageClassification`. That layer must **not** redefine **`eod_ready`** or add close blockers without amending this ADR.
 
 ---
 
@@ -48,3 +49,4 @@ Phase 1 needs **read-only** visibility into whether **GL activity for a business
 
 - Implementation: `Core::Ledger::Queries::TrialBalanceForBusinessDate`, `JournalBalanceCheckForBusinessDate`, `Teller::Queries::EodReadiness`, `Teller::ReportsController`.
 - Formal day close and posting-day invariant: [ADR-0018](0018-business-date-close-and-posting-invariant.md).
+- Derived close-package classification over the same readiness payload: [ADR-0041](0041-close-package-and-eod-classification-taxonomy.md) (`Teller::Queries::ClosePackageClassification`, `Ops::ClosePackagesController`).

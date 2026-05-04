@@ -160,20 +160,21 @@ Likely slices:
 
 ### 3.5 Business Date Close
 
-Shipped narrow slice: singleton current business date persistence, open-day posting invariant, supervisor `POST /teller/business_date/close`, `Core::BusinessDate::Commands::CloseBusinessDate`, EOD readiness checks, and append-only close audit are shipped. Multi-branch/entity calendars, close packages, checkpoints beyond the current readiness query, and day reopen remain deferred.
+Shipped narrow slice: singleton current business date persistence, open-day posting invariant, supervisor `POST /teller/business_date/close`, `Core::BusinessDate::Commands::CloseBusinessDate`, EOD readiness checks, append-only close audit, **Ops HTML close package** (`/ops/close_package`), and **derived** close-package classification (`Teller::Queries::ClosePackageClassification`, [ADR-0041](adr/0041-close-package-and-eod-classification-taxonomy.md) T4.1) are shipped. Legacy Ops screens **EOD readiness** and **business date close** remain available; primary day-end review is routed through Close package.
+
+Still deferred: multi-branch/entity calendars, a formal **checkpoint registry** beyond today’s `Teller::Queries::EodReadiness` conjuncts, **day reopen**, and **materialized close reports / extract bundles** (PDFs, regulator-style packages, immutable artifact storage) distinct from the current server-rendered read model.
 
 To complete:
 
 - Define branch or entity scope for business dates.
-- Add close checkpoints: teller sessions, unposted events, trial balance readiness, unresolved exceptions, and generated extracts.
+- Add explicit close checkpoints and orchestration where product requires more than balanced journals, closed sessions, and zero pending operational events for the day.
 - Define day reopen policy, including who can reopen and what data remains immutable.
-- Add close reports and auditable close packages.
+- Add formal close reports and downloadable close artifacts if required beyond the Ops close-package screen.
 
 Likely slices:
 
 - ADR for branch-scoped business date.
-- Close checkpoint registry.
-- Read-only close package generation.
+- Close checkpoint registry (policy engine), if institution scope demands it beyond ADR-0016 readiness.
 - Reopen command with strict guardrails, if product accepts reopen at all.
 
 ### 3.6 Drawer Variance and Cash Operations

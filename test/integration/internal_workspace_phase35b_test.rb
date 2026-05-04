@@ -45,7 +45,8 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
 
     get ops_path
     assert_response :success
-    assert_includes response.body, "Close package"
+    assert_includes response.body, "Close package — EOD hub"
+    assert_includes response.body, "Legacy EOD screens"
     assert_includes response.body, "Exception queues"
     assert_includes response.body, "ACH receipt ingestion"
 
@@ -84,7 +85,7 @@ class InternalWorkspacePhase35bTest < ActionDispatch::IntegrationTest
 
     get ops_close_package_path
     assert_response :success
-    assert_includes response.body, "EOD impact evidence"
+    assert_includes response.body, "Raw operational events"
     assert_includes response.body, "By channel"
     assert_includes response.body, "branch"
     assert_includes response.body, "fee.assessed"

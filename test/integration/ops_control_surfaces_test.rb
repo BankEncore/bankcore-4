@@ -21,7 +21,7 @@ class OpsControlSurfacesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Balance projection health"
 
     post "/ops/business_date_close", params: { business_date: @business_date.iso8601 }
-    assert_redirected_to "/ops/business_date_close"
+    assert_redirected_to "/ops/close_package"
     assert_equal @business_date + 1.day, Core::BusinessDate::Services::CurrentBusinessDate.call
   end
 
