@@ -90,6 +90,27 @@ class AcceptCheckDepositTest < ActiveSupport::TestCase
     assert_equal 1, Accounts::Models::Hold.where(placed_for_operational_event_id: dep_id).count
   end
 
+  test "passes expires_on through to deposit-linked hold" do
+    idem = "chk-exp-#{SecureRandom.hex(6)}"
+    payload = { "items" => [ { "amount_minor_units" => 100, "item_reference" => "EXP-1" } ] }
+    release_on = Date.new(2026, 5, 10)
+
+    r = Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+      channel: "teller",
+      idempotency_key: idem,
+      amount_minor_units: 100,
+      currency: "USD",
+      source_account_id: @account.id,
+      actor_id: @operator.id,
+      payload: payload,
+      hold_amount_minor_units: 100,
+      hold_idempotency_key: "#{idem}-hold",
+      expires_on: release_on
+    )
+
+    assert_equal release_on, r[:hold].expires_on
+  end
+
   test "requires distinct hold idempotency key when holding" do
     idem = "chk-same-#{SecureRandom.hex(4)}"
     payload = { "items" => [ { "amount_minor_units" => 100, "item_reference" => "X" } ] }

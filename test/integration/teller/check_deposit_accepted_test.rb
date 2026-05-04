@@ -28,6 +28,7 @@ class CheckDepositAcceptedIntegrationTest < ActionDispatch::IntegrationTest
         teller_session_id: @cash_session_id,
         hold_amount_minor_units: 750,
         hold_idempotency_key: hold_idem,
+        hold_expires_on: "2026-04-28",
         payload: {
           items: [
             { amount_minor_units: 400, item_reference: "REF-A", classification: "on_us" },
@@ -42,6 +43,8 @@ class CheckDepositAcceptedIntegrationTest < ActionDispatch::IntegrationTest
     parsed = response.parsed_body
     assert_equal "posted", parsed["posting_outcome"]
     assert_equal "created", parsed["hold_outcome"]
+    hold = Accounts::Models::Hold.find(parsed.fetch("hold_id"))
+    assert_equal Date.new(2026, 4, 28), hold.expires_on
     ev_id = parsed["operational_event_id"]
 
     get "/teller/operational_events", params: { business_date: "2026-04-22" }, headers: teller_json_headers(@teller_operator)

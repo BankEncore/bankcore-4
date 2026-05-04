@@ -74,6 +74,12 @@
       <p class="mt-1 text-xs text-slate-500">If omitted while a hold amount is set, defaults to deposit key with <code>-hold</code> suffix (must differ from deposit idempotency key).</p>
     </div>
 
+    <div>
+      <%= form.label :hold_expires_on, "Scheduled hold release date (optional)", class: "block text-sm font-medium text-slate-700" %>
+      <%= form.date_field :hold_expires_on, value: normalized["hold_expires_on"].presence, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+      <p class="mt-1 text-xs text-slate-500">Stored as <code>expires_on</code> on the hold; must be on or after the business date of acceptance.</p>
+    </div>
+
     <%= form.hidden_field :currency, value: normalized["currency"] || "USD" %>
     <%= form.hidden_field :idempotency_key, value: normalized["idempotency_key"] %>
 

@@ -39,7 +39,7 @@ module Teller
       attrs = params.require(:operational_event).permit(
         :event_type, :channel, :idempotency_key, :amount_minor_units, :currency, :source_account_id,
         :destination_account_id, :teller_session_id, :business_date, :reference_id, :operating_unit_id,
-        :hold_amount_minor_units, :hold_idempotency_key
+        :hold_amount_minor_units, :hold_idempotency_key, :hold_expires_on
       ).to_h.symbolize_keys
       attrs[:amount_minor_units] = attrs[:amount_minor_units].to_i
       if attrs[:source_account_id].present?
@@ -71,11 +71,13 @@ module Teller
 
       hold_amt = attrs.delete(:hold_amount_minor_units)
       hold_idem = attrs.delete(:hold_idempotency_key)
+      hold_expires_raw = attrs.delete(:hold_expires_on)
 
       result = record_operational_event(
         attrs,
         hold_amount_minor_units: hold_amt,
-        hold_idempotency_key: hold_idem
+        hold_idempotency_key: hold_idem,
+        hold_expires_on: hold_expires_raw
       )
       if result[:outcome].in?([ Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED, Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED_REPLAY ])
         render json: {
@@ -118,7 +120,7 @@ module Teller
 
     private
 
-    def record_operational_event(attrs, hold_amount_minor_units: nil, hold_idempotency_key: nil)
+    def record_operational_event(attrs, hold_amount_minor_units: nil, hold_idempotency_key: nil, hold_expires_on: nil)
       if attrs[:event_type].to_s == Core::OperationalEvents::Commands::RecordEvent::CHECK_DEPOSIT_ACCEPTED
         payload_perm = params.require(:operational_event).permit(
           payload: { items: %i[amount_minor_units item_reference serial_number classification] }
@@ -141,7 +143,8 @@ module Teller
           payload: payload_hash,
           hold_amount_minor_units: hold_amount_minor_units,
           hold_idempotency_key: hold_idempotency_key,
-          hold_channel: attrs[:channel]
+          hold_channel: attrs[:channel],
+          expires_on: parse_hold_expires_on_for_json(hold_expires_on)
         )
       elsif %w[withdrawal.posted transfer.completed].include?(attrs[:event_type].to_s)
         Accounts::Commands::AuthorizeDebit.call(**attrs, actor_id: current_operator.id)
@@ -217,6 +220,15 @@ module Teller
           Core::OperationalEvents::Services::CheckDepositPayload.payload_summary(event.payload)
       end
       h
+    end
+
+    def parse_hold_expires_on_for_json(raw)
+      return nil if raw.blank?
+
+      Date.iso8601(raw.to_s.strip)
+    rescue ArgumentError
+      raise Core::OperationalEvents::Commands::AcceptCheckDeposit::InvalidRequest,
+            "hold_expires_on must be ISO date YYYY-MM-DD"
     end
 
     def deposit_account_context_json(account)

@@ -28,18 +28,21 @@ class BranchCheckDepositIntegrationTest < ActionDispatch::IntegrationTest
         classification: "on_us",
         hold_amount: "42.75",
         hold_idempotency_key: hold_idem,
+        hold_expires_on: "2026-08-15",
         idempotency_key: idem
       }
     }
 
     assert_response :created
     assert_match(/Check deposit accepted/i, response.body)
-    assert_match(/Hold placed/i, response.body)
+    assert_match(/Hold scheduled release/i, response.body)
 
     ev = Core::OperationalEvents::Models::OperationalEvent.find_by!(channel: "teller", idempotency_key: idem)
     assert_equal "check.deposit.accepted", ev.event_type
     assert_equal "posted", ev.status
     assert_equal 4_275, ev.amount_minor_units
+    hold = Accounts::Models::Hold.find_by!(placed_for_operational_event_id: ev.id)
+    assert_equal Date.new(2026, 8, 15), hold.expires_on
   end
 
   test "branch check deposit new is reachable from dashboard when deposit capability" do

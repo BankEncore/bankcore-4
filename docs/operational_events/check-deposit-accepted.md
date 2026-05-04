@@ -26,6 +26,7 @@ Records that the institution **accepted** a **check deposit** ticket against an 
 - **Must** reference an **open** `deposit_accounts` row via `source_account_id`.
 - **Does not require** an open `TellerSession`; `teller_session_id` is optional audit/trace only.
 - **Held-at-acceptance** flows **must** use **`AcceptCheckDeposit`** (single transaction: record → post → optional `PlaceHold`) — do not sequence separate HTTP record/post/hold for that intent.
+- Optional **`hold_expires_on`** (**ISO date**) on teller JSON / Branch HTML maps to the linked hold’s **`expires_on`** (must be on or after the acceptance **`business_date`**).
 
 ## Persistence
 
@@ -107,7 +108,8 @@ Minimal teller JSON (orchestration entry via `POST /teller/operational_events`):
       ]
     },
     "hold_amount_minor_units": 5000,
-    "hold_idempotency_key": "chk-001-hold"
+    "hold_idempotency_key": "chk-001-hold",
+    "hold_expires_on": "2026-05-15"
   }
 }
 ```

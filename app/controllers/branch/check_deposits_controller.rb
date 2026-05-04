@@ -31,7 +31,8 @@ module Branch
         operating_unit_id: current_operating_unit&.id,
         payload: payload,
         hold_amount_minor_units: hold_minor,
-        hold_idempotency_key: hold_idem
+        hold_idempotency_key: hold_idem,
+        expires_on: parse_hold_expires_on(@check_deposit[:hold_expires_on])
       )
 
       @event = result[:operational_event]
@@ -70,7 +71,8 @@ module Branch
         "classification" => "",
         "hold_amount" => "",
         "hold_amount_minor_units" => params[:hold_amount_minor_units],
-        "hold_idempotency_key" => ""
+        "hold_idempotency_key" => "",
+        "hold_expires_on" => ""
       }
     end
 
@@ -78,7 +80,7 @@ module Branch
       params.require(:check_deposit).permit(
         :deposit_account_id, :deposit_account_number, :amount, :amount_minor_units, :currency, :teller_session_id,
         :idempotency_key, :identity_kind, :identity_value, :classification, :hold_amount, :hold_amount_minor_units,
-        :hold_idempotency_key
+        :hold_idempotency_key, :hold_expires_on
       ).to_h.symbolize_keys
     end
 
@@ -129,6 +131,14 @@ module Branch
       return nil unless hold_minor.positive?
 
       attrs[:hold_idempotency_key].presence || "#{attrs[:idempotency_key]}-hold"
+    end
+
+    def parse_hold_expires_on(raw)
+      return nil if raw.blank?
+
+      Date.iso8601(raw.to_s.strip)
+    rescue ArgumentError
+      raise ArgumentError, "hold release date must be a valid ISO date (YYYY-MM-DD)"
     end
 
     def load_open_teller_sessions
