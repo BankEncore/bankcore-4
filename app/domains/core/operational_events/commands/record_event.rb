@@ -28,9 +28,12 @@ module Core
         CASH_SHIPMENT_RECEIVED = "cash.shipment.received"
         INTEREST_EVENT_TYPES = %w[interest.accrued interest.posted].freeze
 
+        CHECK_DEPOSIT_ACCEPTED = "check.deposit.accepted"
+
         FINANCIAL_EVENT_TYPES = (
           %w[deposit.accepted withdrawal.posted transfer.completed fee.assessed fee.waived ach.credit.received] +
-            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED, CASH_SHIPMENT_RECEIVED ]
+            INTEREST_EVENT_TYPES + [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED, CASH_SHIPMENT_RECEIVED ] +
+            [ CHECK_DEPOSIT_ACCEPTED ]
         ).freeze
         CHANNELS = %w[teller branch api batch system].freeze
         STAFF_CHANNELS = %w[teller branch].freeze
@@ -50,13 +53,17 @@ module Core
           actor_id: nil,
           operating_unit_id: nil,
           reference_id: nil,
-          force_nsf_fee: false
+          force_nsf_fee: false,
+          payload: nil
         )
           validate_channel!(channel)
           validate_event_type!(event_type)
+          validate_payload_usage!(event_type, payload)
           resolved_operating_unit = resolve_operating_unit(channel, actor_id, teller_session_id, operating_unit_id)
 
           authorize_fee_waiver!(event_type, channel, actor_id, resolved_operating_unit)
+          canonical_check_payload = validate_check_deposit_payload!(event_type, channel, payload, amount_minor_units)
+
           validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
           validate_source_account!(event_type, source_account_id)
           validate_destination_account!(event_type, destination_account_id)
@@ -89,7 +96,8 @@ module Core
             destination_account_id: destination_account_id,
             teller_session_id: teller_session_id,
             operating_unit_id: resolved_operating_unit&.id,
-            reference_id: reference_id
+            reference_id: reference_id,
+            check_deposit_canonical_payload: canonical_check_payload
           )
 
           begin
@@ -138,7 +146,8 @@ module Core
                 teller_session_id: teller_session_id,
                 actor_id: actor_id,
                 operating_unit: resolved_operating_unit,
-                reference_id: reference_id.presence
+                reference_id: reference_id.presence,
+                payload: canonical_check_payload
               )
               { outcome: :created, event: event }
             end
@@ -149,7 +158,8 @@ module Core
         end
 
         def self.fingerprint_for(event_type:, channel:, idempotency_key:, amount_minor_units:, currency:, source_account_id:,
-                                destination_account_id: nil, teller_session_id: nil, operating_unit_id: nil, reference_id: nil)
+                                destination_account_id: nil, teller_session_id: nil, operating_unit_id: nil, reference_id: nil,
+                                check_deposit_canonical_payload: nil)
           if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED, CASH_SHIPMENT_RECEIVED ].include?(event_type.to_s)
             payload = {
               event_type: event_type.to_s,
@@ -191,6 +201,11 @@ module Core
           if event_type.to_s == "ach.credit.received" && reference_id.present?
             payload[:reference_id] = reference_id.to_s
           end
+          if event_type.to_s == CHECK_DEPOSIT_ACCEPTED
+            canonical = check_deposit_canonical_payload || {}
+            payload[:teller_session_id] = teller_session_id&.to_i
+            payload[:check_deposit_digest] = Services::CheckDepositPayload.digest(canonical)
+          end
           Digest::SHA256.hexdigest(payload.to_json)
         end
 
@@ -200,11 +215,30 @@ module Core
           raise InvalidRequest, "channel must be one of: #{CHANNELS.join(", ")}"
         end
 
+        def self.validate_check_deposit_payload!(event_type, channel, payload, amount_minor_units)
+          return nil unless event_type.to_s == CHECK_DEPOSIT_ACCEPTED
+
+          unless channel.to_s == "teller"
+            raise InvalidRequest, "#{CHECK_DEPOSIT_ACCEPTED} may only use channel teller"
+          end
+
+          Services::CheckDepositPayload.normalize!(payload, amount_minor_units: amount_minor_units)
+        end
+        private_class_method :validate_check_deposit_payload!
+
         def self.validate_event_type!(event_type)
           return if FINANCIAL_EVENT_TYPES.include?(event_type.to_s)
 
           raise InvalidRequest, "event_type not supported: #{event_type.inspect}"
         end
+
+        def self.validate_payload_usage!(event_type, payload)
+          return if event_type.to_s == CHECK_DEPOSIT_ACCEPTED
+          return if payload.nil? || (payload.respond_to?(:empty?) && payload.empty?)
+
+          raise InvalidRequest, "payload is only supported for #{CHECK_DEPOSIT_ACCEPTED}"
+        end
+        private_class_method :validate_payload_usage!
 
         def self.validate_financial_amounts!(event_type, amount_minor_units, currency, source_account_id, destination_account_id)
           if [ DRAWER_VARIANCE_POSTED, CASH_VARIANCE_POSTED ].include?(event_type.to_s)
@@ -479,6 +513,11 @@ module Core
         private_class_method :teller_cash_session_gate?
 
         def self.handle_existing(existing, incoming_fp)
+          canonical_payload =
+            if existing.event_type == CHECK_DEPOSIT_ACCEPTED
+              existing.payload.presence || {}
+            end
+
           existing_fp = fingerprint_for(
             event_type: existing.event_type,
             channel: existing.channel,
@@ -489,7 +528,8 @@ module Core
             destination_account_id: existing.destination_account_id,
             teller_session_id: existing.teller_session_id,
             operating_unit_id: existing.operating_unit_id,
-            reference_id: existing.reference_id
+            reference_id: existing.reference_id,
+            check_deposit_canonical_payload: canonical_payload
           )
           raise MismatchedIdempotency.new(incoming_fp) if existing_fp != incoming_fp
           raise PostedReplay if existing.status == Models::OperationalEvent::STATUS_POSTED

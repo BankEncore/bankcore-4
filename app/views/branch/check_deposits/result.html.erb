@@ -1,0 +1,13 @@
+<% content_for :title, "Check Deposit Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Check deposit result</h1>
+  <p class="mt-2 text-slate-600">Posted via <code>AcceptCheckDeposit</code> (record, post, optional hold).</p>
+</section>
+
+<%= render "branch/shared/transaction_result",
+  title: "Check deposit accepted",
+  event: @event,
+  outcome: @outcome,
+  post_result: @post_result,
+  hold: @hold %>

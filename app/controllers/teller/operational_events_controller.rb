@@ -38,7 +38,8 @@ module Teller
     def create
       attrs = params.require(:operational_event).permit(
         :event_type, :channel, :idempotency_key, :amount_minor_units, :currency, :source_account_id,
-        :destination_account_id, :teller_session_id, :business_date, :reference_id, :operating_unit_id
+        :destination_account_id, :teller_session_id, :business_date, :reference_id, :operating_unit_id,
+        :hold_amount_minor_units, :hold_idempotency_key
       ).to_h.symbolize_keys
       attrs[:amount_minor_units] = attrs[:amount_minor_units].to_i
       if attrs[:source_account_id].present?
@@ -68,7 +69,14 @@ module Teller
         attrs[:operating_unit_id] = current_operating_unit&.id
       end
 
-      result = record_operational_event(attrs)
+      hold_amt = attrs.delete(:hold_amount_minor_units)
+      hold_idem = attrs.delete(:hold_idempotency_key)
+
+      result = record_operational_event(
+        attrs,
+        hold_amount_minor_units: hold_amt,
+        hold_idempotency_key: hold_idem
+      )
       if result[:outcome].in?([ Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED, Accounts::Commands::AuthorizeDebit::OUTCOME_DENIED_REPLAY ])
         render json: {
           error: "nsf_denied",
@@ -79,12 +87,21 @@ module Teller
         return
       end
 
-      status = result[:outcome] == :created ? :created : :ok
-      render json: {
-        id: result[:event].id,
-        outcome: result[:outcome],
-        operational_event_id: result[:event].id
-      }, status: status
+      if check_deposit_controller_result?(result)
+        status = check_deposit_create_status(result)
+        render json: check_deposit_response_body(result), status: status
+      else
+        status = result[:outcome] == :created ? :created : :ok
+        render json: {
+          id: result[:event].id,
+          outcome: result[:outcome],
+          operational_event_id: result[:event].id
+        }, status: status
+      end
+    rescue Accounts::Commands::PlaceHold::InvalidRequest => e
+      render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
+    rescue Core::OperationalEvents::Commands::AcceptCheckDeposit::InvalidRequest => e
+      render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
     rescue Core::OperationalEvents::Commands::RecordEvent::InvalidRequest => e
       render json: { error: "invalid_request", message: e.message }, status: :unprocessable_entity
     rescue Accounts::Commands::AuthorizeDebit::InvalidRequest => e
@@ -93,18 +110,67 @@ module Teller
       render json: { error: "idempotency_conflict", fingerprint: e.fingerprint }, status: :conflict
     rescue Core::OperationalEvents::Commands::RecordEvent::PostedReplay => e
       render json: { error: "posted_replay", message: e.message.presence || "already posted" }, status: :conflict
+    rescue Core::Posting::Commands::PostEvent::InvalidState => e
+      render json: { error: "invalid_state", message: e.message }, status: :unprocessable_entity
     rescue Workspace::Authorization::Forbidden
       render json: { error: "forbidden", message: "supervisor role required" }, status: :forbidden
     end
 
     private
 
-    def record_operational_event(attrs)
-      if %w[withdrawal.posted transfer.completed].include?(attrs[:event_type].to_s)
+    def record_operational_event(attrs, hold_amount_minor_units: nil, hold_idempotency_key: nil)
+      if attrs[:event_type].to_s == Core::OperationalEvents::Commands::RecordEvent::CHECK_DEPOSIT_ACCEPTED
+        payload_perm = params.require(:operational_event).permit(
+          payload: { items: %i[amount_minor_units item_reference serial_number classification] }
+        )
+        payload_hash =
+          if payload_perm[:payload].present?
+            payload_perm[:payload].to_unsafe_h
+          end
+
+        Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+          channel: attrs[:channel],
+          idempotency_key: attrs[:idempotency_key],
+          amount_minor_units: attrs[:amount_minor_units],
+          currency: attrs[:currency],
+          source_account_id: attrs[:source_account_id],
+          teller_session_id: attrs[:teller_session_id],
+          actor_id: current_operator.id,
+          operating_unit_id: attrs[:operating_unit_id],
+          business_date: attrs[:business_date],
+          payload: payload_hash,
+          hold_amount_minor_units: hold_amount_minor_units,
+          hold_idempotency_key: hold_idempotency_key,
+          hold_channel: attrs[:channel]
+        )
+      elsif %w[withdrawal.posted transfer.completed].include?(attrs[:event_type].to_s)
         Accounts::Commands::AuthorizeDebit.call(**attrs, actor_id: current_operator.id)
       else
         Core::OperationalEvents::Commands::RecordEvent.call(**attrs, actor_id: current_operator.id)
       end
+    end
+
+    def check_deposit_controller_result?(result)
+      result.key?(:operational_event)
+    end
+
+    def check_deposit_create_status(result)
+      return :created if result[:record_outcome] == :created
+      return :ok if result[:record_outcome] == :replay
+
+      :ok
+    end
+
+    def check_deposit_response_body(result)
+      body = {
+        id: result[:operational_event].id,
+        outcome: result[:record_outcome],
+        operational_event_id: result[:operational_event].id,
+        posting_outcome: result[:posting_outcome]
+      }
+      body[:hold_outcome] = result[:hold_outcome] if result[:hold_outcome]
+      body[:hold_id] = result[:hold].id if result[:hold]
+      body
     end
 
     def index_query_params
@@ -121,7 +187,7 @@ module Teller
     end
 
     def operational_event_list_json(event)
-      {
+      h = {
         id: event.id,
         event_type: event.event_type,
         status: event.status,
@@ -145,6 +211,12 @@ module Teller
         posting_batch_ids: event.posting_batches.map(&:id),
         journal_entry_ids: event.posting_batches.flat_map { |b| b.journal_entries.map(&:id) }
       }
+      if event.event_type == Core::OperationalEvents::Commands::RecordEvent::CHECK_DEPOSIT_ACCEPTED &&
+          event.payload.present?
+        h[:payload_summary] =
+          Core::OperationalEvents::Services::CheckDepositPayload.payload_summary(event.payload)
+      end
+      h
     end
 
     def deposit_account_context_json(account)

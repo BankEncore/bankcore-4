@@ -31,6 +31,8 @@ module Teller
         )
         create_event!("deposit.accepted", session.id, 5_000, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING)
 
+        create_event!("check.deposit.accepted", session.id, 88_888, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
+
         assert_equal 700, ExpectedCashForSession.call(teller_session_id: session.id)
       end
 

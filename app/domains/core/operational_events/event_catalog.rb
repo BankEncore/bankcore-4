@@ -39,6 +39,22 @@ module Core
           support_search_keys: %w[source_account_id actor_id teller_session_id]
         ),
         Entry.new(
+          event_type: "check.deposit.accepted",
+          category: "financial",
+          posts_to_gl: true,
+          record_command: "AcceptCheckDeposit",
+          reversible_via_posting_reversal: true,
+          compensating_event_type: "posting.reversal",
+          description: "Teller-accepted check deposit credited to DDA via deposited items clearing (ADR-0040)",
+          lifecycle: "pending_to_posted",
+          allowed_channels: %w[teller],
+          financial_impact: "gl_posting",
+          customer_visible: true,
+          statement_visible: true,
+          payload_schema: "docs/operational_events/check-deposit-accepted.md",
+          support_search_keys: %w[source_account_id actor_id teller_session_id idempotency_key]
+        ),
+        Entry.new(
           event_type: "ach.credit.received",
           category: "financial",
           posts_to_gl: true,

@@ -17,6 +17,18 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     Rails.application.config.x.teller.variance_threshold_minor_units = @saved_threshold
   end
 
+  test "posts check deposit dr 1160 cr 2110" do
+    ev = create_pending_check_deposit_event!(amount: 9_999)
+    r = Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
+    assert_equal :posted, r[:outcome]
+    entry = ev.reload.posting_batches.sole.journal_entries.sole
+    lines = entry.journal_lines.order(:sequence_no)
+    assert_equal Core::Ledger::Models::GlAccount.find_by!(account_number: "1160").id, lines.find_by(side: "debit").gl_account_id
+    credit = lines.find_by(side: "credit")
+    assert_equal Core::Ledger::Models::GlAccount.find_by!(account_number: "2110").id, credit.gl_account_id
+    assert_equal @account.id, credit.deposit_account_id
+  end
+
   test "posts balanced 1110/2110 and marks event posted" do
     ev = create_pending_event!(amount: 12_34)
     r = Core::Posting::Commands::PostEvent.call(operational_event_id: ev.id)
@@ -295,6 +307,19 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
       amount_minor_units: amount,
       currency: "USD",
       source_account_id: @account.id
+    )[:event]
+  end
+
+  def create_pending_check_deposit_event!(amount:)
+    payload = { "items" => [ { "amount_minor_units" => amount, "item_reference" => "chk-post-#{SecureRandom.hex(4)}" } ] }
+    Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "check.deposit.accepted",
+      channel: "teller",
+      idempotency_key: "chk-post-test-#{SecureRandom.hex(6)}",
+      amount_minor_units: amount,
+      currency: "USD",
+      source_account_id: @account.id,
+      payload: payload
     )[:event]
   end
 
