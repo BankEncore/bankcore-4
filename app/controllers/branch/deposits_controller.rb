@@ -2,6 +2,8 @@
 
 module Branch
   class DepositsController < ApplicationController
+    before_action :load_open_teller_sessions, only: %i[new create]
+
     def new
       @deposit = default_form_params("branch-deposit")
       @preview = preview_for(@deposit)
@@ -9,6 +11,7 @@ module Branch
 
     def create
       @deposit = deposit_params
+      @deposit = normalize_deposit_params(@deposit)
       @preview = preview_for(@deposit)
       account_id = resolve_deposit_account_id(@deposit[:deposit_account_id], @deposit[:deposit_account_number])
       result = Core::OperationalEvents::Commands::RecordEvent.call(
@@ -30,6 +33,7 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
       Core::Posting::Commands::PostEvent::InvalidState,
+      ArgumentError,
       ActiveRecord::RecordNotFound => e
       @error_message = e.message
       @preview ||= preview_for(@deposit || {})
@@ -46,6 +50,7 @@ module Branch
       {
         "deposit_account_id" => params[:deposit_account_id],
         "deposit_account_number" => params[:deposit_account_number],
+        "amount" => money_amount_display(params[:amount], fallback_minor_units: params[:amount_minor_units]),
         "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "teller_session_id" => params[:teller_session_id],
@@ -56,8 +61,23 @@ module Branch
 
     def deposit_params
       params.require(:deposit).permit(
-        :deposit_account_id, :deposit_account_number, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
+        :deposit_account_id, :deposit_account_number, :amount, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
       ).to_h.symbolize_keys
+    end
+
+    def normalize_deposit_params(attrs)
+      attrs[:currency] = attrs[:currency].presence || "USD"
+      attrs[:idempotency_key] = attrs[:idempotency_key].presence || default_idempotency_key("branch-deposit")
+      attrs[:amount] = money_amount_display(attrs[:amount], fallback_minor_units: attrs[:amount_minor_units])
+      attrs[:amount_minor_units] = normalize_money_amount_minor_units(
+        attrs[:amount],
+        fallback_minor_units: attrs[:amount_minor_units]
+      )
+      attrs
+    end
+
+    def load_open_teller_sessions
+      @open_teller_sessions = open_teller_sessions_for_branch
     end
 
     def preview_for(attrs)

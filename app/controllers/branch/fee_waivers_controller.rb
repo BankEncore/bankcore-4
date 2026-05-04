@@ -3,7 +3,7 @@
 module Branch
   class FeeWaiversController < ApplicationController
     before_action :require_fee_waive_capability!
-    before_action :load_account
+    before_action :load_account_context
 
     def new
       @fee_waiver = default_fee_waiver_params
@@ -52,8 +52,8 @@ module Branch
       require_branch_capability!(Workspace::Authorization::CapabilityRegistry::FEE_WAIVE)
     end
 
-    def load_account
-      @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])
+    def load_account_context
+      load_account_context!(deposit_account_id: params[:deposit_account_id])
     end
 
     def default_fee_waiver_params

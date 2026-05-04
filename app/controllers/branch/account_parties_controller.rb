@@ -2,7 +2,7 @@
 
 module Branch
   class AccountPartiesController < ApplicationController
-    before_action :load_account
+    before_action :load_account_context
     before_action :require_account_maintain_capability!
 
     def new_authorized_signer
@@ -58,8 +58,8 @@ module Branch
       require_branch_capability!(Workspace::Authorization::CapabilityRegistry::ACCOUNT_MAINTAIN)
     end
 
-    def load_account
-      @account = Accounts::Models::DepositAccount.find(params[:deposit_account_id])
+    def load_account_context
+      load_account_context!(deposit_account_id: params[:deposit_account_id])
     end
 
     def load_relationship

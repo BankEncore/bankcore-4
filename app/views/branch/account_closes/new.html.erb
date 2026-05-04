@@ -1,10 +1,10 @@
 <% content_for :title, "Close account #{@account.account_number} - BankCORE" %>
 
-<section class="mx-auto max-w-3xl">
-  <div>
-    <h1 class="text-3xl font-semibold">Close account <%= @account.account_number %></h1>
-    <p class="mt-2 text-slate-600">Close is explicit, audited, and allowed only after balance, hold, pending-event, and restriction checks pass.</p>
-  </div>
+<%= render "branch/shared/account_context", active_tab: "overview", show_actions: false %>
+
+<section class="mx-auto mt-6 max-w-3xl">
+  <h1 class="text-3xl font-semibold">Close account</h1>
+  <p class="mt-2 text-slate-600">Close is explicit, audited, and allowed only after balance, hold, pending-event, and restriction checks pass.</p>
 
   <%= render "branch/shared/form_error", error_message: @error_message %>
 
@@ -30,7 +30,7 @@
 
     <div class="mt-6 flex gap-3">
       <%= form.submit "Close account", class: "rounded bg-red-700 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Cancel", branch_servicing_deposit_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= link_to "Cancel", branch_account_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     </div>
   <% end %>
 </section>

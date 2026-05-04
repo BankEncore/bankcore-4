@@ -61,6 +61,6 @@
   <div class="mt-4 flex flex-wrap gap-2 text-sm">
     <%= link_to "Release hold", release_branch_holds_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
     <%= link_to "Reversal", new_branch_reversal_path, class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
-    <%= link_to "Pending events", branch_operational_events_path(status: Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING), class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
+    <%= link_to "Pending events", branch_events_path(status: Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING), class: "rounded border border-amber-300 bg-white px-3 py-2 font-medium text-amber-950 shadow-sm" %>
   </div>
 </section>

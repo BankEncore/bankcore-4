@@ -1,9 +1,9 @@
 <section class="mt-6 rounded border border-sky-200 bg-sky-50 p-6 text-sky-950 shadow-sm">
   <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
     <div>
-      <h2 class="text-xl font-semibold">Advisory preview</h2>
+      <h2 class="text-xl font-semibold">Transaction impact preview</h2>
       <p class="mt-1 text-sm text-sky-800">
-        Preview only. Final balances and posting are re-checked when the transaction is submitted.
+        Preview only. Cash movement, account balance impact, drawer totals, and posting readiness are re-checked on submit.
       </p>
     </div>
     <span class="rounded bg-white px-3 py-1 text-sm font-medium text-sky-900">
@@ -40,7 +40,7 @@
         <dd><%= preview.dig(:event, :event_type) %></dd>
       </div>
       <div>
-        <dt class="font-medium text-sky-700">Financial impact</dt>
+        <dt class="font-medium text-sky-700">Posting readiness</dt>
         <dd>
           <%= preview.dig(:event, :financial_impact) %>
           · <%= preview.dig(:event, :posts_to_gl) ? "Posts to GL" : "No GL posting" %>
@@ -76,18 +76,18 @@
 
     <% if preview[:drawer].present? %>
       <div>
-        <dt class="font-medium text-sky-700">Current expected drawer cash</dt>
+        <dt class="font-medium text-sky-700">Drawer cash before</dt>
         <dd><%= branch_money(preview.dig(:drawer, :current_expected_cash_minor_units)) %></dd>
       </div>
       <div>
-        <dt class="font-medium text-sky-700">Projected expected drawer cash</dt>
+        <dt class="font-medium text-sky-700">Drawer cash after submit</dt>
         <dd><%= branch_money(preview.dig(:drawer, :projected_expected_cash_minor_units)) %></dd>
       </div>
     <% end %>
 
     <% preview.fetch(:accounts, {}).each do |role, account| %>
       <div>
-        <dt class="font-medium text-sky-700"><%= role.to_s.humanize %> account available</dt>
+        <dt class="font-medium text-sky-700"><%= role.to_s.humanize %> account balance movement</dt>
         <dd>
           #<%= account[:id] %>:
           <%= branch_money(account[:current_available_balance_minor_units]) %>

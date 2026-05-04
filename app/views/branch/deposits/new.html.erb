@@ -5,10 +5,11 @@
   <p class="mt-2 text-slate-600">Create a teller-channel deposit event, with optional immediate posting.</p>
 </section>
 
-<%= render "branch/shared/transaction_form",
+<%= render "branch/shared/cash_transaction_form",
   path: branch_deposits_path,
   scope: :deposit,
   form_data: @deposit,
   error_message: @error_message,
+  open_sessions: @open_teller_sessions,
   preview: @preview,
   submit_label: "Record deposit" %>

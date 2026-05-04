@@ -90,7 +90,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :success
-    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Transaction impact preview"
     assert_includes response.body, "Source cash location"
     assert_includes response.body, "Destination cash location"
     assert_includes response.body, "Projected cash balance"
@@ -274,9 +274,61 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_equal @teller.default_operating_unit_id, event.operating_unit_id
     assert_includes response.body, "Post event"
 
-    post "/branch/operational_events/#{event.id}/post"
-    assert_redirected_to "/branch/operational_events/#{event.id}"
+    post branch_event_post_path(event)
+    assert_redirected_to branch_event_path(event)
     assert_equal "posted", event.reload.status
+  end
+
+  test "cash deposit and withdrawal forms show operator-facing inputs" do
+    account = open_account!
+    session = open_session!
+    internal_login!(username: "branch-forms-teller")
+
+    get "/branch/deposits/new", params: {
+      deposit_account_number: account.account_number,
+      teller_session_id: session.id,
+      amount_minor_units: 1_500
+    }
+
+    assert_response :success
+    assert_includes response.body, "deposit[deposit_account_number]"
+    assert_includes response.body, "deposit[amount]"
+    assert_select "input[name='deposit[amount]'][value='15.00']"
+    assert_select "select[name='deposit[teller_session_id]']"
+    assert_includes response.body, session.drawer_code
+    assert_includes response.body, "Transaction impact preview"
+    assert_includes response.body, "Cash in"
+    assert_includes response.body, "Drawer cash after submit"
+    assert_not_includes response.body, "Amount minor units"
+    assert_not_includes response.body, "Enter an internal numeric ID"
+    assert_not_includes response.body, "Idempotency key"
+
+    get "/branch/withdrawals/new", params: {
+      deposit_account_number: account.account_number,
+      teller_session_id: session.id,
+      amount_minor_units: 500
+    }
+
+    assert_response :success
+    assert_includes response.body, "withdrawal[deposit_account_number]"
+    assert_includes response.body, "withdrawal[amount]"
+    assert_select "input[name='withdrawal[amount]'][value='5.00']"
+    assert_select "select[name='withdrawal[teller_session_id]']"
+    assert_not_includes response.body, "Amount minor units"
+    assert_not_includes response.body, "Enter an internal numeric ID"
+    assert_not_includes response.body, "Idempotency key"
+  end
+
+  test "cash transaction forms show open-session guidance when no sessions are open" do
+    internal_login!(username: "branch-forms-teller")
+
+    get "/branch/deposits/new"
+
+    assert_response :success
+    assert_includes response.body, "Open a teller session first"
+    assert_select "a[href='#{new_branch_teller_session_path}']", "Open teller session"
+    assert_select "select[name='deposit[teller_session_id]'][disabled='disabled']"
+    assert_select "input[type='submit'][disabled='disabled']"
   end
 
   test "deposit form can record and post immediately and requires open teller session" do
@@ -291,10 +343,10 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     }
     assert_response :success
     assert_includes response.body, "deposit[deposit_account_number]"
-    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Transaction impact preview"
     assert_includes response.body, "Event type"
     assert_includes response.body, "Cash in"
-    assert_includes response.body, "Projected expected drawer cash"
+    assert_includes response.body, "Drawer cash after submit"
 
     post "/branch/deposits", params: {
       deposit: transaction_params(account: account, session: session, amount: 3_000, key: "branch-deposit-post", record_and_post: "1")
@@ -311,7 +363,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     post "/branch/deposits", params: {
       deposit: {
         deposit_account_number: account.account_number,
-        amount_minor_units: 750,
+        amount: "7.50",
         currency: "USD",
         teller_session_id: session.id,
         idempotency_key: "branch-deposit-number-lookup",
@@ -330,22 +382,73 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "teller_session_id is required"
   end
 
+  test "cash transaction decimal amounts normalize before existing command calls" do
+    account = open_account!
+    session = open_session!
+    internal_login!(username: "branch-forms-teller")
+
+    {
+      "10" => 1_000,
+      "10.5" => 1_050,
+      "10.50" => 1_050,
+      "1,234.56" => 123_456
+    }.each_with_index do |(display_amount, expected_minor_units), index|
+      post "/branch/deposits", params: {
+        deposit: cash_transaction_params(
+          account: account,
+          session: session,
+          amount: display_amount,
+          key: "branch-deposit-decimal-#{index}"
+        )
+      }
+
+      assert_response :created
+      event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-deposit-decimal-#{index}")
+      assert_equal expected_minor_units, event.amount_minor_units
+      assert_equal account.id, event.source_account_id
+    end
+  end
+
+  test "cash transaction amount validation rerenders with entered context" do
+    account = open_account!
+    session = open_session!
+    internal_login!(username: "branch-forms-teller")
+
+    [ "1,23.45", "10.999", "0", "-1.00" ].each_with_index do |amount, index|
+      key = "branch-deposit-invalid-amount-#{index}"
+
+      post "/branch/deposits", params: {
+        deposit: cash_transaction_params(account: account, session: session, amount: amount, key: key)
+      }
+
+      assert_response :unprocessable_entity
+      assert_includes response.body, "amount must be greater than 0"
+      assert_select "input[name='deposit[amount]'][value='#{amount}']"
+      assert_select "input[name='deposit[deposit_account_number]'][value='#{account.account_number}']"
+      assert_select "select[name='deposit[teller_session_id]']"
+      assert_includes response.body, "value=\"#{key}\""
+      assert_nil Core::OperationalEvents::Models::OperationalEvent.find_by(idempotency_key: key)
+    end
+  end
+
   test "withdrawal form can record only and record-and-post" do
     account = funded_account!(amount: 10_000)
     session = open_session!
     internal_login!(username: "branch-forms-teller")
 
     post "/branch/withdrawals", params: {
-      withdrawal: transaction_params(account: account, session: session, amount: 2_000, key: "branch-withdrawal-record")
+      withdrawal: cash_transaction_params(account: account, session: session, amount: "20.00", key: "branch-withdrawal-record")
     }
 
     assert_response :created
     record_event = Core::OperationalEvents::Models::OperationalEvent.find_by!(idempotency_key: "branch-withdrawal-record")
     assert_equal "pending", record_event.status
+    assert_equal 2_000, record_event.amount_minor_units
+    assert_equal account.id, record_event.source_account_id
     assert_includes response.body, "Post event"
 
     post "/branch/withdrawals", params: {
-      withdrawal: transaction_params(account: account, session: session, amount: 1_000, key: "branch-withdrawal-post", record_and_post: "1")
+      withdrawal: cash_transaction_params(account: account, session: session, amount: "10", key: "branch-withdrawal-post", record_and_post: "1")
     }
 
     assert_response :created
@@ -365,7 +468,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
       amount_minor_units: 5_000
     }
     assert_response :success
-    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Transaction impact preview"
     assert_includes response.body, "Projected available balance would be negative"
 
     post "/branch/withdrawals", params: {
@@ -394,9 +497,9 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "transfer[source_account_id]"
     assert_includes response.body, "transfer[destination_account_id]"
-    assert_includes response.body, "Advisory preview"
-    assert_includes response.body, "Source account available"
-    assert_includes response.body, "Destination account available"
+    assert_includes response.body, "Transaction impact preview"
+    assert_includes response.body, "Source account balance movement"
+    assert_includes response.body, "Destination account balance movement"
 
     post "/branch/transfers", params: {
       transfer: {
@@ -483,6 +586,17 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     {
       deposit_account_id: account.id,
       amount_minor_units: amount,
+      currency: "USD",
+      teller_session_id: session&.id,
+      idempotency_key: key,
+      record_and_post: record_and_post
+    }
+  end
+
+  def cash_transaction_params(account:, session:, amount:, key:, record_and_post: "0")
+    {
+      deposit_account_number: account.account_number,
+      amount: amount,
       currency: "USD",
       teller_session_id: session&.id,
       idempotency_key: key,

@@ -33,8 +33,66 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get branch_servicing_deposit_account_path(@account)
     assert_response :success
+    assert_select "a[data-surface-tab='csr'][aria-current='true']", "CSR"
     assert_includes response.body, "Available balance"
     assert_includes response.body, "Operational events"
+  end
+
+  test "account servicing pages share persistent account context and local navigation" do
+    internal_login!(username: "csr-teller")
+
+    [
+      [ branch_account_path(@account), "overview" ],
+      [ branch_account_activity_path(@account), "activity" ],
+      [ branch_account_holds_path(@account), "holds" ],
+      [ branch_account_statements_path(@account), "statements" ]
+    ].each do |path, active_tab|
+      get path
+      assert_response :success
+      assert_account_context(active_tab: active_tab)
+    end
+
+    get branch_account_activity_path(@account, query: "Member")
+    assert_response :success
+    assert_select "a", "Back to search"
+    assert_includes response.body, "href=\"#{branch_customers_path(query: "Member")}\""
+  end
+
+  test "account context keeps shared actions conservative and capability gated" do
+    internal_login!(username: "csr-supervisor")
+
+    get branch_account_path(@account)
+    assert_response :success
+    assert_select "a", text: "Place hold", count: 1
+    assert_select "a", text: "Post fee waiver", count: 1
+    assert_select "a", text: "Restrict account", count: 1
+    assert_select "a", text: "Close account", count: 1
+    assert_select "a", text: "Assess fee", count: 0
+  end
+
+  test "branch html aliases expose account profile and operational event trace surfaces" do
+    event = fund_account!(amount: 5_000, key: "branch-html-alias-deposit")
+    internal_login!(username: "csr-teller")
+
+    get branch_account_path(@account)
+    assert_response :success
+    assert_select "a[data-surface-tab='csr'][aria-current='true']", "CSR"
+    assert_includes response.body, "Available balance"
+
+    get branch_events_path(source_account_id: @account.id)
+    assert_response :success
+    assert_select "a[data-surface-tab='events'][aria-current='true']", "Events"
+    assert_includes response.body, "Branch operational events"
+    assert_includes response.body, "##{event.id}"
+
+    get branch_event_path(event)
+    assert_response :success
+    assert_select "a[data-surface-tab='events'][aria-current='true']", "Events"
+    assert_includes response.body, "Operational event ##{event.id}"
+
+    get branch_event_receipt_path(event)
+    assert_response :success
+    assert_includes response.body, "Trace receipt"
   end
 
   test "account profile separates balance activity from other operational events" do
@@ -107,6 +165,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_new_account_authorized_signer_path(@account)
     assert_response :success
     assert_includes response.body, "Add authorized signer"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
 
     post branch_account_authorized_signers_path(@account), params: {
       authorized_signer: {
@@ -133,6 +192,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Auth Signer"
     assert_includes response.body, "End signer"
 
+    get branch_end_account_authorized_signer_path(@account, relationship)
+    assert_response :success
+    assert_includes response.body, "End authorized signer"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
+
     post branch_end_account_authorized_signer_path(@account, relationship), params: {
       authorized_signer_end: {
         ended_on: "2026-09-10",
@@ -155,8 +219,13 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get new_branch_hold_path, params: { deposit_account_id: @account.id, amount_minor_units: 800 }
     assert_response :success
-    assert_includes response.body, "Advisory preview"
-    assert_includes response.body, "Source account available"
+    assert_includes response.body, "Transaction impact preview"
+    assert_includes response.body, "Source account balance movement"
+
+    get branch_new_account_hold_path(@account)
+    assert_response :success
+    assert_account_form_context(active_tab: "holds", cancel_path: branch_account_holds_path(@account))
+    assert_includes response.body, "Place account hold"
 
     post branch_account_hold_placements_path(@account), params: {
       hold: {
@@ -200,6 +269,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     }
     assert_response :unprocessable_entity
     assert_includes response.body, "idempotency replay mismatch"
+    assert_account_form_context(active_tab: "holds", cancel_path: branch_account_holds_path(@account))
 
     hold = Accounts::Models::Hold.find_by!(placed_by_operational_event: hold_event)
     assert_equal "legal", hold.hold_type
@@ -212,6 +282,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     delete logout_path
 
     internal_login!(username: "csr-supervisor")
+    get branch_release_account_hold_path(@account, hold)
+    assert_response :success
+    assert_account_form_context(active_tab: "holds", cancel_path: branch_account_holds_path(@account))
+    assert_includes response.body, "Release account hold"
+
     post branch_release_account_hold_path(@account, hold), params: {
       hold_release: { idempotency_key: "csr-release-hold" }
     }
@@ -258,7 +333,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_new_fee_assessment_path(@account), params: { amount_minor_units: 500 }
     assert_response :success
     assert_includes response.body, "Assess fee"
-    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Transaction impact preview"
     assert_includes response.body, "fee.assessed"
 
     post branch_fee_assessments_path(@account), params: {
@@ -277,7 +352,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_equal Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED, manual_fee.status
     assert_includes response.body, "Trace receipt"
 
-    get branch_operational_event_receipt_path(manual_fee)
+    get branch_event_receipt_path(manual_fee)
     assert_response :success
     assert_includes response.body, "Trace receipt"
     assert_includes response.body, "manual-service-fee"
@@ -287,6 +362,11 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
       amount: 1_000,
       key: "csr-fee-assessed"
     )
+
+    get branch_new_fee_waiver_path(@account, fee_assessment_event_id: fee_event.id)
+    assert_response :success
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
+    assert_includes response.body, "Waive fee"
 
     post branch_fee_waivers_path(@account), params: {
       fee_waiver: {
@@ -342,6 +422,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_new_account_restriction_path(@account)
     assert_response :success
     assert_includes response.body, "Restrict account"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
 
     post branch_account_restrictions_path(@account), params: {
       restriction: {
@@ -370,6 +451,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_close_account_path(@account)
     assert_response :success
     assert_includes response.body, "Close account"
+    assert_account_form_context(active_tab: "overview", cancel_path: branch_account_path(@account))
 
     post branch_close_account_path(@account), params: {
       account_close: {
@@ -430,5 +512,30 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     )[:event]
     Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
     event.reload
+  end
+
+  def assert_account_context(active_tab:)
+    assert_select "[data-account-context]"
+    assert_includes response.body, @account.account_number
+    assert_includes response.body, @product.product_code
+    assert_includes response.body, @product.name
+    assert_includes response.body, "Ledger balance"
+    assert_includes response.body, "Available balance"
+    assert_includes response.body, "Active holds"
+    assert_includes response.body, @account.status
+    assert_select "a[data-account-tab='#{active_tab}'][aria-current='page']", 1
+    assert_select "a[href='#{branch_account_path(@account)}']", "Overview"
+    assert_select "a[href='#{branch_account_activity_path(@account)}']", "Activity"
+    assert_select "a[href='#{branch_account_holds_path(@account)}']", "Holds"
+    assert_select "a[href='#{branch_account_statements_path(@account)}']", "Statements"
+    assert_select "a[data-account-tab='events']", "Events"
+    assert_includes response.body, "href=\"#{branch_events_path(source_account_id: @account.id)}\""
+  end
+
+  def assert_account_form_context(active_tab:, cancel_path:)
+    assert_account_context(active_tab: active_tab)
+    assert_select "a", text: "Find customer", count: 0
+    assert_select "a", text: "Back to search", count: 0
+    assert_select "a[href='#{cancel_path}']", "Cancel"
   end
 end
