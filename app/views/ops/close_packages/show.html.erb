@@ -1,4 +1,5 @@
 <% content_for :title, "Close Package - BankCORE" %>
+<% bd = @business_date&.iso8601 %>
 
 <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
   <div>
@@ -17,6 +18,7 @@
 <% if @error_message.present? %>
   <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= @error_message %></section>
 <% elsif @readiness.present? %>
+  <% oe_status = Core::OperationalEvents::Models::OperationalEvent %>
   <% if @classification[:retrospective_only] %>
     <section class="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
       <p class="font-medium">Retrospective view</p>
@@ -24,13 +26,26 @@
     </section>
   <% end %>
 
+  <section class="mt-6 rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm">
+    <p class="font-medium text-slate-950">Business date context</p>
+    <p class="mt-1 text-slate-600">
+      Reviewing <strong><%= bd %></strong>.
+      Current open business date (singleton) is <strong><%= @readiness[:current_business_on] %></strong>.
+      <% if @business_date.iso8601 == @readiness[:current_business_on].to_s %>
+        This is the <strong>current open</strong> processing day.
+      <% else %>
+        This day is <strong>historical</strong> relative to the open processing day.
+      <% end %>
+    </p>
+  </section>
+
   <section class="mt-8 rounded border border-slate-200 bg-white p-6 shadow-sm">
     <h2 class="text-xl font-semibold">Can we close?</h2>
     <p class="mt-2 text-sm text-slate-600">
       <% if @classification[:retrospective_only] %>
         Historical day — no live close action.
       <% elsif @readiness[:eod_ready] %>
-        Yes. EOD readiness checks pass for <%= @business_date.iso8601 %>.
+        Yes. EOD readiness checks pass for <%= bd %>.
       <% else %>
         No. Resolve blockers below before closing the business date.
       <% end %>
@@ -41,10 +56,18 @@
   </section>
 
   <section class="mt-8 grid gap-4 md:grid-cols-4">
-    <%= render "ops/eod/readiness_card", label: "Balanced", value: @readiness[:journal_totals_balanced] ? "Yes" : "No", state: @readiness[:journal_totals_balanced] %>
-    <%= render "ops/eod/readiness_card", label: "Open/pending sessions", value: @readiness[:open_teller_sessions_count], state: @readiness[:all_sessions_closed] %>
-    <%= render "ops/eod/readiness_card", label: "Pending events", value: @readiness[:pending_operational_events_count], state: @readiness[:pending_operational_events_count].to_i.zero? %>
-    <%= render "ops/eod/readiness_card", label: "Posting day closed", value: @readiness[:posting_day_closed] ? "Yes" : "No", state: !@readiness[:posting_day_closed] %>
+    <%= link_to ops_eod_path(business_date: bd), class: "block rounded border border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700" do %>
+      <%= render "ops/eod/readiness_card", label: "Balanced", value: @readiness[:journal_totals_balanced] ? "Yes" : "No", state: @readiness[:journal_totals_balanced] %>
+    <% end %>
+    <%= link_to ops_teller_sessions_path, class: "block rounded border border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700" do %>
+      <%= render "ops/eod/readiness_card", label: "Open/pending sessions", value: @readiness[:open_teller_sessions_count], state: @readiness[:all_sessions_closed] %>
+    <% end %>
+    <%= link_to ops_operational_events_path(business_date: bd, status: oe_status::STATUS_PENDING), class: "block rounded border border-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700" do %>
+      <%= render "ops/eod/readiness_card", label: "Pending events", value: @readiness[:pending_operational_events_count], state: @readiness[:pending_operational_events_count].to_i.zero? %>
+    <% end %>
+    <div class="rounded border border-transparent">
+      <%= render "ops/eod/readiness_card", label: "Posting day closed", value: @readiness[:posting_day_closed] ? "Yes" : "No", state: !@readiness[:posting_day_closed] %>
+    </div>
   </section>
 
   <% if @classification[:blockers].any? %>
@@ -52,11 +75,27 @@
       <h2 class="text-xl font-semibold text-amber-950"><%= @classification[:retrospective_only] ? "Blockers (historical context)" : "Blockers" %></h2>
       <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-amber-950">
         <% @classification[:blockers].each do |b| %>
+          <% blocker_href = case b[:code].to_s
+            when "journal_imbalance" then ops_eod_path(business_date: bd)
+            when "pending_operational_events" then ops_operational_events_path(business_date: bd, status: oe_status::STATUS_PENDING)
+            when "open_teller_sessions" then ops_teller_sessions_path
+            else nil
+            end %>
           <li>
-            <span class="font-medium"><%= b[:code].to_s.humanize %>:</span>
-            <%= b[:label] %>
-            <% if b[:count] %>
-              <span class="text-amber-800">(<%= b[:count] %>)</span>
+            <% if blocker_href.present? %>
+              <%= link_to blocker_href, class: "font-medium text-amber-950 underline hover:text-amber-900" do %>
+                <span class="font-medium"><%= b[:code].to_s.humanize %>:</span>
+                <%= b[:label] %>
+                <% if b[:count] %>
+                  <span class="text-amber-800">(<%= b[:count] %>)</span>
+                <% end %>
+              <% end %>
+            <% else %>
+              <span class="font-medium"><%= b[:code].to_s.humanize %>:</span>
+              <%= b[:label] %>
+              <% if b[:count] %>
+                <span class="text-amber-800">(<%= b[:count] %>)</span>
+              <% end %>
             <% end %>
           </li>
         <% end %>
@@ -69,10 +108,26 @@
       <h2 class="text-xl font-semibold"><%= @classification[:retrospective_only] ? "Warnings (historical context)" : "Warnings" %></h2>
       <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
         <% @classification[:warnings].each do |w| %>
+          <% warn_href =
+               if w[:code].to_s == "pending_cash_movements"
+                 ops_cash_path(reviewed_business_date: bd, from_close_package: "1")
+               end %>
           <li>
-            <span class="font-medium"><%= w[:label] %></span>
-            <% if w[:count].to_i.positive? %>
-              <span class="text-slate-500">(<%= w[:count] %>)</span>
+            <% if warn_href.present? %>
+              <%= link_to warn_href, class: "font-medium text-slate-950 underline hover:text-slate-800" do %>
+                <%= w[:label] %>
+                <% if w[:count].to_i.positive? %>
+                  <span class="text-slate-500">(<%= w[:count] %>)</span>
+                <% end %>
+              <% end %>
+            <% else %>
+              <span class="font-medium"><%= w[:label] %></span>
+              <% if w[:count].to_i.positive? %>
+                <span class="text-slate-500">(<%= w[:count] %>)</span>
+              <% end %>
+              <% if w[:code].to_s == "unresolved_cash_variances" %>
+                <span class="mt-1 block text-xs text-slate-500">No drill target yet — landing list must match readiness semantics (ADR-0042).</span>
+              <% end %>
             <% end %>
           </li>
         <% end %>
@@ -97,6 +152,14 @@
     </section>
   <% end %>
 
+  <% bucket_drills = {
+    posted: ops_operational_events_path(business_date: bd, status: oe_status::STATUS_POSTED),
+    pending: ops_operational_events_path(business_date: bd, status: oe_status::STATUS_PENDING),
+    reversed: ops_operational_events_path(business_date: bd, event_type: "posting.reversal"),
+    overridden: ops_operational_events_path(business_date: bd, event_type_in: %w[override.requested override.approved]),
+    exception: ops_operational_events_path(business_date: bd, event_type: "overdraft.nsf_denied")
+  } %>
+
   <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-5 py-4">
       <h2 class="text-xl font-semibold">Classified evidence (primary buckets)</h2>
@@ -112,24 +175,39 @@
         exception: "Exceptions (e.g. NSF)"
       } %>
       <% @classification[:buckets].each do |key, data| %>
-        <div class="rounded border border-slate-100 bg-slate-50 p-4">
-          <p class="font-medium text-slate-950"><%= bucket_labels.fetch(key, key.to_s.humanize) %></p>
-          <p class="mt-2 text-2xl font-semibold"><%= data[:count] %></p>
-          <% ids = data[:operational_event_ids] || data[:hold_ids] %>
-          <% if ids.present? %>
-            <ul class="mt-2 space-y-1 text-xs text-slate-600">
-              <% ids.first(12).each do |id| %>
-                <li>
-                  <% if key == :held %>
-                    Hold #<%= id %>
-                  <% else %>
-                    <%= link_to "Event ##{id}", ops_operational_event_path(id), class: "text-slate-950 underline" %>
-                  <% end %>
-                </li>
-              <% end %>
-            </ul>
+        <% drill = bucket_drills[key] %>
+        <% bucket_inner = capture do %>
+          <div class="rounded border border-slate-100 bg-slate-50 p-4">
+            <p class="font-medium text-slate-950"><%= bucket_labels.fetch(key, key.to_s.humanize) %></p>
+            <p class="mt-2 text-2xl font-semibold"><%= data[:count] %></p>
+            <% if key == :held %>
+              <p class="mt-2 text-xs text-slate-500">Informational until Ops holds index ships (ADR-0042).</p>
+            <% elsif drill.present? %>
+              <p class="mt-2 text-xs text-slate-600">Drill to Ops event search with matching filters.</p>
+            <% end %>
+            <% ids = data[:operational_event_ids] || data[:hold_ids] %>
+            <% if ids.present? %>
+              <ul class="mt-2 space-y-1 text-xs text-slate-600">
+                <% ids.first(12).each do |id| %>
+                  <li>
+                    <% if key == :held %>
+                      Hold #<%= id %>
+                    <% else %>
+                      <%= link_to "Event ##{id}", ops_operational_event_path(id), class: "text-slate-950 underline" %>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+          </div>
+        <% end %>
+        <% if drill.present? %>
+          <%= link_to drill, class: "block rounded border border-transparent text-inherit no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700" do %>
+            <%= bucket_inner %>
           <% end %>
-        </div>
+        <% else %>
+          <%= bucket_inner %>
+        <% end %>
       <% end %>
     </div>
   </section>
@@ -141,7 +219,7 @@
   <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-5 py-4">
       <h2 class="text-xl font-semibold">Raw operational events</h2>
-      <p class="mt-1 text-sm text-slate-600">Full breakdown by status, channel, and event type for <%= @business_date.iso8601 %>.</p>
+      <p class="mt-1 text-sm text-slate-600">Full breakdown by status, channel, and event type for <%= bd %>.</p>
     </div>
     <div class="grid gap-4 p-5 text-sm md:grid-cols-4">
       <div>
@@ -156,43 +234,90 @@
         <% end %>
       </div>
       <div>
+        <% pc_href = ops_cash_path(reviewed_business_date: bd, from_close_package: "1") %>
         <p class="font-medium text-slate-500">Pending cash movements</p>
-        <p class="mt-1 text-lg font-semibold"><%= @readiness[:pending_cash_movements_count] %></p>
+        <p class="mt-1 text-lg font-semibold">
+          <%= link_to @readiness[:pending_cash_movements_count], pc_href, class: "text-slate-950 underline font-semibold" %>
+        </p>
       </div>
       <div>
         <p class="font-medium text-slate-500">Unresolved cash variances</p>
         <p class="mt-1 text-lg font-semibold"><%= @readiness[:unresolved_cash_variances_count] %></p>
+        <p class="mt-1 text-xs text-slate-500">Informational — no matching filtered drill yet.</p>
       </div>
     </div>
     <div class="grid gap-6 border-t border-slate-100 p-5 text-sm lg:grid-cols-3">
-      <% {
-        "By status" => @event_status_counts,
-        "By channel" => @event_channel_counts,
-        "By event type" => @event_type_counts
-      }.each do |label, counts| %>
-        <div>
-          <h3 class="font-semibold"><%= label %></h3>
-          <% if counts.any? %>
-            <dl class="mt-3 space-y-2">
-              <% counts.each do |key, count| %>
-                <div class="flex justify-between gap-3">
-                  <dt class="text-slate-600"><%= key.presence || "None" %></dt>
+      <div>
+        <h3 class="font-semibold">By status</h3>
+        <% if @event_status_counts.any? %>
+          <dl class="mt-3 space-y-2">
+            <% @event_status_counts.each do |key, count| %>
+              <div class="flex justify-between gap-3">
+                <% if key.present? %>
+                  <% href = ops_operational_events_path(business_date: bd, status: key) %>
+                  <dt class="text-slate-600"><%= link_to key, href, class: "text-slate-950 underline" %></dt>
+                  <dd class="font-medium"><%= link_to count, href, class: "text-slate-950 underline font-medium" %></dd>
+                <% else %>
+                  <dt class="text-slate-600">None</dt>
                   <dd class="font-medium"><%= count %></dd>
-                </div>
-              <% end %>
-            </dl>
-          <% else %>
-            <p class="mt-3 text-slate-600">No events.</p>
-          <% end %>
-        </div>
-      <% end %>
+                <% end %>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="mt-3 text-slate-600">No events.</p>
+        <% end %>
+      </div>
+      <div>
+        <h3 class="font-semibold">By channel</h3>
+        <% if @event_channel_counts.any? %>
+          <dl class="mt-3 space-y-2">
+            <% @event_channel_counts.each do |key, count| %>
+              <div class="flex justify-between gap-3">
+                <% if key.present? %>
+                  <% href = ops_operational_events_path(business_date: bd, channel: key) %>
+                  <dt class="text-slate-600"><%= link_to key, href, class: "text-slate-950 underline" %></dt>
+                  <dd class="font-medium"><%= link_to count, href, class: "text-slate-950 underline font-medium" %></dd>
+                <% else %>
+                  <dt class="text-slate-600">None</dt>
+                  <dd class="font-medium"><%= count %></dd>
+                <% end %>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="mt-3 text-slate-600">No events.</p>
+        <% end %>
+      </div>
+      <div>
+        <h3 class="font-semibold">By event type</h3>
+        <% if @event_type_counts.any? %>
+          <dl class="mt-3 space-y-2">
+            <% @event_type_counts.each do |key, count| %>
+              <div class="flex justify-between gap-3">
+                <% if key.present? %>
+                  <% href = ops_operational_events_path(business_date: bd, event_type: key) %>
+                  <dt class="text-slate-600"><%= link_to key, href, class: "text-slate-950 underline" %></dt>
+                  <dd class="font-medium"><%= link_to count, href, class: "text-slate-950 underline font-medium" %></dd>
+                <% else %>
+                  <dt class="text-slate-600">None</dt>
+                  <dd class="font-medium"><%= count %></dd>
+                <% end %>
+              </div>
+            <% end %>
+          </dl>
+        <% else %>
+          <p class="mt-3 text-slate-600">No events.</p>
+        <% end %>
+      </div>
     </div>
   </section>
 
   <section class="mt-8 grid gap-6 lg:grid-cols-2">
     <div class="rounded border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 px-5 py-4">
+      <div class="border-b border-slate-200 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-xl font-semibold">Pending operational events</h2>
+        <%= link_to "View all pending", ops_operational_events_path(business_date: bd, status: oe_status::STATUS_PENDING), class: "text-sm font-medium text-slate-950 underline" %>
       </div>
       <% if @pending_events.any? %>
         <ul class="divide-y divide-slate-100">
@@ -209,14 +334,15 @@
     </div>
 
     <div class="rounded border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-200 px-5 py-4">
+      <div class="border-b border-slate-200 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-xl font-semibold">Open or pending sessions</h2>
+        <%= link_to "Ops session queue", ops_teller_sessions_path, class: "text-sm font-medium text-slate-950 underline" %>
       </div>
       <% if @open_or_pending_sessions.any? %>
         <ul class="divide-y divide-slate-100">
           <% @open_or_pending_sessions.each do |session| %>
             <li class="px-5 py-4 text-sm">
-              <span class="font-medium">#<%= session.id %></span>
+              <%= link_to "##{session.id}", ops_teller_session_path(session), class: "font-medium text-slate-950 underline" %>
               <span class="text-slate-600"><%= session.status.humanize %> · <%= session.drawer_code.presence || "Default drawer" %></span>
             </li>
           <% end %>
@@ -249,9 +375,9 @@
     <h2 class="text-xl font-semibold">Close business date</h2>
     <% if @embedded_close_section %>
       <% if @readiness[:eod_ready] %>
-        <p class="mt-2 text-sm text-slate-600">This will close <%= @business_date.iso8601 %> and advance the singleton business date.</p>
+        <p class="mt-2 text-sm text-slate-600">This will close <%= bd %> and advance the singleton business date.</p>
         <%= form_with url: ops_business_date_close_path, method: :post, local: true, class: "mt-4" do %>
-          <%= hidden_field_tag :business_date, @business_date.iso8601 %>
+          <%= hidden_field_tag :business_date, bd %>
           <%= submit_tag "Close business date", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
         <% end %>
       <% else %>
@@ -263,8 +389,8 @@
     <div class="mt-6 border-t border-slate-100 pt-4 text-sm text-slate-600">
       <p class="font-medium text-slate-800">Legacy pages</p>
       <ul class="mt-2 list-disc space-y-1 pl-5">
-        <li><%= link_to "EOD readiness (trial balance focus)", ops_eod_path(business_date: @business_date.iso8601), class: "text-slate-950 underline" %></li>
-        <li><%= link_to "Business date close (standalone)", ops_business_date_close_path(business_date: @business_date.iso8601), class: "text-slate-950 underline" %></li>
+        <li><%= link_to "EOD readiness (trial balance focus)", ops_eod_path(business_date: bd), class: "text-slate-950 underline" %></li>
+        <li><%= link_to "Business date close (standalone)", ops_business_date_close_path(business_date: bd), class: "text-slate-950 underline" %></li>
       </ul>
     </div>
   </section>

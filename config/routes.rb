@@ -113,6 +113,7 @@ Rails.application.routes.draw do
     resources :teller_variances, only: [ :index ] do
       post :approve, on: :member, action: :create
     end
+    resources :teller_sessions, only: %i[index show]
     get "cash", to: "cash#index", as: :cash
     post "cash/movements/:id/approve", to: "cash#approve_movement", as: :approve_cash_movement
     post "cash/variances/:id/approve", to: "cash#approve_variance", as: :approve_cash_variance

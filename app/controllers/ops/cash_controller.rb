@@ -8,6 +8,8 @@ module Ops
     before_action :require_cash_variance_approval!, only: :approve_variance
 
     def index
+      @reviewed_business_date = parse_reviewed_business_date_param
+      @from_close_package = ActiveModel::Type::Boolean.new.cast(params[:from_close_package])
       @approvals = Cash::Queries::PendingCashApprovals.call(operating_unit_id: current_operating_unit&.id)
       @summary = Cash::Queries::ReconciliationSummary.call(operating_unit_id: current_operating_unit&.id)
     end
@@ -41,6 +43,15 @@ module Ops
     end
 
     private
+
+    def parse_reviewed_business_date_param
+      raw = params[:reviewed_business_date].presence
+      return nil if raw.blank?
+
+      Date.iso8601(raw.to_s)
+    rescue ArgumentError, TypeError
+      nil
+    end
 
     def require_cash_position_view!
       require_cash_capability!(
