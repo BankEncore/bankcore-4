@@ -88,6 +88,14 @@ See [branch operations capability map](architecture/branch-operations-capability
 
 This is a planning/catalog pass only. It must not introduce new money movement semantics by itself.
 
+### Teller transaction taxonomy (T-phases)
+
+Phase 1–2 shipped **account-centric** cash flows and **custody** primitives. Expanding the teller line toward instruments, branch-only receipts, and richer close classification is tracked separately so roadmap phases stay readable:
+
+- Bank-wide capability taxonomy: [303-bank-transaction-capability-taxonomy.md](concepts/303-bank-transaction-capability-taxonomy.md)
+- Capability ↔ `event_type` registry: [master-transaction-capability-registry.md](architecture/master-transaction-capability-registry.md)
+- First instrument spike (check deposit): [check-deposit-t1-vertical-slice.md](spikes/check-deposit-t1-vertical-slice.md), runnable checklist `rake spike:check_deposit_t1`
+
 ---
 
 ## 5. Phase 1: Branch-Safe Transaction MVP
@@ -485,6 +493,8 @@ Exact event taxonomy is governed by ADR-0036 for the shipped slice. Account-cont
 ## 9. Phase 5: Negotiable Instruments / Official Checks
 
 **Goal:** support check cashing and official checks without overloading Teller or Accounts.
+
+Bank-wide capability taxonomy: [303-bank-transaction-capability-taxonomy.md](concepts/303-bank-transaction-capability-taxonomy.md). Branch **check deposit** intake is tracked as spike **T1** ([check-deposit-t1-vertical-slice.md](spikes/check-deposit-t1-vertical-slice.md)); Phase 5 below emphasizes issuance/cashing (**T2**-adjacent).
 
 ### Recommended First Slice
 

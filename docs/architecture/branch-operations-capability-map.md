@@ -2,7 +2,7 @@
 
 **Status:** Draft  
 **Last reviewed:** 2026-04-28  
-**Companion to:** [BankCORE branch operations roadmap](../roadmap-branch-operations.md)  
+**Companion to:** [BankCORE branch operations roadmap](../roadmap-branch-operations.md), [master-transaction-capability-registry.md](master-transaction-capability-registry.md) (capability codes ↔ `event_type` / F1–F17), [303-bank-transaction-capability-taxonomy.md](../concepts/303-bank-transaction-capability-taxonomy.md) (**bank-wide** capability families—not teller-owned).
 
 This map connects branch activities to BankCORE module ownership, operational events, posting behavior, read models, and audit controls. It is a planning and sequencing artifact only. It does **not** introduce new event types, posting rules, GL mappings, business-date behavior, or table ownership by itself.
 

@@ -90,6 +90,7 @@ flowchart LR
 ## 5. Related documents
 
 - Branch cash operating model (target): [301-branch-level-cash-tracking.md](../concepts/301-branch-level-cash-tracking.md)
+- Bank-wide capability taxonomy (families **F1–F17** vs execution channel): [303-bank-transaction-capability-taxonomy.md](../concepts/303-bank-transaction-capability-taxonomy.md)
 - Capability summary: [branch-operations-capability-map.md](../architecture/branch-operations-capability-map.md)
 
 ---

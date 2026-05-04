@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This concept defines where the teller transaction surface fits in BankCORE.
+This concept defines where the **teller-adjacent execution surface** fits in BankCORE: JSON **`/teller`** and the Branch **teller line** (and supervisor approvals tied to those flows). It is **not** the full bank capability universe—many families run on **`batch`**, **`system`**, or **Ops** surfaces ([ADR-0037](../adr/0037-internal-staff-authorized-surfaces.md)).
 
 The Teller workspace is a controlled front-line execution surface. It lets staff initiate selected cash and account workflows, but it does not own financial truth, account state, product behavior, or physical custody by itself.
 
@@ -15,6 +15,12 @@ BankCORE's teller goal is operational sufficiency with strong controls:
 - expose drawer/account impact clearly enough for branch staff to operate safely
 
 This document is a planning and product-boundary artifact. It does not introduce new event types, posting rules, GL mappings, approval tables, receipt storage, or instrument lifecycle records by itself.
+
+For the **bank-wide capability taxonomy** (families **F1–F17**, phased **T1–T4** slices, and channel-vs-family framing), see [303-bank-transaction-capability-taxonomy.md](303-bank-transaction-capability-taxonomy.md).
+
+### Relationship to capability taxonomy
+
+**Lanes vs domains:** Branch CSR servicing, teller cash, supervisor approvals, JSON **`/teller`**, and batch/system jobs are **surfaces** and **`operational_events.channel`** producers—not capability families. The durable fact still lands as an **`OperationalEvent`** (plus domain-owned rows such as **`Cash`** movements) regardless of lane ([ADR-0037](../adr/0037-internal-staff-authorized-surfaces.md)). **Teller** (the module) orchestrates sessions and workstation rules; **303** places each activity in an **F-family** for ownership and sequencing.
 
 ## Alignment with BankCORE implementation and roadmap
 

@@ -72,6 +72,8 @@ After `bin/rails db:seed` in **development**, sample **`operators`** rows exist 
 ## Documentation pointers
 
 - **[docs/concepts/01-mvp-vs-core.md](docs/concepts/01-mvp-vs-core.md)** — MVP vs full-system boundaries (“branch safely”).
+- **[docs/concepts/303-bank-transaction-capability-taxonomy.md](docs/concepts/303-bank-transaction-capability-taxonomy.md)** — bank-wide capability families **F1–F17** (vs execution channel); **T1–T4** phased slices; spike checklist `rake spike:check_deposit_t1`.
+- **[docs/architecture/master-transaction-capability-registry.md](docs/architecture/master-transaction-capability-registry.md)** — F1–F17 capability codes mapped to shipped `event_type` / commands (subordinate to event catalog per ADR-0019).
 - **[docs/architecture/bankcore-module-catalog.md](docs/architecture/bankcore-module-catalog.md)** — domain modules and ownership.
 - **[docs/roadmap.md](docs/roadmap.md)** — draft engineering sequence (does not redefine MVP scope).
 
