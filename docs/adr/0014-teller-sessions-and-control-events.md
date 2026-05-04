@@ -28,6 +28,6 @@ Teller workspace routes (including **`GET /teller/reports/*`** per [ADR-0016](00
 
 ## 3. Related boundaries
 
-- **Teller session ↔ drawer custody:** An open session resolves a **`teller_drawer`** `Cash` location (`cash_location_id`). Custody balances and movements remain owned by **`Cash`** per [ADR-0031](0031-cash-inventory-and-management.md).
-- **Expected drawer cash:** Still derived from posted teller-channel operational events on the session (`deposit.accepted`, `withdrawal.posted`); custody `cash_balances` follow `Cash` commands unless a future product decision ties them automatically (see ADR-0031 §5.2).
+- **Teller session ↔ drawer custody:** An open session resolves a **`teller_drawer`** `Cash` location (`cash_location_id`). Custody balances and movements remain owned by **`Cash`** per [ADR-0031](0031-cash-inventory-and-management.md); teller-event-to-drawer projection policy is defined in [ADR-0039](0039-teller-session-drawer-custody-projection.md).
+- **Expected drawer cash:** Still derived from posted teller-channel operational events on the session (`deposit.accepted`, `withdrawal.posted`); [ADR-0039](0039-teller-session-drawer-custody-projection.md) further defines opening cash, server-owned close calculation, reversal handling, and explicit session attribution for Cash movements.
 - **Where supervisors act:** Session variance approval and related gates may appear on **Branch HTML supervisor** surfaces or JSON `/teller`; surfaces do not change `Teller` domain ownership ([ADR-0037](0037-internal-staff-authorized-surfaces.md)).
