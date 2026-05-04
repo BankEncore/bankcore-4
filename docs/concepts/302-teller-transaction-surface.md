@@ -45,6 +45,8 @@ For the **bank-wide capability taxonomy** (families **F1–F17**, phased **T1–
 
 The current BankCORE teller/branch transaction surface should be treated as the MVP baseline.
 
+### Customer transaction surface[1]
+
 | Teller activity | Primary owner | Evidence | Posting behavior | MVP posture |
 | --- | --- | --- | --- | --- |
 | Cash deposit to deposit account | `Core::OperationalEvents`, `Teller` | `deposit.accepted` | Dr `1110` / Cr `2110` | Shipped |
@@ -57,6 +59,13 @@ The current BankCORE teller/branch transaction surface should be treated as the 
 | Reverse posted financial event | `Core::OperationalEvents`, `Core::Posting` | `posting.reversal` | Equal/opposite posting | Shipped |
 | Open / close teller session | `Teller` | `teller_sessions` row | No GL by default | Shipped |
 | Approve teller variance | `Teller` | session variance approval; optional `teller.drawer.variance.posted` | Optional GL `1110` / `5190` | Shipped |
+
+### Teller-adjacent cash custody controls[1]
+
+These controls are teller-adjacent because branch staff use them and they affect close readiness, but they remain Cash-domain custody workflows rather than customer transaction families.
+
+| Teller-adjacent activity | Primary owner | Evidence | Posting behavior | MVP posture |
+| --- | --- | --- | --- | --- |
 | Vault-to-drawer / drawer-to-vault transfer | `Cash` | `cash_movement`, optional `cash.movement.completed` | No GL for internal custody movement | Shipped foundation |
 | Cash count / cash variance | `Cash` | `cash_count`, `cash_variance` | GL only for approved `cash.variance.posted` | Shipped foundation |
 
@@ -230,7 +239,7 @@ MVP-lite funds availability is manual and bounded:
 
 - branch staff can place a hold on deposited funds
 - amount, expiration date, reason code, and description are captured where supported
-- automated Reg CC and collected-funds scheduling remains deferred
+- automated collected-funds scheduling, Reg CC policy automation, and item-level funds-availability workflows remain deferred[2]
 
 ### Fee Handling
 
@@ -257,6 +266,12 @@ Receipt display and simple reprint are reasonable near-term UI features. Durable
 ## Supervisor Controls
 
 BankCORE already supports command-specific supervisor and capability gates. Teller UI should surface those gates clearly.
+
+## Footnotes
+
+[1] Split the MVP table into `customer transaction surface` and `teller-adjacent cash custody controls` to match the ownership boundary already defined in ADR-0039: teller sessions and customer financial events are distinct from Cash-owned custody state, even when both appear on the branch/teller line.
+
+[2] Tightened the availability wording so this concept doc does not imply that check/item availability policy has already been chosen. Existing shipped behavior is still manual hold placement; automated Reg CC-style scheduling and item-level availability remain ADR-gated future work.
 
 Near-term controls:
 

@@ -38,7 +38,7 @@ Persisted **`operational_events`** carry **`event_type`** (business fact) and **
 | Family | Intent | MVP posture |
 | --- | --- | --- |
 | **F1 — Deposit account transactions** | Credit/debit DDA with durable event + posting path where applicable | **Shipped** (cash deposit/withdrawal/transfer, fees, holds, reversals) |
-| **F2 — Instrument transactions** | Checks and similar items: acceptance, holds, returns, eventual availability | **Phased** — [T1](#3-phased-slices-t1t4) check deposit spike path |
+| **F2 — Instrument transactions** | Checks and similar items: acceptance, holds, returns, eventual availability | **Phased** — [T1](#3-phased-slices-t1t4) check deposit spike path[1] |
 | **F3 — Service and non-account receipts** | Branch fees and charges that may not present as a simple DDA debit/credit pair | **Partial** — account-linked `fee.*`; broader misc receipts **T3** |
 | **F4 — Cash custody operations** | Vault/drawer/shipment/count/variance | **Shipped** foundation ([ADR-0031](../adr/0031-cash-inventory-and-management.md), [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)) |
 | **F5 — Operational exceptions** | Overrides, approvals, reversals, blockers | **Partial** — controls + EOD readiness; richer classification **T4** |
@@ -65,8 +65,8 @@ Legend: **DDA** = deposit account balance effect; **GL** = posts via `Core::Post
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F1 | Cash deposit, withdrawal, transfer | `Core::OperationalEvents`, `Accounts`, `Teller` | Yes | Yes | Yes when cash + posted ([ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)) | Optional (`hold.placed`) | Reversal / some fees | Pending vs posted events; sessions closed |
 | F1 | Fee assess / waive | `Core::OperationalEvents`, `Core::Posting` | Yes | Yes | No | — | Waive | Same as F1 |
-| F2 | Check deposit (item in, provisional credit) | `Core::*`, future **`Instruments`** or `Accounts` extension | Yes (policy-dependent) | TBD per ADR | TBD (often no cash drawer delta until negotiated) | **Reg‑CC-style** availability | Overrides | Pending items / holds |
-| F2 | Check cashing, official check | Future `Instruments` / posting slice | Often | Yes | Often cash-out | Risk limits | Often | Outstanding liabilities |
+| F2 | Check deposit (item in, provisional credit) | `Core::*`, future **`Instruments`** or another ADR-approved owner, or `Accounts` extension[2] | Yes (policy-dependent) | TBD per ADR | TBD (often no cash drawer delta until negotiated) | Item-availability policy TBD; initial slice may use manual hold discipline[1] | Overrides | Pending items / holds |
+| F2 | Check cashing, official check | Future `Instruments` or another ADR-approved owner / posting slice[2] | Often | Yes | Often cash-out | Risk limits | Often | Outstanding liabilities |
 | F3 | Wire fee, misc branch charge without simple DDA leg | TBD (`Core` + revenue/suspense pattern) | Maybe | Yes | Maybe | — | Sometimes | Posted vs suspense |
 | F4 | Vault ↔ drawer, shipments, counts | `Cash` | No | Exceptions only | Yes | — | Approvals | Custody variances, movements |
 | F5 | Override, NSF denial | `Core::OperationalEvents`, `Workspace` | Optional | Usually no | No | — | Often | Exceptions list |
@@ -89,7 +89,7 @@ Rows marked **TBD** require an ADR before coding posting, reversal, or GL semant
 
 ## 3. Phased slices (T1–T4)
 
-These **T-phases** are **vertical delivery slices** for sequencing kernel and UX work. They often **start from branch/teller UX pain points** but **cut across domains**—ownership stays with **Instruments**, **Cash**, **`Core::Posting`**, etc., not “the teller module.”
+These **T-phases** are **vertical delivery slices** for sequencing kernel and UX work. They often **start from branch/teller UX pain points** but **cut across domains**—ownership stays with an ADR-approved domain owner such as future **`Instruments`**, **`Cash`**, **`Core::Posting`**, etc., not “the teller module.”[2]
 
 | Slice | Goal | Kernel stress |
 | --- | --- | --- |
@@ -129,3 +129,9 @@ Today’s readiness APIs focus on trial balance, pending events, and open sessio
 | [ADR-0037](../adr/0037-internal-staff-authorized-surfaces.md) | Staff surfaces vs domains |
 | [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md) | Teller cash ↔ drawer custody |
 | [roadmap-branch-operations.md](../roadmap-branch-operations.md) | Branch sequencing |
+
+## Footnotes
+
+[1] Softened F2 availability language so this taxonomy does not pre-decide the T1 check-deposit ADR. The current shipped posture in 302 and the account/hold ADRs is manual hold discipline, not a committed Reg CC-style automation model.
+
+[2] Reworded instrument-family ownership references to avoid implying that `Instruments` is already the accepted owner. The branch-operations roadmap still treats that as an explicit ADR decision, so the taxonomy now keeps ownership provisional.
