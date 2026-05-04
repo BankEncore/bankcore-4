@@ -16,13 +16,22 @@ Today `deposit.accepted` models “cash or equivalent in” with immediate posti
 - **Funds availability policy** — provisional ledger vs holds-only-first vs hybrid (policy ADR).
 - **Often no teller drawer delta** at acceptance (contrast cash deposits under [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)).
 
+ADR-0040 now fixes the T1 direction:
+
+- new financial event type: **`check.deposit.accepted`**
+- posting at acceptance time
+- debit **1160 Deposited Items Clearing** / credit **2110** DDA
+- multi-item typed JSON payload on the event
+- optional but supported **event-level** hold linkage only
+- teller/session attribution allowed, but **no drawer projection** and **no expected-cash impact**
+
 ---
 
 ## Proposed directions (pick one in ADR)
 
 ### Option A — Single financial event
 
-- One `event_type` e.g. `check.deposit.accepted` with `pending → posted`, posting rule credits **2110** with availability driven by hold rules or subledger metadata.
+- One `event_type` **`check.deposit.accepted`** with `pending → posted`, posting rule debits **1160 Deposited Items Clearing** and credits **2110**, with availability driven by event-level hold rules.
 
 ### Option B — Split operational + financial
 
@@ -32,7 +41,7 @@ Today `deposit.accepted` models “cash or equivalent in” with immediate posti
 
 - Reuse `deposit.accepted` with `instrument_kind` / payload discriminant — minimal new types but risks overloading semantics and reversals.
 
-**Recommendation for ADR workshop:** Option A or B; avoid C unless payload versioning is tightly controlled.
+**ADR outcome:** Option A chosen in [ADR-0040](../adr/0040-check-deposit-vertical-slice.md). Option B remains a future lifecycle-deepening alternative if clearing/returns later require a split intake/posting model.
 
 ---
 
@@ -45,10 +54,10 @@ Conceptual order:
 1. **ADR** — availability, posting timing, reversal rules, drawer exclusion defaults.
 2. **`Core::OperationalEvents::EventCatalog`** + **`docs/operational_events/*.md`** + README index (required together per drift tests).
 3. **`RecordEvent`** — whitelist type; validations (account open, amounts, optional `teller_session_id` policy).
-4. **`Core::Posting::PostingRules::Registry`** — balanced legs; clarify interaction with **1120 / suspense** if checks settle separately later.
-5. **`Accounts::Commands::PlaceHold`** — extend or add **item hold** pattern if `placed_for_operational_event_id` linkage is insufficient for multi-item deposits.
+4. **`Core::Posting::PostingRules::Registry`** — balanced legs for **Dr 1160 / Cr 2110**; later slices may decide how on-us and transit items relieve the clearing balance. The same change set should wire the documented `1160:{business_date}:{operational_event_id}` subledger pattern and any required seeded/control-account support.
+5. **`Accounts::Commands::PlaceHold`** — T1 uses **event-level** hold linkage only; item-specific hold linkage is deferred even when the payload contains multiple items.
 6. **`Cash::Services::TellerEventProjector`** — exclude or conditional-include check deposit types so drawer custody stays accurate ([ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)).
-7. **`Teller::Queries::ExpectedCashForSession`** — ensure check deposits do not inflate drawer expected unless product explicitly treats “cash in envelope” separately.
+7. **`Teller::Queries::ExpectedCashForSession`** — ensure check deposits do not inflate drawer expected cash.
 8. **Reversal** — `RecordReversal` eligibility and deposit-linked hold guards mirror `deposit.accepted`.
 9. **Branch / Teller controllers** — operator UX for items + totals + session context.
 10. **Tests** — domain + integration; event catalog drift suite.
@@ -60,6 +69,8 @@ Conceptual order:
 - ACH/check clearing networks, returns workflow, image capture.
 - Official checks / check cashing (T2).
 - Full close-package taxonomy (T4).
+- Item-specific hold linkage, item-by-item release, or per-item reversal semantics.
+- Differentiated posting treatment between on-us and transit deposited checks; T1 uses generic clearing account **1160**, while **1140 CIPC** remains reserved for external/transit collection semantics.
 
 ---
 
@@ -67,4 +78,5 @@ Conceptual order:
 
 - [ADR-0013](../adr/0013-holds-available-and-servicing-events.md) — holds vs availability.
 - [ADR-0019](../adr/0019-event-catalog-and-fee-events.md) — catalog discipline.
+- [ADR-0040](../adr/0040-check-deposit-vertical-slice.md) — accepted T1 decision boundary.
 - Roadmap Phase 5 instruments: [roadmap-branch-operations.md](../roadmap-branch-operations.md).

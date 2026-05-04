@@ -57,16 +57,24 @@ When the catalog changes, update the corresponding **shipped** rows here in the 
 | `ACCOUNT_RESTRICTED` | F8 | `account.restricted` | `branch` | `Accounts` | `Accounts::Commands::RestrictAccount` | No GL ([ADR-0036](../adr/0036-branch-servicing-event-audit-taxonomy.md)) |
 | `ACCOUNT_UNRESTRICTED` | F8 | `account.unrestricted` | `branch` | `Accounts` | `Accounts::Commands::UnrestrictAccount` | No GL |
 | `ACCOUNT_CLOSED` | F8 | `account.closed` | `branch` | `Accounts` | `Accounts::Commands::CloseAccount` | No GL |
+---
+
+## ADR-approved capabilities pending implementation
+
+These rows have an ADR-defined `event_type` and intended semantics, but they are not yet shipped in `Core::OperationalEvents::EventCatalog` or Ruby write paths. Move them into the shipped registry in the same PR that lands the code-first catalog entry and command/posting support.
+
+| Capability code | Family | `event_type` | Typical channels (planned) | Primary domain owner (planned) | ADR / notes |
+| --- | --- | --- | --- | --- | --- |
+| `CHECK_DEPOSIT_ACCEPTED` | F2 | `check.deposit.accepted` | `teller`, `branch` | `Core::OperationalEvents` (+ `Accounts` holds / teller execution rules) | [ADR-0040](../adr/0040-check-deposit-vertical-slice.md); intended posting Dr `1160` / Cr `2110`; teller/session trace without drawer projection |
 
 ---
 
-## Planned capabilities (no shipped `event_type` yet)
+## Planned capabilities (no ADR-named shipped `event_type` yet)
 
-Use [303](../concepts/303-bank-transaction-capability-taxonomy.md) phased slices (**T1–T4**) and branch roadmap phases for sequencing. Rows below are **placeholders** — **`event_type` TBD** until an ADR names the catalog entry.
+Use [303](../concepts/303-bank-transaction-capability-taxonomy.md) phased slices (**T1–T4**) and branch roadmap phases for sequencing. Rows below are placeholders whose concrete `event_type` names still require ADR coverage.
 
 | Capability code (planned) | Family | `event_type` | Typical channels (planned) | Primary domain owner (planned) |
 | --- | --- | --- | --- | --- |
-| Check deposit / item acceptance | F2 | TBD | `teller`, `branch` | `Integration` / future `Instruments` — ADR required |
 | Official check issuance | F2 | TBD | `teller`, `branch` | Future `Instruments` — ADR required |
 | Miscellaneous GL / non-DDA receipt | F3 | TBD | `branch`, `batch` | `Core::Ledger` + controlled Ops surface — ADR required |
 

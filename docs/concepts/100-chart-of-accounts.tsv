@@ -5,6 +5,7 @@ Account Code	Name	Type	Control Account	Description	Subledger Applies	Subledger S
 1130	Due from Correspondent Banks	Asset	Yes	Nostro accounts at correspondent banks	Yes	1130:{bank_id}:{nostro_acct}	1130:CITI:USDCHK
 1140	Cash Items in Process of Collection (CIPC)	Asset	Yes	Checks accepted and in transit for external collection	Yes	1140:{branch}:{batch_id}	1140:NYC:20251012A
 1150	Returned Item Clearing	Asset	Yes	Temporary holding for on-us checks and returns while resolving	Yes	1150:{ons|ret}:{ref}	1150:ons:TXN123
+1160	Deposited Items Clearing	Asset	Yes	Generic clearing asset for teller-accepted deposited checks pending internal clearing, collection, return, or later settlement treatment	Yes	1160:{business_date}:{operational_event_id}	1160:2026-05-03:OE123
 1180	Suspense – Unposted Cash	Asset	Yes	Unverified cash items (night drop, mail) pending verification	Yes	1180:{source}:{ref}	1180:nightdrop:2025-10-12
 1200	Investment Securities	Asset	Yes	Parent for investment securities holdings	No		
 1210	U.S. Treasury & Agency Securities	Asset	Yes	Held-for-investment or AFS Treasuries and agencies	Yes	1210:{cusip}:{lot_id}	1210:9128285Q9:L1
@@ -36,7 +37,7 @@ Account Code	Name	Type	Control Account	Description	Subledger Applies	Subledger S
 2130	Savings & Money Market Accounts	Liability	Yes	Savings/MMDA deposit accounts	Yes	2130:{acct_id}	
 2140	Time Deposits (CDs)	Liability	Yes	Certificates of deposit by account	Yes	2140:{acct_id}	
 2150	Escrow Accounts (Taxes / Insurance)	Liability	Yes	Escrow balances connected to loans	Yes	2150:{loan_id}:{bucket}	2150:LN123:tax
-2160	Official Checks Outstanding	Liability	Yes	Liability for issued official/cashier‚Äôs checks	Yes	2160:{issue_batch}:{check_no}	2160:2025A:000123
+2160	Official Checks Outstanding	Liability	Yes	Liability for issued official/cashier's checks	Yes	2160:{issue_batch}:{check_no}	2160:2025A:000123
 2170	ACH Settlement Clearing	Liability	Yes	Clearing for ACH settlements by direction and file	Yes	2170:{dr|cr|return}:{file_id}:{trace}	
 2180	RTP/Card Clearing	Liability	Yes	Clearing for RTP or card network settlements	Yes	2180:{rtp|card}:{id}	
 2190	Suspense – Unidentified Deposits	Liability	Yes	Temporary holding for unidentified inbound funds	Yes	2190:{source}:{ref}	
