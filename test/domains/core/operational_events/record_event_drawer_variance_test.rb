@@ -104,9 +104,9 @@ class CoreOperationalEventsRecordEventDrawerVarianceTest < ActiveSupport::TestCa
     sid = Teller::Commands::OpenSession.call(drawer_code: "dv-#{SecureRandom.hex(5)}").id
     exp = 10_000
     act = exp + variance
+    Teller::Models::TellerSession.find(sid).update!(opening_cash_minor_units: exp)
     Teller::Commands::CloseSession.call(
       teller_session_id: sid,
-      expected_cash_minor_units: exp,
       actual_cash_minor_units: act
     )
     sid

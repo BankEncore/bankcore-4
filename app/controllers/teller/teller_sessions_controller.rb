@@ -28,12 +28,11 @@ module Teller
 
     def close
       attrs = params.require(:teller_session_close).permit(
-        :teller_session_id, :expected_cash_minor_units, :actual_cash_minor_units
+        :teller_session_id, :actual_cash_minor_units
       ).to_h.symbolize_keys
       attrs[:teller_session_id] = attrs[:teller_session_id].to_i
       session = Teller::Commands::CloseSession.call(
         teller_session_id: attrs[:teller_session_id],
-        expected_cash_minor_units: attrs[:expected_cash_minor_units].to_i,
         actual_cash_minor_units: attrs[:actual_cash_minor_units].to_i
       )
       render json: { id: session.id, status: session.status, variance_minor_units: session.variance_minor_units }, status: :ok

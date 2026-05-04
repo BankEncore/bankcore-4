@@ -44,7 +44,6 @@ class TellerSessionCashPolicyTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: closed_sid,
-          expected_cash_minor_units: 100,
           actual_cash_minor_units: 100
         }
       }.to_json,

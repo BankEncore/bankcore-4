@@ -281,12 +281,12 @@ class OperationalEventsMoneyFlowsTest < ActionDispatch::IntegrationTest
       headers: teller_json_headers(@teller_operator)
     assert_response :created
     sid = response.parsed_body["id"]
+    Teller::Models::TellerSession.find(sid).update!(opening_cash_minor_units: 100)
 
     post "/teller/teller_sessions/close",
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 100,
           actual_cash_minor_units: 100
         }
       }.to_json,

@@ -28,13 +28,15 @@ module Teller
             actor_id: operator_id,
             operating_unit: operating_unit
           )
+          opening_cash = Cash::Services::BalanceProjector.balance_for(drawer_location).amount_minor_units.to_i
 
           Teller::Models::TellerSession.create!(
             status: Teller::Models::TellerSession::STATUS_OPEN,
             opened_at: Time.current,
             drawer_code: drawer_code,
             operating_unit: operating_unit,
-            cash_location: drawer_location
+            cash_location: drawer_location,
+            opening_cash_minor_units: opening_cash
           )
         end
       end

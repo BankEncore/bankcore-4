@@ -18,21 +18,28 @@ module Teller
         )
         reversal = create_event!("posting.reversal", session.id, 200)
 
-        create_event!("deposit.accepted", session.id, 1_000)
-        create_event!("withdrawal.posted", session.id, 300)
-        create_event!("transfer.completed", session.id, 500)
-        create_event!("deposit.accepted", other_session.id, 9_999)
-        create_event!("deposit.accepted", session.id, 200, reversed_by_event_id: reversal.id)
+        create_event!("deposit.accepted", session.id, 1_000, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
+        create_event!("withdrawal.posted", session.id, 300, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
+        create_event!("transfer.completed", session.id, 500, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
+        create_event!("deposit.accepted", other_session.id, 9_999, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
+        create_event!(
+          "deposit.accepted",
+          session.id,
+          200,
+          status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED,
+          reversed_by_event_id: reversal.id
+        )
+        create_event!("deposit.accepted", session.id, 5_000, status: Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING)
 
         assert_equal 700, ExpectedCashForSession.call(teller_session_id: session.id)
       end
 
       private
 
-      def create_event!(event_type, teller_session_id, amount_minor_units, reversed_by_event_id: nil)
+      def create_event!(event_type, teller_session_id, amount_minor_units, status: nil, reversed_by_event_id: nil)
         Core::OperationalEvents::Models::OperationalEvent.create!(
           event_type: event_type,
-          status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED,
+          status: status || Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED,
           business_date: Date.new(2026, 4, 22),
           channel: "teller",
           idempotency_key: "#{event_type}-#{SecureRandom.hex(8)}",

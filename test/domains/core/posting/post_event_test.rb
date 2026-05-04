@@ -302,9 +302,9 @@ class CorePostingPostEventTest < ActiveSupport::TestCase
     sid = Teller::Commands::OpenSession.call(drawer_code: "post-dv-#{SecureRandom.hex(4)}").id
     exp = 20_000
     act = exp + amount_minor_units
+    Teller::Models::TellerSession.find(sid).update!(opening_cash_minor_units: exp)
     Teller::Commands::CloseSession.call(
       teller_session_id: sid,
-      expected_cash_minor_units: exp,
       actual_cash_minor_units: act
     )
     Core::OperationalEvents::Commands::RecordEvent.call(

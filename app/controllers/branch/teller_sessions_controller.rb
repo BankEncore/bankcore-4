@@ -49,7 +49,6 @@ module Branch
       teller_session_id = params[:id].to_i
       session = Teller::Commands::CloseSession.call(
         teller_session_id: teller_session_id,
-        expected_cash_minor_units: Teller::Queries::ExpectedCashForSession.call(teller_session_id: teller_session_id),
         actual_cash_minor_units: close_params[:actual_cash_minor_units].to_i
       )
       message = if session.status == Teller::Models::TellerSession::STATUS_PENDING_SUPERVISOR

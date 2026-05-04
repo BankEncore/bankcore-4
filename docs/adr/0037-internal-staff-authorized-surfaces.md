@@ -10,7 +10,7 @@ Proposed
 
 ## Aligns with
 
-[Module catalog](../architecture/bankcore-module-catalog.md) (workspace vs domain ownership), [ADR-0014](0014-teller-sessions-and-control-events.md), [ADR-0015](0015-teller-workspace-authentication.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0029](0029-capability-first-authorization-layer.md), [ADR-0031](0031-cash-inventory-and-management.md), [roadmap branch operations Phase 2](../roadmap-branch-operations.md#6-phase-2-cash-custody-and-branch-controls)
+[Module catalog](../architecture/bankcore-module-catalog.md) (workspace vs domain ownership), [ADR-0014](0014-teller-sessions-and-control-events.md), [ADR-0015](0015-teller-workspace-authentication.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0029](0029-capability-first-authorization-layer.md), [ADR-0031](0031-cash-inventory-and-management.md), [ADR-0039](0039-teller-session-drawer-custody-projection.md), [roadmap branch operations Phase 2](../roadmap-branch-operations.md#6-phase-2-cash-custody-and-branch-controls)
 
 ---
 
@@ -83,7 +83,7 @@ flowchart LR
 
 - New Branch UI may introduce **supervisor-only** routes or nav sections without new domains; tests should assert **403** / redirect when capabilities are missing.
 - Documentation and capability map should name these surfaces so contributors do not invent parallel modules.
-- **Cash custody** vs **teller session expected cash** remains governed by [ADR-0031](0031-cash-inventory-and-management.md) and [ADR-0014](0014-teller-sessions-and-control-events.md); this ADR only clarifies **where** staff initiate or approve those flows in the UI.
+- **Cash custody** vs **teller session expected cash** remains governed by [ADR-0031](0031-cash-inventory-and-management.md), [ADR-0014](0014-teller-sessions-and-control-events.md), and [ADR-0039](0039-teller-session-drawer-custody-projection.md); this ADR only clarifies **where** staff initiate or approve those flows in the UI.
 
 ---
 
@@ -102,5 +102,6 @@ Shipped wiring:
 - **HTML aliases:** Branch HTML may expose friendlier route paths such as `/branch/events` and `/branch/accounts/:id` while preserving underlying controller/domain names (`OperationalEvents`, deposit account servicing). These aliases are authorized surfaces, not domain renames.
 - **Branch teller inputs:** Branch HTML deposit/withdrawal forms collect operator-facing account number, decimal amount, and open teller-session selection, then normalize those inputs into the existing `RecordEvent` / `AuthorizeDebit` command contracts. JSON `/teller`, posting/idempotency semantics, and teller-session policy remain unchanged.
 - **Capability-gated links:** [Branch::ApplicationController](../../app/controllers/branch/application_controller.rb) exposes `branch_operator_can?` to views; dashboard links use `Workspace::Authorization::CapabilityRegistry` constants.
+- **Teller session close:** Branch HTML and JSON **`/teller`** submit **actual** count inputs only; **`CloseSession`** computes **expected** cash internally ([ADR-0039](0039-teller-session-drawer-custody-projection.md)); UI may still **display** computed expected for operator guidance.
 - **Teller session variance on Branch:** `POST /branch/teller_sessions/approve_variance` on [Branch::TellerSessionsController](../../app/controllers/branch/teller_sessions_controller.rb); pending rows include an approve form in [app/views/branch/dashboard/_session_group.html.erb](../../app/views/branch/dashboard/_session_group.html.erb) when `variance_approve: true`.
 - **Override approval:** capability `override.approve` ([CapabilityRegistry](../../app/domains/workspace/authorization/capability_registry.rb)); enforced on [Branch::OverridesController](../../app/controllers/branch/overrides_controller.rb) and [Teller::OverridesController](../../app/controllers/teller/overrides_controller.rb).
