@@ -2,6 +2,8 @@
 
 module Branch
   class WithdrawalsController < ApplicationController
+    before_action :load_open_teller_sessions, only: %i[new create]
+
     def new
       @withdrawal = default_form_params("branch-withdrawal")
       @preview = preview_for(@withdrawal)
@@ -9,6 +11,7 @@ module Branch
 
     def create
       @withdrawal = withdrawal_params
+      @withdrawal = normalize_withdrawal_params(@withdrawal)
       @preview = preview_for(@withdrawal)
       account_id = resolve_deposit_account_id(@withdrawal[:deposit_account_id], @withdrawal[:deposit_account_number])
       result = Accounts::Commands::AuthorizeDebit.call(
@@ -39,6 +42,7 @@ module Branch
       Core::OperationalEvents::Commands::RecordEvent::MismatchedIdempotency,
       Core::OperationalEvents::Commands::RecordEvent::PostedReplay,
       Core::Posting::Commands::PostEvent::InvalidState,
+      ArgumentError,
       ActiveRecord::RecordNotFound => e
       @error_message = e.message
       @preview ||= preview_for(@withdrawal || {})
@@ -55,6 +59,7 @@ module Branch
       {
         "deposit_account_id" => params[:deposit_account_id],
         "deposit_account_number" => params[:deposit_account_number],
+        "amount" => money_amount_display(params[:amount], fallback_minor_units: params[:amount_minor_units]),
         "amount_minor_units" => params[:amount_minor_units],
         "currency" => "USD",
         "teller_session_id" => params[:teller_session_id],
@@ -65,8 +70,23 @@ module Branch
 
     def withdrawal_params
       params.require(:withdrawal).permit(
-        :deposit_account_id, :deposit_account_number, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
+        :deposit_account_id, :deposit_account_number, :amount, :amount_minor_units, :currency, :teller_session_id, :idempotency_key, :record_and_post
       ).to_h.symbolize_keys
+    end
+
+    def normalize_withdrawal_params(attrs)
+      attrs[:currency] = attrs[:currency].presence || "USD"
+      attrs[:idempotency_key] = attrs[:idempotency_key].presence || default_idempotency_key("branch-withdrawal")
+      attrs[:amount] = money_amount_display(attrs[:amount], fallback_minor_units: attrs[:amount_minor_units])
+      attrs[:amount_minor_units] = normalize_money_amount_minor_units(
+        attrs[:amount],
+        fallback_minor_units: attrs[:amount_minor_units]
+      )
+      attrs
+    end
+
+    def load_open_teller_sessions
+      @open_teller_sessions = open_teller_sessions_for_branch
     end
 
     def preview_for(attrs)

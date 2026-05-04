@@ -219,8 +219,8 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get new_branch_hold_path, params: { deposit_account_id: @account.id, amount_minor_units: 800 }
     assert_response :success
-    assert_includes response.body, "Advisory preview"
-    assert_includes response.body, "Source account available"
+    assert_includes response.body, "Transaction impact preview"
+    assert_includes response.body, "Source account balance movement"
 
     get branch_new_account_hold_path(@account)
     assert_response :success
@@ -333,7 +333,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     get branch_new_fee_assessment_path(@account), params: { amount_minor_units: 500 }
     assert_response :success
     assert_includes response.body, "Assess fee"
-    assert_includes response.body, "Advisory preview"
+    assert_includes response.body, "Transaction impact preview"
     assert_includes response.body, "fee.assessed"
 
     post branch_fee_assessments_path(@account), params: {
