@@ -18,6 +18,13 @@ module Organization
         DefaultOperatingUnit.branch!
       end
 
+      # Raises NotAuthorized if missing/inactive or operator has no capability scoped to the unit.
+      def self.assert_operator_scoped_to_operating_unit!(operator:, operating_unit_id:)
+        raise NotAuthorized, "operating unit required" if operating_unit_id.blank?
+
+        operating_unit_from_explicit(operator, operating_unit_id)
+      end
+
       def self.operating_unit_from_session(teller_session_id)
         return nil if teller_session_id.blank?
 

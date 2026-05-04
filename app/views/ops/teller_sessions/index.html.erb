@@ -1,0 +1,42 @@
+<% content_for :title, "Ops Teller Sessions - BankCORE" %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+  <div>
+    <h1 class="text-3xl font-semibold">Teller sessions</h1>
+    <p class="mt-2 text-slate-600">Open and pending-supervisor drawer sessions (institution-wide).</p>
+  </div>
+  <%= link_to "Close package", ops_close_package_path, class: "rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" %>
+</section>
+
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <% if @sessions.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Session</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3">Drawer</th>
+            <th class="px-5 py-3">Operating unit</th>
+            <th class="px-5 py-3">Opened</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% @sessions.each do |session| %>
+            <tr class="hover:bg-slate-50">
+              <td class="px-5 py-4">
+                <%= link_to "##{session.id}", ops_teller_session_path(session), class: "font-semibold text-slate-950 underline" %>
+              </td>
+              <td class="px-5 py-4"><%= ops_status_badge(session.status) %></td>
+              <td class="px-5 py-4"><%= session.drawer_code.presence || "Default drawer" %></td>
+              <td class="px-5 py-4"><%= session.operating_unit&.code %> — <%= session.operating_unit&.name %></td>
+              <td class="px-5 py-4"><%= ops_time(session.opened_at) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No open or pending-supervisor sessions.</div>
+  <% end %>
+</section>

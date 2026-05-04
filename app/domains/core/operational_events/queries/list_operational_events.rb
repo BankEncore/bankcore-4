@@ -10,6 +10,7 @@ module Core
         MAX_SPAN_DAYS = 31
         DEFAULT_LIMIT = 50
         MAX_LIMIT = 200
+        MAX_EVENT_TYPE_IN = 10
 
         # @return [Hash] :rows (Array<OperationalEvent>), :envelope (Hash), :next_after_id, :has_more
         def self.call(
@@ -20,6 +21,7 @@ module Core
           destination_account_id: nil,
           status: nil,
           event_type: nil,
+          event_type_in: nil,
           channel: nil,
           actor_id: nil,
           reference_id: nil,
@@ -27,6 +29,7 @@ module Core
           reversal_of_event_id: nil,
           deposit_product_id: nil,
           product_code: nil,
+          operating_unit_id: nil,
           after_id: nil,
           limit: nil
         )
@@ -46,6 +49,9 @@ module Core
           end
           raise InvalidQuery, "limit must be between 1 and #{MAX_LIMIT}" unless lim.between?(1, MAX_LIMIT)
 
+          normalized_event_type_in = normalize_event_type_in!(event_type_in)
+          raise InvalidQuery, "cannot combine event_type and event_type_in" if event_type.present? && normalized_event_type_in.present?
+
           scope = base_scope(
             from_date: from_date,
             to_date: to_date,
@@ -53,13 +59,15 @@ module Core
             destination_account_id: destination_account_id,
             status: status,
             event_type: event_type,
+            event_types: normalized_event_type_in,
             channel: channel,
             actor_id: actor_id,
             reference_id: reference_id,
             idempotency_key: idempotency_key,
             reversal_of_event_id: reversal_of_event_id,
             deposit_product_id: deposit_product_id,
-            product_code: product_code
+            product_code: product_code,
+            operating_unit_id: operating_unit_id
           )
 
           scope = scope.where("operational_events.id > ?", after_id.to_i) if after_id.present?
@@ -127,19 +135,37 @@ module Core
         end
         private_class_method :validate_range!
 
+        def self.normalize_event_type_in!(raw)
+          return nil if raw.blank?
+
+          values = Array.wrap(raw).flat_map { |v| v.to_s.split(",") }.map(&:strip).reject(&:blank?).uniq
+          return nil if values.empty?
+
+          raise InvalidQuery, "event_type_in must not exceed #{MAX_EVENT_TYPE_IN} values" if values.size > MAX_EVENT_TYPE_IN
+
+          values
+        end
+        private_class_method :normalize_event_type_in!
+
         def self.base_scope(from_date:, to_date:, source_account_id:, destination_account_id:, status:, event_type:,
-                            channel:, actor_id:, reference_id:, idempotency_key:, reversal_of_event_id:,
-                            deposit_product_id:, product_code:)
+                            event_types:, channel:, actor_id:, reference_id:, idempotency_key:, reversal_of_event_id:,
+                            deposit_product_id:, product_code:, operating_unit_id:)
           scope = Models::OperationalEvent.where(business_date: from_date..to_date)
           scope = scope.where(source_account_id: source_account_id.to_i) if source_account_id.present?
           scope = scope.where(destination_account_id: destination_account_id.to_i) if destination_account_id.present?
           scope = scope.where(status: status.to_s) if status.present?
-          scope = scope.where(event_type: event_type.to_s) if event_type.present?
+          if event_types.present?
+            scope = scope.where(event_type: event_types)
+          elsif event_type.present?
+            scope = scope.where(event_type: event_type.to_s)
+          end
           scope = scope.where(channel: channel.to_s) if channel.present?
           scope = scope.where(actor_id: actor_id.to_i) if actor_id.present?
           scope = scope.where(reference_id: reference_id.to_s) if reference_id.present?
           scope = scope.where(idempotency_key: idempotency_key.to_s) if idempotency_key.present?
           scope = scope.where(reversal_of_event_id: reversal_of_event_id.to_i) if reversal_of_event_id.present?
+          ou = operating_unit_id.to_i
+          scope = scope.where(operating_unit_id: ou) if ou.positive?
 
           account_ids = matching_deposit_account_ids(deposit_product_id: deposit_product_id, product_code: product_code)
           if account_ids.nil?

@@ -1,6 +1,6 @@
 # ADR-0042: Business-date monitoring and drilldown surfaces
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Date:** 2026-05-03  
 **Decision Type:** Internal workspace read model / monitoring surface / drilldown contract  
 **Aligns with:** [ADR-0016](0016-trial-balance-and-eod-readiness.md), [ADR-0018](0018-business-date-close-and-posting-invariant.md), [ADR-0025](0025-internal-workspace-ui.md), [ADR-0026](0026-branch-csr-servicing.md), [ADR-0031](0031-cash-inventory-and-management.md), [ADR-0032](0032-operating-units-and-branch-scope.md), [ADR-0037](0037-internal-staff-authorized-surfaces.md), [ADR-0038](0038-account-balance-projections-and-daily-snapshots.md), [ADR-0039](0039-teller-session-drawer-custody-projection.md), [ADR-0041](0041-close-package-and-eod-classification-taxonomy.md)
@@ -184,7 +184,7 @@ Examples:
   - time scope: session-lifecycle scoped
   - filters: session `status IN (open, pending_supervisor)`
   - aggregation: count of matching teller sessions
-  - drill target: teller-session queue or list with the same status filter
+  - drill target: `Ops::TellerSessionsController#index` with the same status filter (canonical Level 2 once implemented; see §4.6)
 
 - `pending_cash_movements_count`
   - owner: readiness or Cash-domain support query as applicable
@@ -214,6 +214,62 @@ BankCORE will use these time-scope categories:
   - examples: pending cash movements, unresolved cash variances, active holds where the primary question is whether the hold is active now
 
 When a metric mixes concerns, the metric definition must state which scope is primary and why.
+
+### 4.6 Implementation resolutions (binding)
+
+The following rules constrain HTML and shared-query work that implements this ADR. They do not change close policy, posting rules, or `eod_ready` composition.
+
+**Operational event listing (`ListOperationalEvents`)**
+
+- Extensions are **additive only**: default behavior, ordering, pagination, and single-`event_type` filtering remain unchanged when new params are omitted.
+- **`event_type_in`** (multi-value filter) uses repeated query parameters, for example  
+  `event_type_in[]=override.requested&event_type_in[]=override.approved`.
+- A request must **not** supply both **`event_type`** and **`event_type_in`**; respond with **`422 invalid_request`** (ambiguous drill semantics).
+- Normalize **`event_type_in`**: strip blanks, de-duplicate, cap at **10** types; if the normalized list is empty, treat the filter as **absent**.
+- Validation for **`event_type_in`** applies **only** when that param is supplied.
+- Callers include **Ops HTML**, **Branch HTML**, and **Teller JSON-backed** read paths. Do not tighten the shared query in ways that break existing account-activity or teller event listing behavior.
+- **Teller JSON** does not need to expose **`event_type_in`** in the first implementation slice unless explicitly chosen; controllers may continue permitting **`event_type`** only there.
+
+**Cash warning drills**
+
+- **`pending_cash_movements_count`** may drill to **`ops/cash`** when that screen already surfaces pending movements matching the metric intent.
+- **`unresolved_cash_variances_count`** remains **non-drillable** until a destination exposes the **same filtered record set** (reviewed business date and statuses) as the readiness count.
+- Do not make a warning **clickable** unless the landing screen explains the **same underlying record set** as the count (see §4.3 and §8.4).
+
+**Ops teller sessions**
+
+- **`Ops::TellerSessionsController#index`** is the canonical **Level 2** teller-session drill surface.
+- Default index filter: **`status IN (open, pending_supervisor)`**; default ordering: **`opened_at`**, then **`id`**.
+- **`#show`** should present at minimum: status, operator, operating unit, drawer code, cash location, `opened_at`, `closed_at`, `opening_cash_minor_units`, `expected_cash_minor_units`, `actual_cash_minor_units`, `variance_minor_units`, supervisor operator, and **`supervisor_approved_at`** (field names align to persisted columns as implemented).
+- Close-package session blockers and session lists link here once the controller exists.
+- **Same-page anchors** on the close package are **not** part of the long-term drill contract.
+
+**Held bucket**
+
+- The **`held`** bucket may remain **informational** (no Ops holds index) until after Ops teller-session pages ship; **event-backed** buckets and **raw** event breakdown drills take priority.
+- Revisit **`Ops::HoldsController#index`** after teller-session drills are canonical.
+
+**Branch `operating_unit_id` filtering**
+
+- When Branch event search applies **`operating_unit_id`**, the active scope must be **visible** in the UI; **no** hidden narrowing.
+- Provide **“Show all units”** (or equivalent) to clear the filter.
+- Branch-scoped views do **not** change institution-level **`eod_ready`** or close authority.
+
+**Explainability minimum**
+
+- Drill destinations must show the **reviewed business date** (when supplied by the drill) and **active filters** in visible copy, not only in form fields.
+- **Ops event search:** keep and reinforce the existing envelope/context line.
+- **Ops cash** and future Ops holds/session indexes: add a short **filter/context banner** when reached from close-package drills.
+
+**Authorization**
+
+- New Ops teller-session pages follow existing **`Ops::ApplicationController`** posture (e.g. **`require_ops_operator!`**). No extra capability gate unless product explicitly adds one.
+- If **`operating_unit_id`** is accepted on Ops or Branch event search, validate it against operating units the operator may legitimately scope (**no** arbitrary-ID probing).
+
+**Navigation**
+
+- For metrics backed by operational events, the default Level 2 landing remains **`ops/operational_events`** (§6.5).
+- For the **exception** classification bucket, the default drill is **`ops/operational_events`** with **`business_date`** and **`event_type=overdraft.nsf_denied`**. **`ops/exceptions`** remains a **workflow queue**, not the canonical Level 2 hub for that bucket count.
 
 ---
 
@@ -283,7 +339,7 @@ The following contract standardizes where Level 1 links should land.
 
 `open_teller_sessions_count` or `pending_supervisor` sessions
 
-- drill target: teller-session list filtered to open and pending-supervisor states
+- drill target: **`Ops::TellerSessionsController#index`** with default filter `status IN (open, pending_supervisor)` (ships in implementation Phase 3; until then, session blockers on the close package stay non-clickable rather than using anchor-only bridges as the long-term contract)
 - primary record: teller session
 - financial follow-up: expected cash, close attempt, variance approval evidence
 
@@ -297,13 +353,13 @@ The following contract standardizes where Level 1 links should land.
 
 `pending_cash_movements_count`
 
-- drill target: cash approvals list filtered to pending approvals
+- drill target: **`ops/cash`** when that screen already presents pending movements consistent with the readiness count
 - primary record: cash movement
 
 `unresolved_cash_variances_count`
 
-- drill target: cash reconciliation or variance review list
-- primary record: cash variance
+- drill target: **none** until a reconciliation or variance list exposes the **same** filtered record set as the readiness count for the reviewed business date (until then, display as informational only; see §4.6)
+- primary record: cash variance (conceptual)
 
 ### 6.3 Classification buckets from ADR-0041
 
@@ -321,16 +377,17 @@ The following contract standardizes where Level 1 links should land.
 
 `held`
 
-- drill target: hold index filtered to active holds relevant to the reviewed business date
+- drill target: hold index filtered to active holds relevant to the reviewed business date (**may remain informational** until an Ops holds index exists; §4.6)
 - if event-linked, hold detail should link back to the originating operational event
 
 `overridden`
 
-- drill target: Ops operational event search filtered to override event families
+- drill target: Ops operational event search with **`event_type_in`** covering `override.requested` and `override.approved` for the reviewed **`business_date`** (see §4.6); Ops search form multi-select for `event_type_in` is optional
 
 `exception`
 
-- drill target: Ops operational event search or exception queue filtered to abnormal event families such as `overdraft.nsf_denied`
+- drill target (default): Ops operational event search with **`business_date`** and **`event_type=overdraft.nsf_denied`**
+- **`ops/exceptions`** remains a workflow queue, **not** the canonical Level 2 hub for this bucket count
 
 ### 6.4 Raw breakdowns
 
@@ -372,15 +429,18 @@ Branch event detail may remain role-appropriate and action-oriented, but it shou
 
 ### 7.2 Teller-session detail
 
-Teller-session drilldown should explain:
+The canonical Level 3 surface for teller-session drills from the close package is **`Ops::TellerSessionsController#show`** (Level 2 is **`#index`** per §6.1).
 
-- operating unit
+It should explain at minimum:
+
+- status
 - operator
+- operating unit
+- drawer code and cash location
 - opened and closed timestamps
-- expected cash
-- actual cash
-- variance
-- supervisor approval state
+- **opening**, **expected**, and **actual** cash (minor units as persisted)
+- variance (minor units)
+- supervisor operator and **`supervisor_approved_at`**
 
 This truth path is teller-session and cash-control oriented, not journal-first.
 
@@ -428,10 +488,10 @@ The close package should stay institution-focused, not branch-themed.
 
 When a user drills from a summary number, the destination screen should make the number's definition legible.
 
-This may be as simple as showing:
+**Minimum (binding for implementation):** show **reviewed business date** (when supplied by the drill) and **active filters** in **visible copy**, not only embedded in form fields. Reinforce the Ops operational-event search envelope line; for **`ops/cash`** and future Ops holds or teller-session indexes reached from drills, add a short **filter/context banner**.
 
-- active filters
-- reviewed business date
+Additionally helpful:
+
 - record count
 - grouping dimension if grouped
 
@@ -444,25 +504,27 @@ Later slices may expose an explicit "Explain this number" action, but the minimu
 ### Phase 1: Make current business-date monitoring explicit
 
 - keep `ops/close_package` as canonical
-- add clearer current open-day language where needed
-- add branch-facing compact status panel linking to Ops close package
+- add clearer current open-day language where needed (reviewed date vs `current_business_on`)
+- add branch-facing compact status panel linking to Ops close package (and Branch events / cash as in §8.2)
 
-### Phase 2: Finish bucket drill links
+### Phase 2: Finish bucket drill links (event-backed first)
 
-- make close-package blocker, warning, and bucket counts clickable
-- standardize query params used by each link target
-- make raw status/channel/type counts link into event search
+- make **event-backed** classification buckets and **raw** status/channel/event-type breakdown counts clickable into **`ops/operational_events`** with standardized params (including **`event_type_in`** for the overridden bucket per §4.6)
+- **`pending_cash_movements_count`** may drill to **`ops/cash`** when consistent with the metric
+- **`unresolved_cash_variances_count`** and **`held`** remain **informational** until matching destinations exist (§4.6)
+- **session-related blockers** remain **non-clickable** until **`Ops::TellerSessionsController`** ships in Phase 3
 
-### Phase 3: Tighten record detail parity
+### Phase 3: Tighten record detail parity and canonical session drills
 
-- keep Ops event detail as canonical
-- improve Branch event detail where key trace fields are missing
-- add or improve native teller-session and Cash drill surfaces where counts currently dead-end
+- keep Ops event detail as canonical; improve Branch event detail where key trace fields are missing
+- ship **`Ops::TellerSessionsController#index`** and **`#show`** per §4.6 and §7.2; wire close-package session blockers and session lists to these routes
+- remove or ignore any temporary anchor-only bridges once session pages exist
+- revisit whether **`Ops::HoldsController#index`** is required immediately or can follow
 
 ### Phase 4: Strengthen scope-aware filtering
 
-- extend relevant event and support screens with better `operating_unit_id` filtering where the underlying records support it
-- preserve the distinction between operating-unit filtering and institution-level close authority
+- extend relevant event and support screens with **`operating_unit_id`** filtering where records support it; validate scope server-side (**no** arbitrary-ID probing per §4.6)
+- Branch: visible active scope and **“Show all units”** (or equivalent); preserve distinction between operating-unit filtering and institution-level close authority
 
 ### Phase 5: Optional later enhancements
 
@@ -510,5 +572,6 @@ Later slices may expose an explicit "Explain this number" action, but the minimu
 - Branch event index: `app/views/branch/operational_events/index.html.erb`
 - Branch event detail: `app/views/branch/operational_events/show.html.erb`
 - Ops exceptions: `app/views/ops/exceptions/index.html.erb`
+- Ops teller sessions: `app/controllers/ops/teller_sessions_controller.rb`, `app/views/ops/teller_sessions/index.html.erb`, `app/views/ops/teller_sessions/show.html.erb`
 - Branch cash position: `app/views/branch/cash/index.html.erb`
 - Ops cash monitoring: `app/views/ops/cash/index.html.erb`

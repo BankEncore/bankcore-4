@@ -12,6 +12,40 @@
   </div>
 </section>
 
+<% if current_business_date.present? %>
+  <section class="mt-8 rounded border border-slate-200 bg-white p-6 shadow-sm" aria-label="Business date status">
+    <h2 class="text-xl font-semibold text-slate-950">Today (business date)</h2>
+    <p class="mt-1 text-sm text-slate-600">Institution open processing day and branch situational snapshot (ADR-0042).</p>
+    <dl class="mt-4 grid gap-3 text-sm md:grid-cols-3">
+      <div>
+        <dt class="font-medium text-slate-500">Current business date</dt>
+        <dd class="text-lg font-semibold text-slate-950"><%= current_business_date.iso8601 %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-slate-500">Open sessions</dt>
+        <dd class="text-lg font-semibold text-slate-950"><%= @session_dashboard.open_sessions.size %></dd>
+      </div>
+      <div>
+        <dt class="font-medium text-slate-500">Pending supervisor</dt>
+        <dd class="text-lg font-semibold text-slate-950"><%= @session_dashboard.pending_supervisor_sessions.size %></dd>
+      </div>
+    </dl>
+    <div class="mt-4 flex flex-wrap gap-2 text-sm">
+      <% if branch_operator_can?(cap::OPERATIONAL_EVENT_VIEW) %>
+        <%= link_to "Branch events (#{current_business_date.iso8601})", branch_events_path(business_date: current_business_date.iso8601), class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+      <% end %>
+      <% if branch_operator_can?(cap::CASH_POSITION_VIEW) %>
+        <%= link_to "Cash position", branch_cash_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+      <% end %>
+      <% if ops_access? %>
+        <%= link_to "Ops close package", ops_close_package_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white shadow-sm" %>
+      <% else %>
+        <span class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">Full institution close review requires Ops workspace access.</span>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
 <% csr_section = capture do %>
 <section id="csr" class="<%= section_spacing.call("csr") %>scroll-mt-8 rounded border border-slate-200 bg-white p-6 shadow-sm">
   <h2 class="text-xl font-semibold text-slate-950">CSR — customer servicing</h2>

@@ -1,6 +1,18 @@
 <% content_for :title, "Cash Approvals - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+<% if @reviewed_business_date.present? || @from_close_package %>
+  <section class="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+    <p class="font-medium text-slate-950">Drill context</p>
+    <% if @reviewed_business_date.present? %>
+      <p class="mt-1">Reviewed business date from close package: <strong><%= @reviewed_business_date.iso8601 %></strong>.</p>
+    <% end %>
+    <% if @from_close_package %>
+      <p class="mt-1 text-slate-600">Opened from close-package pending cash movements warning. Pending lists reflect current approvals workload — compare counts to readiness when scopes align.</p>
+    <% end %>
+  </section>
+<% end %>
+
+<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end mt-8">
   <div>
     <h1 class="text-3xl font-semibold">Cash approvals</h1>
     <p class="mt-2 text-slate-600">Review pending vault movements and Cash-domain variances.</p>

@@ -13,6 +13,7 @@
       business_date_to: "Date to",
       status: "Status",
       event_type: "Event type",
+      operating_unit_id: "Operating unit id",
       channel: "Channel",
       source_account_id: "Source account id",
       destination_account_id: "Destination account id",
@@ -29,6 +30,27 @@
         <%= form.text_field field, value: params[field], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
       </div>
     <% end %>
+
+    <div class="md:col-span-4">
+      <p class="text-sm font-medium text-slate-700">Event types (OR) — optional multi-select for drills</p>
+      <% preset_types = Array.wrap(params[:event_type_in]).reject(&:blank?) %>
+      <%= form.select :event_type_in,
+            options_for_select(
+              [
+                [ "override.requested", "override.requested" ],
+                [ "override.approved", "override.approved" ],
+                [ "posting.reversal", "posting.reversal" ],
+                [ "overdraft.nsf_denied", "overdraft.nsf_denied" ]
+              ],
+              preset_types
+            ),
+            {},
+            multiple: true,
+            name: "event_type_in[]",
+            class: "mt-1 min-h-[7rem] w-full max-w-xl rounded border border-slate-300 px-3 py-2",
+            size: 6 %>
+      <p class="mt-1 text-xs text-slate-500">Hold Ctrl/Cmd to select multiple. Leave empty when using single Event type above.</p>
+    </div>
 
     <div class="flex items-end gap-3 md:col-span-4">
       <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
@@ -47,6 +69,21 @@
     Showing <%= envelope[:business_date_from].iso8601 %> to <%= envelope[:business_date_to].iso8601 %>.
     Current business date is <%= envelope[:current_business_on].iso8601 %>.
     Posting day closed: <%= envelope[:posting_day_closed] ? "yes" : "no" %>.
+    Results on this page: <%= @event_search[:rows].size %><%= @event_search[:has_more] ? " (more on next page)" : "" %>.
+    <% if @scoped_operating_unit.present? %>
+      Operating unit filter: <strong><%= @scoped_operating_unit.code %></strong> (id <%= @scoped_operating_unit.id %>).
+    <% end %>
+    <% if params[:event_type_in].present? %>
+      Event types (OR): <strong><%= Array.wrap(params[:event_type_in]).reject(&:blank?).join(", ") %></strong>.
+    <% elsif params[:event_type].present? %>
+      Event type: <strong><%= params[:event_type] %></strong>.
+    <% end %>
+    <% if params[:status].present? %>
+      Status: <strong><%= params[:status] %></strong>.
+    <% end %>
+    <% if params[:channel].present? %>
+      Channel: <strong><%= params[:channel] %></strong>.
+    <% end %>
   </section>
 
   <section class="mt-6 rounded border border-slate-200 bg-white shadow-sm">

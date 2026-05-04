@@ -18,8 +18,30 @@
     <div><dt class="font-medium text-slate-500">Destination account</dt><dd><%= @event.destination_account_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></dd></div>
     <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reversal of event id</dt><dd><%= @event.reversal_of_event_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reversed by event id</dt><dd><%= @event.reversed_by_event_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name || @event.actor_id || "None" %></dd></div>
+    <div>
+      <dt class="font-medium text-slate-500">Operating unit</dt>
+      <dd>
+        <% if @event.operating_unit.present? %>
+          <%= @event.operating_unit.code %> — <%= @event.operating_unit.name %> (id <%= @event.operating_unit.id %>)
+        <% else %>
+          None
+        <% end %>
+      </dd>
+    </div>
+    <% if @event.posting_batches.any? %>
+      <div class="md:col-span-2">
+        <dt class="font-medium text-slate-500">Posting batches / journal entries</dt>
+        <dd class="mt-1 text-slate-700">
+          Batches: <%= @event.posting_batches.map(&:id).join(", ") %> ·
+          Entries: <%= @event.posting_batches.flat_map(&:journal_entries).map(&:id).join(", ") %>
+          <span class="block text-xs text-slate-500">Full journal grid remains on Ops event detail.</span>
+        </dd>
+      </div>
+    <% end %>
     <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
       <div class="md:col-span-2">
         <dt class="font-medium text-slate-500">Check deposit items (payload)</dt>
@@ -29,6 +51,9 @@
   </dl>
 
   <div class="mt-6 flex flex-wrap gap-3">
+    <% if ops_access? %>
+      <%= link_to "View in Ops", ops_operational_event_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+    <% end %>
     <%= link_to "Trace receipt", branch_event_receipt_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     <% if @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
       <%= button_to "Post event", branch_event_post_path(@event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>

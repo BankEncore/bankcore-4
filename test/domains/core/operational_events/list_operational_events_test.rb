@@ -72,6 +72,41 @@ class CoreOperationalEventsListOperationalEventsTest < ActiveSupport::TestCase
     assert_equal 1, result[:rows].size
   end
 
+  test "filters by event_type_in" do
+    create_event!(event_type: "override.requested", idempotency_key: "o-req")
+    create_event!(event_type: "override.approved", idempotency_key: "o-app")
+    create_event!(event_type: "deposit.accepted", idempotency_key: "o-dep")
+
+    result = Core::OperationalEvents::Queries::ListOperationalEvents.call(
+      business_date: Date.new(2026, 5, 10),
+      event_type_in: %w[override.requested override.approved]
+    )
+    assert_equal [ "override.requested", "override.approved" ].to_set, result[:rows].map(&:event_type).to_set
+  end
+
+  test "rejects event_type combined with event_type_in" do
+    assert_raises(Core::OperationalEvents::Queries::ListOperationalEvents::InvalidQuery) do
+      Core::OperationalEvents::Queries::ListOperationalEvents.call(
+        event_type: "fee.assessed",
+        event_type_in: %w[override.requested]
+      )
+    end
+  end
+
+  test "filters by operating_unit_id" do
+    ev = record_deposit!(idem: "ou-filter", amount: 77)
+    ou_id = @session.operating_unit_id
+    assert ou_id.present?
+
+    result = Core::OperationalEvents::Queries::ListOperationalEvents.call(operating_unit_id: ou_id)
+    assert_equal [ ev.id ], result[:rows].map(&:id)
+
+    empty = Core::OperationalEvents::Queries::ListOperationalEvents.call(
+      operating_unit_id: ou_id + 99_999
+    )
+    assert_empty empty[:rows]
+  end
+
   test "filters by support search keys" do
     original = create_event!(
       event_type: "fee.assessed",

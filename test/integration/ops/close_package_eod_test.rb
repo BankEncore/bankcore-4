@@ -15,6 +15,7 @@ class OpsClosePackageEodTest < ActionDispatch::IntegrationTest
     internal_login!(username: "ops-close-pkg")
     get ops_close_package_path
     assert_response :success
+    assert_includes response.body, "Business date context"
     assert_includes response.body, "Can we close?"
     assert_includes response.body, "Classified evidence (primary buckets)"
     assert_includes response.body, "Close business date"
