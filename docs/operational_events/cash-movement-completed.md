@@ -26,6 +26,8 @@ The event confirms custody moved inside institutional cash ownership. It must no
 
 `reference_id` is the numeric `cash_movements.id`; amount and currency mirror the movement row.
 
+`cash_movements` may include optional **`teller_session_id`**. When present on a completed vault/drawer movement, teller session **expected** cash can include that movement’s signed delta; unattributed movements change custody balances only ([ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)).
+
 ## Lifecycle
 
 Cash commands create this row directly as `posted` after balances are updated.
@@ -44,7 +46,7 @@ Corrections use a compensating Cash movement, not `posting.reversal`.
 
 ## Relationships
 
-`cash_movements.operational_event_id` points to this event.
+`cash_movements.operational_event_id` points to this event. **`cash_movements.teller_session_id`** optionally links the movement to a teller session for accountability.
 
 ## Module ownership
 
@@ -52,7 +54,7 @@ Corrections use a compensating Cash movement, not `posting.reversal`.
 
 ## References
 
-[ADR-0031](../adr/0031-cash-inventory-and-management.md)
+[ADR-0031](../adr/0031-cash-inventory-and-management.md), [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)
 
 ## Examples
 

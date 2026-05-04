@@ -341,6 +341,172 @@ class CashInventoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "posted teller cash event projects into linked drawer once" do
+    account = account!
+    session = Teller::Commands::OpenSession.call(drawer_code: "PROJECT-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    event = record_teller_deposit!(account: account, session: session, amount_minor_units: 1_000)
+
+    Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
+
+    assert_equal 1_000, session.cash_location.cash_balance.reload.amount_minor_units
+    projection = Cash::Models::CashTellerEventProjection.find_by!(operational_event_id: event.id)
+    assert_equal 1_000, projection.delta_minor_units
+    assert_equal session.id, projection.teller_session_id
+
+    Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
+
+    assert_equal 1_000, session.cash_location.cash_balance.reload.amount_minor_units
+    assert_equal 1, Cash::Models::CashTellerEventProjection.where(operational_event_id: event.id).count
+  end
+
+  test "posted reversal projects opposite drawer delta after session close" do
+    account = account!
+    session = Teller::Commands::OpenSession.call(drawer_code: "REV-PROJECT-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    event = record_teller_deposit!(account: account, session: session, amount_minor_units: 1_000)
+    Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
+    Teller::Commands::CloseSession.call(teller_session_id: session.id, actual_cash_minor_units: 1_000)
+
+    reversal = Core::OperationalEvents::Commands::RecordReversal.call(
+      original_operational_event_id: event.id,
+      channel: "branch",
+      idempotency_key: "reverse-projection-#{SecureRandom.hex(4)}",
+      actor_id: @supervisor.id
+    )[:event]
+    Core::Posting::Commands::PostEvent.call(operational_event_id: reversal.id)
+
+    assert_equal 0, session.cash_location.cash_balance.reload.amount_minor_units
+    projection = Cash::Models::CashTellerEventProjection.find_by!(operational_event_id: reversal.id)
+    assert_equal(-1_000, projection.delta_minor_units)
+    assert_equal event.id, projection.reversal_of_operational_event_id
+    assert_equal session.id, projection.teller_session_id
+  end
+
+  test "cash balance rebuild interleaves teller projections and counts" do
+    account = account!
+    session = Teller::Commands::OpenSession.call(drawer_code: "REBUILD-PROJECT-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    event = record_teller_deposit!(account: account, session: session, amount_minor_units: 1_000)
+    Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
+    count = Cash::Commands::RecordCashCount.call(
+      cash_location_id: session.cash_location_id,
+      counted_amount_minor_units: 600,
+      expected_amount_minor_units: 1_000,
+      actor_id: @teller.id,
+      idempotency_key: "projection-rebuild-count"
+    )
+    projection = Cash::Models::CashTellerEventProjection.find_by!(operational_event_id: event.id)
+    count.update_columns(created_at: Time.zone.local(2026, 4, 29, 9, 0, 0), updated_at: Time.current)
+    projection.update_columns(applied_at: Time.zone.local(2026, 4, 29, 10, 0, 0), updated_at: Time.current)
+    session.cash_location.cash_balance.update!(amount_minor_units: 0)
+
+    Cash::Commands::RebuildCashBalances.call
+
+    assert_equal 1_600, session.cash_location.cash_balance.reload.amount_minor_units
+  end
+
+  test "session-attributed vault drawer movement changes expected cash" do
+    vault = vault!
+    Cash::Commands::RecordCashCount.call(
+      cash_location_id: vault.id,
+      counted_amount_minor_units: 10_000,
+      expected_amount_minor_units: 0,
+      actor_id: @teller.id,
+      idempotency_key: "session-attributed-vault-funding"
+    )
+    session = Teller::Commands::OpenSession.call(drawer_code: "ATTRIB-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    movement = Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: session.cash_location_id,
+      amount_minor_units: 2_500,
+      actor_id: @teller.id,
+      teller_session_id: session.id,
+      idempotency_key: "session-attributed-vault-to-drawer"
+    )
+
+    assert_equal Cash::Models::CashMovement::STATUS_PENDING_APPROVAL, movement.status
+    assert_equal 0, Teller::Queries::ExpectedCashForSession.call(teller_session_id: session.id)
+
+    Cash::Commands::ApproveCashMovement.call(cash_movement_id: movement.id, approving_actor_id: @supervisor.id)
+
+    assert_equal 2_500, Teller::Queries::ExpectedCashForSession.call(teller_session_id: session.id)
+  end
+
+  test "unattributed vault drawer movement changes custody only" do
+    vault = vault!
+    Cash::Commands::RecordCashCount.call(
+      cash_location_id: vault.id,
+      counted_amount_minor_units: 10_000,
+      expected_amount_minor_units: 0,
+      actor_id: @teller.id,
+      idempotency_key: "unattributed-vault-funding"
+    )
+    session = Teller::Commands::OpenSession.call(drawer_code: "UNATTRIB-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    movement = Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: session.cash_location_id,
+      amount_minor_units: 2_500,
+      actor_id: @teller.id,
+      idempotency_key: "unattributed-vault-to-drawer"
+    )
+
+    Cash::Commands::ApproveCashMovement.call(cash_movement_id: movement.id, approving_actor_id: @supervisor.id)
+
+    assert_equal 2_500, session.cash_location.cash_balance.reload.amount_minor_units
+    assert_equal 0, Teller::Queries::ExpectedCashForSession.call(teller_session_id: session.id)
+  end
+
+  test "session-attributed cash movement validates session at request and completion" do
+    vault = vault!
+    Cash::Commands::RecordCashCount.call(
+      cash_location_id: vault.id,
+      counted_amount_minor_units: 10_000,
+      expected_amount_minor_units: 0,
+      actor_id: @teller.id,
+      idempotency_key: "session-validation-vault-funding"
+    )
+    session = Teller::Commands::OpenSession.call(drawer_code: "ATTRIB-VALID-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    other_session = Teller::Commands::OpenSession.call(drawer_code: "ATTRIB-BAD-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+
+    assert_raises(Cash::Commands::TransferCash::InvalidRequest) do
+      Cash::Commands::TransferCash.call(
+        source_cash_location_id: vault.id,
+        destination_cash_location_id: session.cash_location_id,
+        amount_minor_units: 1_000,
+        actor_id: @teller.id,
+        teller_session_id: 0,
+        idempotency_key: "unknown-session-attribution"
+      )
+    end
+
+    mismatched = Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: session.cash_location_id,
+      amount_minor_units: 1_000,
+      actor_id: @teller.id,
+      teller_session_id: other_session.id,
+      idempotency_key: "mismatched-session-attribution"
+    )
+    error = assert_raises(Cash::Commands::ApproveCashMovement::InvalidState) do
+      Cash::Commands::ApproveCashMovement.call(cash_movement_id: mismatched.id, approving_actor_id: @supervisor.id)
+    end
+    assert_includes error.message, "drawer does not match"
+    assert_equal Cash::Models::CashMovement::STATUS_PENDING_APPROVAL, mismatched.reload.status
+
+    valid = Cash::Commands::TransferCash.call(
+      source_cash_location_id: vault.id,
+      destination_cash_location_id: session.cash_location_id,
+      amount_minor_units: 1_000,
+      actor_id: @teller.id,
+      teller_session_id: session.id,
+      idempotency_key: "closed-session-attribution"
+    )
+    Teller::Commands::CloseSession.call(teller_session_id: session.id, actual_cash_minor_units: 0)
+    error = assert_raises(Cash::Commands::ApproveCashMovement::InvalidState) do
+      Cash::Commands::ApproveCashMovement.call(cash_movement_id: valid.id, approving_actor_id: @supervisor.id)
+    end
+    assert_includes error.message, "must be open"
+    assert_equal Cash::Models::CashMovement::STATUS_PENDING_APPROVAL, valid.reload.status
+  end
+
   test "external cash shipment receipt requires shipment capability and branch vault destination" do
     drawer = drawer!("D1")
 
@@ -431,5 +597,27 @@ class CashInventoryTest < ActiveSupport::TestCase
       operating_unit_id: @operating_unit.id,
       actor_id: @teller.id
     )
+  end
+
+  def account!
+    party = Party::Commands::CreateParty.call(
+      party_type: "individual",
+      first_name: "Cash",
+      last_name: "Projection"
+    )
+    Accounts::Commands::OpenAccount.call(party_record_id: party.id)
+  end
+
+  def record_teller_deposit!(account:, session:, amount_minor_units:)
+    Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "deposit.accepted",
+      channel: "teller",
+      idempotency_key: "cash-projection-deposit-#{SecureRandom.hex(6)}",
+      amount_minor_units: amount_minor_units,
+      currency: "USD",
+      source_account_id: account.id,
+      teller_session_id: session.id,
+      actor_id: @teller.id
+    )[:event]
   end
 end

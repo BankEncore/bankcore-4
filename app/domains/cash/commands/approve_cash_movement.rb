@@ -24,6 +24,7 @@ module Cash
           if movement.actor_id.to_i == approving_actor_id.to_i
             raise InvalidState, "approver must not be the initiator"
           end
+          Cash::Commands::TransferCash.validate_session_attribution_for_completion!(movement)
 
           movement.update!(
             status: Cash::Models::CashMovement::STATUS_COMPLETED,

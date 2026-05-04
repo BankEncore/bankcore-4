@@ -7,7 +7,7 @@ module Teller
       class NotFound < Error; end
       class InvalidState < Error; end
 
-      def self.call(teller_session_id:, expected_cash_minor_units:, actual_cash_minor_units:)
+      def self.call(teller_session_id:, actual_cash_minor_units:)
         threshold = Rails.application.config.x.teller.variance_threshold_minor_units.to_i
 
         Teller::Models::TellerSession.transaction do
@@ -17,6 +17,7 @@ module Teller
             raise InvalidState, "session must be open, was #{session.status.inspect}"
           end
 
+          expected_cash_minor_units = Teller::Queries::ExpectedCashForSession.call(teller_session_id: session.id)
           variance = actual_cash_minor_units.to_i - expected_cash_minor_units.to_i
           attrs = {
             expected_cash_minor_units: expected_cash_minor_units,

@@ -37,6 +37,7 @@ module Cash
       belongs_to :actor, class_name: "Workspace::Models::Operator"
       belongs_to :approving_actor, class_name: "Workspace::Models::Operator", optional: true
       belongs_to :operational_event, class_name: "Core::OperationalEvents::Models::OperationalEvent", optional: true
+      belongs_to :teller_session, class_name: "Teller::Models::TellerSession", optional: true
 
       validates :amount_minor_units, numericality: { greater_than: 0 }
       validates :currency, inclusion: { in: %w[USD] }

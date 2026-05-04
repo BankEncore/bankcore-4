@@ -168,9 +168,9 @@ class OpsControlSurfacesTest < ActionDispatch::IntegrationTest
 
   test "teller variance queue approves pending session" do
     session = Teller::Commands::OpenSession.call(drawer_code: "variance-#{SecureRandom.hex(4)}")
+    session.update!(opening_cash_minor_units: 10_000)
     Teller::Commands::CloseSession.call(
       teller_session_id: session.id,
-      expected_cash_minor_units: 10_000,
       actual_cash_minor_units: 9_900
     )
 
@@ -290,7 +290,6 @@ class OpsControlSurfacesTest < ActionDispatch::IntegrationTest
     Core::Posting::Commands::PostEvent.call(operational_event_id: event.id)
     Teller::Commands::CloseSession.call(
       teller_session_id: session.id,
-      expected_cash_minor_units: amount_minor_units,
       actual_cash_minor_units: amount_minor_units
     )
   end

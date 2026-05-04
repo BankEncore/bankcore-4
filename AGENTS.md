@@ -61,6 +61,8 @@ After `bin/rails db:seed` in **development**, sample **`operators`** rows exist 
 
 **Cash variance threshold:** `TELLER_VARIANCE_THRESHOLD_MINOR_UNITS` (integer, default **0**). If `abs(actual - expected)` is **greater** than this value when closing a session, status becomes **`pending_supervisor`** until a supervisor calls **`approve_variance`**. When the threshold is **0**, any non-zero variance requires supervisor approval.
 
+**Teller session close:** **`POST /teller/teller_sessions/close`** supplies **actual** drawer count fields only; **`CloseSession`** computes **expected** cash internally (`Teller::Queries::ExpectedCashForSession`). Do not send or rely on client-authoritative **`expected_cash_minor_units`** ([docs/adr/0039-teller-session-drawer-custody-projection.md](docs/adr/0039-teller-session-drawer-custody-projection.md)).
+
 **GL posting for drawer variance (optional):** `TELLER_POST_DRAWER_VARIANCE_TO_GL` (default **false**). When enabled, **`CloseSession`** / **`ApproveSessionVariance`** create and post **`teller.drawer.variance.posted`** (`system` channel, signed `amount_minor_units`, GL **1110** / **5190**) for non-zero variance. See [docs/adr/0020-teller-drawer-variance-gl-posting.md](docs/adr/0020-teller-drawer-variance-gl-posting.md).
 
 **Open session for teller cash:** `TELLER_REQUIRE_OPEN_SESSION_FOR_CASH` (default **true**). When enabled, **`channel: teller`** **`deposit.accepted`** and **`withdrawal.posted`** require **`teller_session_id`** referencing an **open** session (`transfer.completed` exempt). Set to **`false`**, **`0`**, or **`no`** to disable.

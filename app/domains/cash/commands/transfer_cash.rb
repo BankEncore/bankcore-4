@@ -11,7 +11,7 @@ module Cash
 
       def self.call(source_cash_location_id:, destination_cash_location_id:, amount_minor_units:, actor_id:,
         idempotency_key:, approval_actor_id: nil, currency: "USD", business_date: nil, channel: "branch",
-        reason_code: nil)
+        reason_code: nil, teller_session_id: nil)
         on_date = business_date || Core::BusinessDate::Services::CurrentBusinessDate.call
         Core::BusinessDate::Services::AssertOpenPostingDate.call!(date: on_date)
 
@@ -21,8 +21,9 @@ module Cash
         raise InvalidRequest, "destination_cash_location_id not found" if destination.nil?
         validate_locations!(source, destination, currency)
         authorize_actor!(actor_id, source.operating_unit)
+        validate_teller_session_exists!(teller_session_id)
 
-        fp = fingerprint(source.id, destination.id, amount_minor_units, actor_id, approval_actor_id, currency, on_date, reason_code)
+        fp = fingerprint(source.id, destination.id, amount_minor_units, actor_id, approval_actor_id, currency, on_date, reason_code, teller_session_id)
 
         Cash::Models::CashMovement.transaction do
           existing = Cash::Models::CashMovement.lock.find_by(idempotency_key: idempotency_key)
@@ -49,6 +50,7 @@ module Cash
             status: status,
             movement_type: movement_type(source, destination),
             reason_code: reason_code,
+            teller_session_id: teller_session_id,
             idempotency_key: idempotency_key,
             request_fingerprint: fp,
             approved_at: status == Cash::Models::CashMovement::STATUS_COMPLETED && approval_actor_id.present? ? Time.current : nil,
@@ -56,6 +58,7 @@ module Cash
           )
 
           if movement.completed?
+            validate_session_attribution_for_completion!(movement)
             Cash::Services::BalanceProjector.apply_completed_movement!(movement)
             event = record_event!(movement, channel)
             movement.update!(operational_event: event)
@@ -109,6 +112,37 @@ module Cash
       end
       private_class_method :authorize_approval!
 
+      def self.validate_teller_session_exists!(teller_session_id)
+        return if teller_session_id.blank?
+        return if Teller::Models::TellerSession.exists?(id: teller_session_id)
+
+        raise InvalidRequest, "teller_session_id not found"
+      end
+      private_class_method :validate_teller_session_exists!
+
+      def self.validate_session_attribution_for_completion!(movement)
+        return if movement.teller_session_id.blank?
+
+        session = Teller::Models::TellerSession.find_by(id: movement.teller_session_id)
+        raise InvalidRequest, "teller_session_id not found" if session.nil?
+        unless session.status == Teller::Models::TellerSession::STATUS_OPEN
+          raise InvalidRequest, "teller session must be open"
+        end
+
+        expected_drawer_id = case movement.movement_type
+        when Cash::Models::CashMovement::TYPE_VAULT_TO_DRAWER
+          movement.destination_cash_location_id
+        when Cash::Models::CashMovement::TYPE_DRAWER_TO_VAULT
+          movement.source_cash_location_id
+        else
+          raise InvalidRequest, "teller_session_id is only supported for vault/drawer movements"
+        end
+
+        unless session.cash_location_id.to_i == expected_drawer_id.to_i
+          raise InvalidRequest, "teller_session_id drawer does not match cash movement"
+        end
+      end
+
       def self.movement_type(source, destination)
         if source.vault? && destination.teller_drawer?
           Cash::Models::CashMovement::TYPE_VAULT_TO_DRAWER
@@ -134,7 +168,7 @@ module Cash
         )
       end
 
-      def self.fingerprint(source_id, destination_id, amount_minor_units, actor_id, approval_actor_id, currency, business_date, reason_code)
+      def self.fingerprint(source_id, destination_id, amount_minor_units, actor_id, approval_actor_id, currency, business_date, reason_code, teller_session_id)
         Digest::SHA256.hexdigest({
           source_cash_location_id: source_id.to_i,
           destination_cash_location_id: destination_id.to_i,
@@ -143,7 +177,8 @@ module Cash
           approval_actor_id: approval_actor_id&.to_i,
           currency: currency.to_s,
           business_date: business_date.to_s,
-          reason_code: reason_code.to_s
+          reason_code: reason_code.to_s,
+          teller_session_id: teller_session_id&.to_i
         }.to_json)
       end
       private_class_method :fingerprint

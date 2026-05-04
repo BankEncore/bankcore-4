@@ -40,6 +40,13 @@ module Cash
           last_cash_count: count
         )
       end
+
+      def apply_teller_event_projection!(projection)
+        balance = balance_for(projection.cash_location)
+        balance.update!(
+          amount_minor_units: balance.amount_minor_units.to_i + projection.delta_minor_units.to_i
+        )
+      end
     end
   end
 end

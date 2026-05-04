@@ -392,6 +392,7 @@ CREATE TABLE public.cash_movements (
     updated_at timestamp(6) without time zone NOT NULL,
     external_source character varying,
     shipment_reference character varying,
+    teller_session_id bigint,
     CONSTRAINT cash_movements_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
     CONSTRAINT cash_movements_external_shipment_required_fields_check CHECK ((((movement_type)::text <> 'external_shipment_received'::text) OR ((source_cash_location_id IS NULL) AND (destination_cash_location_id IS NOT NULL) AND (external_source IS NOT NULL) AND (length(TRIM(BOTH FROM external_source)) > 0) AND (shipment_reference IS NOT NULL) AND (length(TRIM(BOTH FROM shipment_reference)) > 0)))),
     CONSTRAINT cash_movements_location_present_check CHECK (((source_cash_location_id IS NOT NULL) OR (destination_cash_location_id IS NOT NULL))),
@@ -418,6 +419,52 @@ CREATE SEQUENCE public.cash_movements_id_seq
 --
 
 ALTER SEQUENCE public.cash_movements_id_seq OWNED BY public.cash_movements.id;
+
+
+--
+-- Name: cash_teller_event_projections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_teller_event_projections (
+    id bigint NOT NULL,
+    operational_event_id bigint NOT NULL,
+    reversal_of_operational_event_id bigint,
+    teller_session_id bigint NOT NULL,
+    cash_location_id bigint NOT NULL,
+    projection_type character varying NOT NULL,
+    event_type character varying NOT NULL,
+    amount_minor_units bigint NOT NULL,
+    delta_minor_units bigint NOT NULL,
+    currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    business_date date NOT NULL,
+    applied_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT cash_teller_event_projections_currency_usd_check CHECK (((currency)::text = 'USD'::text)),
+    CONSTRAINT cash_teller_event_projections_event_type_check CHECK (((event_type)::text = ANY ((ARRAY['deposit.accepted'::character varying, 'withdrawal.posted'::character varying, 'posting.reversal'::character varying])::text[]))),
+    CONSTRAINT cash_teller_event_projections_nonzero_delta_check CHECK ((delta_minor_units <> 0)),
+    CONSTRAINT cash_teller_event_projections_positive_amount_check CHECK ((amount_minor_units > 0)),
+    CONSTRAINT cash_teller_event_projections_type_check CHECK (((projection_type)::text = ANY ((ARRAY['teller_cash_event'::character varying, 'teller_cash_reversal'::character varying])::text[])))
+);
+
+
+--
+-- Name: cash_teller_event_projections_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cash_teller_event_projections_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cash_teller_event_projections_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cash_teller_event_projections_id_seq OWNED BY public.cash_teller_event_projections.id;
 
 
 --
@@ -1740,6 +1787,7 @@ CREATE TABLE public.teller_sessions (
     supervisor_operator_id bigint,
     operating_unit_id bigint NOT NULL,
     cash_location_id bigint,
+    opening_cash_minor_units bigint DEFAULT 0 NOT NULL,
     CONSTRAINT teller_sessions_status_enum CHECK (((status)::text = ANY (ARRAY[('open'::character varying)::text, ('closed'::character varying)::text, ('pending_supervisor'::character varying)::text])))
 );
 
@@ -1810,6 +1858,13 @@ ALTER TABLE ONLY public.cash_locations ALTER COLUMN id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.cash_movements ALTER COLUMN id SET DEFAULT nextval('public.cash_movements_id_seq'::regclass);
+
+
+--
+-- Name: cash_teller_event_projections id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_teller_event_projections ALTER COLUMN id SET DEFAULT nextval('public.cash_teller_event_projections_id_seq'::regclass);
 
 
 --
@@ -2112,6 +2167,14 @@ ALTER TABLE ONLY public.cash_locations
 
 ALTER TABLE ONLY public.cash_movements
     ADD CONSTRAINT cash_movements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cash_teller_event_projections cash_teller_event_projections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_teller_event_projections
+    ADD CONSTRAINT cash_teller_event_projections_pkey PRIMARY KEY (id);
 
 
 --
@@ -2451,6 +2514,27 @@ CREATE INDEX idx_cash_movements_external_shipment_reference ON public.cash_movem
 
 
 --
+-- Name: idx_cash_movements_on_teller_session_and_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_movements_on_teller_session_and_status ON public.cash_movements USING btree (teller_session_id, status);
+
+
+--
+-- Name: idx_cash_teller_event_projections_on_cash_location; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_teller_event_projections_on_cash_location ON public.cash_teller_event_projections USING btree (cash_location_id);
+
+
+--
+-- Name: idx_cash_teller_event_projections_rebuild_order; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_teller_event_projections_rebuild_order ON public.cash_teller_event_projections USING btree (business_date, applied_at, id);
+
+
+--
 -- Name: idx_daily_balance_snapshots_account_date_source_version; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2661,6 +2745,13 @@ CREATE INDEX idx_on_party_record_id_status_purpose_6659aa2f25 ON public.party_ad
 
 
 --
+-- Name: idx_on_reversal_of_operational_event_id_79fec37bc9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_reversal_of_operational_event_id_79fec37bc9 ON public.cash_teller_event_projections USING btree (reversal_of_operational_event_id);
+
+
+--
 -- Name: index_account_lifecycle_events_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2861,6 +2952,34 @@ CREATE INDEX index_cash_movements_on_operational_event_id ON public.cash_movemen
 --
 
 CREATE INDEX index_cash_movements_on_source_cash_location_id ON public.cash_movements USING btree (source_cash_location_id);
+
+
+--
+-- Name: index_cash_movements_on_teller_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_movements_on_teller_session_id ON public.cash_movements USING btree (teller_session_id);
+
+
+--
+-- Name: index_cash_teller_event_projections_on_cash_location_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_teller_event_projections_on_cash_location_id ON public.cash_teller_event_projections USING btree (cash_location_id);
+
+
+--
+-- Name: index_cash_teller_event_projections_on_operational_event_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cash_teller_event_projections_on_operational_event_id ON public.cash_teller_event_projections USING btree (operational_event_id);
+
+
+--
+-- Name: index_cash_teller_event_projections_on_teller_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cash_teller_event_projections_on_teller_session_id ON public.cash_teller_event_projections USING btree (teller_session_id);
 
 
 --
@@ -3583,11 +3702,27 @@ ALTER TABLE ONLY public.deposit_account_party_maintenance_audits
 
 
 --
+-- Name: cash_teller_event_projections fk_rails_49bc22aeeb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_teller_event_projections
+    ADD CONSTRAINT fk_rails_49bc22aeeb FOREIGN KEY (teller_session_id) REFERENCES public.teller_sessions(id);
+
+
+--
 -- Name: holds fk_rails_4c0c5bf773; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.holds
     ADD CONSTRAINT fk_rails_4c0c5bf773 FOREIGN KEY (placed_by_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
+-- Name: cash_teller_event_projections fk_rails_4cc1e47e93; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_teller_event_projections
+    ADD CONSTRAINT fk_rails_4cc1e47e93 FOREIGN KEY (cash_location_id) REFERENCES public.cash_locations(id);
 
 
 --
@@ -3823,6 +3958,14 @@ ALTER TABLE ONLY public.journal_lines
 
 
 --
+-- Name: cash_movements fk_rails_94eefcf21b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_movements
+    ADD CONSTRAINT fk_rails_94eefcf21b FOREIGN KEY (teller_session_id) REFERENCES public.teller_sessions(id);
+
+
+--
 -- Name: cash_variances fk_rails_95110d8d04; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3892,6 +4035,14 @@ ALTER TABLE ONLY public.cash_movements
 
 ALTER TABLE ONLY public.deposit_account_balance_projections
     ADD CONSTRAINT fk_rails_b59f66f0ab FOREIGN KEY (deposit_account_id) REFERENCES public.deposit_accounts(id);
+
+
+--
+-- Name: cash_teller_event_projections fk_rails_baccba8f01; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_teller_event_projections
+    ADD CONSTRAINT fk_rails_baccba8f01 FOREIGN KEY (operational_event_id) REFERENCES public.operational_events(id);
 
 
 --
@@ -4047,12 +4198,23 @@ ALTER TABLE ONLY public.operational_events
 
 
 --
+-- Name: cash_teller_event_projections fk_rails_f7e6621fe6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_teller_event_projections
+    ADD CONSTRAINT fk_rails_f7e6621fe6 FOREIGN KEY (reversal_of_operational_event_id) REFERENCES public.operational_events(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260503220000'),
+('20260503215000'),
+('20260503214000'),
 ('20260502222000'),
 ('20260502221000'),
 ('20260502220000'),

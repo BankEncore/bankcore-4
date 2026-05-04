@@ -120,8 +120,7 @@ class ReportsTrialBalanceAndEodTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: session_id,
-          expected_cash_minor_units: 0,
-          actual_cash_minor_units: 0
+          actual_cash_minor_units: 100
         }
       }.to_json,
       headers: @auth

@@ -24,7 +24,6 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 10_000,
           actual_cash_minor_units: 10_400
         }
       }.to_json,
@@ -46,7 +45,6 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 10_000,
           actual_cash_minor_units: 11_000
         }
       }.to_json,
@@ -115,12 +113,11 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
   end
 
   test "approve_variance rejects closed session that never was pending_supervisor" do
-    sid = open_session!
+    sid = open_session!(opening_cash_minor_units: 100)
     post "/teller/teller_sessions/close",
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 100,
           actual_cash_minor_units: 100
         }
       }.to_json,
@@ -149,7 +146,6 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 10_000,
           actual_cash_minor_units: 10_400
         }
       }.to_json,
@@ -168,7 +164,6 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 10_000,
           actual_cash_minor_units: 10_350
         }
       }.to_json,
@@ -204,10 +199,12 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
 
   private
 
-  def open_session!
+  def open_session!(opening_cash_minor_units: 10_000)
     post "/teller/teller_sessions", params: {}.to_json, headers: teller_json_headers(@teller_operator)
     assert_response :created
-    response.parsed_body["id"]
+    response.parsed_body["id"].tap do |id|
+      Teller::Models::TellerSession.find(id).update!(opening_cash_minor_units: opening_cash_minor_units)
+    end
   end
 
   def close_with_large_variance!(sid)
@@ -215,7 +212,6 @@ class TellerSessionVarianceTest < ActionDispatch::IntegrationTest
       params: {
         teller_session_close: {
           teller_session_id: sid,
-          expected_cash_minor_units: 10_000,
           actual_cash_minor_units: 11_000
         }
       }.to_json,

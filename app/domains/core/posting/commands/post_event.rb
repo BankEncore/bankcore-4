@@ -18,6 +18,7 @@ module Core
             raise NotFound, "operational_event_id=#{operational_event_id}" if event.nil?
 
             if event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED
+              Cash::Services::TellerEventProjector.call(operational_event_id: event.id)
               return { outcome: :already_posted, event: event }
             end
 
@@ -70,6 +71,7 @@ module Core
             batch.update!(status: "posted")
             event.update!(status: Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED)
 
+            Cash::Services::TellerEventProjector.call(operational_event_id: event.id)
             link_reversal_journal!(event, entry) if event.event_type == "posting.reversal"
 
             { outcome: :posted, event: event }

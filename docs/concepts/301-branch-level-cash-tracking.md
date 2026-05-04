@@ -39,15 +39,16 @@ This concept doc is the **target** operating model for branch cash. **Shipped an
 
 - Four-layer distinction (accounting vs physical custody vs teller expected vs counted) matches [ADR-0031](../adr/0031-cash-inventory-and-management.md) and [roadmap branch operations Phase 2](../roadmap-branch-operations.md#6-phase-2-cash-custody-and-branch-controls).
 - Location-based custody: `cash_locations` (`branch_vault`, `teller_drawer`, `internal_transit`), movements, rebuildable balances, counts, dual-step approvals where policy requires.
-- Teller sessions resolve a **teller drawer** `Cash` location; teller **expected** cash is derived from posted teller-channel cash events on the session (`deposit.accepted`, `withdrawal.posted`).
-- Session close and variance: threshold, supervisor approval, optional drawer variance GL per [ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md).
+- Teller sessions resolve a **teller drawer** `Cash` location; teller **expected** cash follows [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md): **`opening_cash_minor_units`** snapped at session open, plus **posted**, non-reversed teller cash events on the session (`deposit.accepted`, `withdrawal.posted`), plus signed deltas from **completed** vault/drawer **`cash_movements`** that optionally carry **`teller_session_id`** when funding should affect that session’s accountability.
+- Posted teller cash events that tie to the session drawer apply **custody deltas** to **`cash_balances`** in the **same** database transaction as **`Core::Posting::Commands::PostEvent`**, via Cash-owned **`cash_teller_event_projections`** (idempotent per operational event); **`RebuildCashBalances`** replays movements, teller-event projections, and counts in ADR-0039 ordering.
+- Session close and variance: **`CloseSession`** computes expected cash internally; operators supply actual count only; threshold, supervisor approval, optional drawer variance GL per [ADR-0020](../adr/0020-teller-drawer-variance-gl-posting.md).
 - Inbound external cash receipt into a branch vault: [ADR-0035](../adr/0035-external-cash-shipments.md).
 - Capability gates and maker/checker-style rules on custody operations ([ADR-0029](../adr/0029-capability-first-authorization-layer.md)); business-date attribution per core business-date rules.
 
 **Partial alignment (same direction, less depth than this document)**
 
 - **Movement lifecycle:** internal transfers use approval/completion states; full “requested → sealed → in transit → received” shipment modeling is not product-complete except for the narrow inbound receipt slice.
-- **Teller drawer detail:** expected cash is **event-derived**; explicit opening-float fields, per-instrument drawer effects (e.g. check deposit vs cash), and mixed-deposit tickets are product extensions beyond the first custody slice.
+- **Teller drawer detail:** per-instrument drawer effects (for example check deposit vs cash), denomination splits, and mixed-deposit tickets remain product extensions beyond aggregate custody modeling.
 - **Reconciliation and EOD:** position and reconciliation queries exist; wiring **all** custody exceptions into EOD readiness as first-class warnings remains roadmap hardening.
 - **Roles:** capability codes map teller vs supervisor vs ops; seed role bundles may not match every responsibility row in [Branch roles and responsibilities](#branch-roles-and-responsibilities) without configuration.
 
