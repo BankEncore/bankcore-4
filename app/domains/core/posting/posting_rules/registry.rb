@@ -6,6 +6,7 @@ module Core
       module Registry
         HANDLERS = {
           "deposit.accepted" => DepositAccepted,
+          "check.deposit.accepted" => CheckDepositAccepted,
           "withdrawal.posted" => WithdrawalPosted,
           "transfer.completed" => TransferCompleted,
           "posting.reversal" => PostingReversal,

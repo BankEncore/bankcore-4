@@ -20,6 +20,19 @@
       <% if post_result.present? %>
         <div><dt class="font-medium text-slate-500">Post outcome</dt><dd><%= post_result[:outcome] %></dd></div>
       <% end %>
+      <% hold_record = local_assigns[:hold] %>
+      <% if hold_record.present? %>
+        <div>
+          <dt class="font-medium text-slate-500">Hold placed</dt>
+          <dd>#<%= hold_record.id %> — <%= branch_money(hold_record.amount_minor_units) %> <%= hold_record.currency %> (<%= hold_record.status %>)</dd>
+        </div>
+        <% if hold_record.expires_on.present? %>
+          <div>
+            <dt class="font-medium text-slate-500">Hold scheduled release</dt>
+            <dd><%= branch_date(hold_record.expires_on) %></dd>
+          </div>
+        <% end %>
+      <% end %>
       <div>
         <dt class="font-medium text-slate-500">Posting batches</dt>
         <dd><%= event.posting_batches.map { |batch| "##{batch.id}" }.presence&.join(", ") || "None" %></dd>

@@ -36,6 +36,7 @@ When the catalog changes, update the corresponding **shipped** rows here in the 
 | Capability code | Family | `event_type` | `allowed_channels` | Primary domain owner | Record path | GL / notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `DEPOSIT_ACCEPTED` | F1 | `deposit.accepted` | `teller`, `api`, `batch` | `Core::OperationalEvents` (+ `Accounts`, `Teller` session rules for cash) | `Core::OperationalEvents::Commands::RecordEvent` | Posts Dr `1110` / Cr `2110`; drawer projection when session-linked cash ([ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md)) |
+| `CHECK_DEPOSIT_ACCEPTED` | F2 | `check.deposit.accepted` | `teller` | `Core::OperationalEvents`, `Accounts` (holds) | `Core::OperationalEvents::Commands::AcceptCheckDeposit` | Posts Dr `1160` / Cr `2110`; optional event-level hold at acceptance; no drawer projection ([ADR-0040](../adr/0040-check-deposit-vertical-slice.md)) |
 | `ACH_CREDIT_RECEIVED` | F6 | `ach.credit.received` | `batch` | `Integration::Ach` | `Integration::Ach::Commands::IngestReceiptFile` | Posts Dr `1120` / Cr `2110` ([ADR-0028](../adr/0028-ach-receipt-ingestion.md)) |
 | `WITHDRAWAL_POSTED` | F1 | `withdrawal.posted` | `teller`, `api`, `batch` | `Core::OperationalEvents`, `Accounts` | `RecordEvent` + `Accounts::Commands::AuthorizeDebit` | Posts Dr `2110` / Cr `1110` |
 | `TRANSFER_COMPLETED` | F1 | `transfer.completed` | `teller`, `api`, `batch` | `Core::OperationalEvents`, `Accounts` | `RecordEvent` + `AuthorizeDebit` | Posts across two `2110` legs |
@@ -65,7 +66,7 @@ These rows have an ADR-defined `event_type` and intended semantics, but they are
 
 | Capability code | Family | `event_type` | Typical channels (planned) | Primary domain owner (planned) | ADR / notes |
 | --- | --- | --- | --- | --- | --- |
-| `CHECK_DEPOSIT_ACCEPTED` | F2 | `check.deposit.accepted` | `teller`, `branch` | `Core::OperationalEvents` (+ `Accounts` holds / teller execution rules) | [ADR-0040](../adr/0040-check-deposit-vertical-slice.md); intended posting Dr `1160` / Cr `2110`; teller/session trace without drawer projection |
+| — | — | — | — | — | *(No ADR-named types in this bucket are currently waiting on implementation.)* |
 
 ---
 

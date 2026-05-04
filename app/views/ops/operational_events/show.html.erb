@@ -38,6 +38,12 @@
     <div><dt class="font-medium text-slate-500">Reversed by</dt><dd><%= @event.reversed_by_event_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Created</dt><dd><%= ops_time(@event.created_at) %></dd></div>
     <div><dt class="font-medium text-slate-500">Updated</dt><dd><%= ops_time(@event.updated_at) %></dd></div>
+    <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
+      <div class="md:col-span-2">
+        <dt class="font-medium text-slate-500">Check deposit payload</dt>
+        <dd class="mt-1 overflow-x-auto rounded border border-slate-100 bg-slate-50 p-3 font-mono text-xs"><pre class="whitespace-pre-wrap"><%= JSON.pretty_generate(@event.payload) %></pre></dd>
+      </div>
+    <% end %>
   </dl>
 </section>
 

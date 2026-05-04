@@ -359,6 +359,26 @@ class CashInventoryTest < ActiveSupport::TestCase
     assert_equal 1, Cash::Models::CashTellerEventProjection.where(operational_event_id: event.id).count
   end
 
+  test "posted check deposit does not create teller drawer projection even when session-linked" do
+    account = account!
+    session = Teller::Commands::OpenSession.call(drawer_code: "CHK-NOPROJ-#{SecureRandom.hex(4)}", operator_id: @teller.id)
+    payload = { "items" => [ { "amount_minor_units" => 500, "item_reference" => "N1" } ] }
+
+    r = Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+      channel: "teller",
+      idempotency_key: "chk-noproj-#{SecureRandom.hex(6)}",
+      amount_minor_units: 500,
+      currency: "USD",
+      source_account_id: account.id,
+      teller_session_id: session.id,
+      actor_id: @teller.id,
+      payload: payload
+    )
+
+    assert_equal :posted, r[:posting_outcome]
+    assert_nil Cash::Models::CashTellerEventProjection.find_by(operational_event_id: r[:operational_event].id)
+  end
+
   test "posted reversal projects opposite drawer delta after session close" do
     account = account!
     session = Teller::Commands::OpenSession.call(drawer_code: "REV-PROJECT-#{SecureRandom.hex(4)}", operator_id: @teller.id)

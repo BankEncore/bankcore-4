@@ -12,6 +12,11 @@ class GlCoaSeedTest < ActiveSupport::TestCase
 
     vault_cash = Core::Ledger::Models::GlAccount.find_by!(account_number: "1110")
     dda = Core::Ledger::Models::GlAccount.find_by!(account_number: "2110")
+    clearing = Core::Ledger::Models::GlAccount.find_by!(account_number: "1160")
+
+    assert_equal "asset", clearing.account_type
+    assert_equal "debit", clearing.natural_balance
+    assert_includes clearing.account_name, "Deposited Items"
 
     assert_equal "asset", vault_cash.account_type
     assert_equal "debit", vault_cash.natural_balance

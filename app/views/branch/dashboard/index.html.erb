@@ -63,6 +63,7 @@
     <% end %>
     <% if branch_operator_can?(cap::DEPOSIT_ACCEPT) %>
       <%= link_to "Record deposit", new_branch_deposit_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
+      <%= link_to "Accept check deposit", new_branch_check_deposit_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
     <% end %>
     <% if branch_operator_can?(cap::WITHDRAWAL_POST) %>
       <%= link_to "Record withdrawal", new_branch_withdrawal_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>

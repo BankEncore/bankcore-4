@@ -1,6 +1,6 @@
 # Spike: T1 check deposit vertical slice
 
-**Status:** Spike only — **not implemented** in `EventCatalog`, `RecordEvent`, or `PostingRules` yet.
+**Status:** **Implemented** in `EventCatalog`, `RecordEvent`, `PostingRules`, and teller **`AcceptCheckDeposit`** orchestration per [ADR-0040](../adr/0040-check-deposit-vertical-slice.md).
 
 **Goal:** Branch-facing **check deposit** as the first **instrument** family: durable audit of items credited to a DDA with **availability / hold** discipline distinct from aggregate cash `deposit.accepted`.
 

@@ -67,6 +67,28 @@ class RecordReversalDepositHoldGuardTest < ActiveSupport::TestCase
     assert_equal "posting.reversal", r[:event].event_type
   end
 
+  test "rejects reversal of check deposit while active deposit-linked hold exists" do
+    dep = record_and_post_check_deposit!(15_000, "chk-rev-h-#{SecureRandom.hex(4)}")
+
+    Accounts::Commands::PlaceHold.call(
+      deposit_account_id: @account.id,
+      amount_minor_units: 15_000,
+      currency: "USD",
+      channel: "teller",
+      idempotency_key: "hold-chk-rev-#{SecureRandom.hex(4)}",
+      placed_for_operational_event_id: dep.id
+    )
+
+    assert_raises(Core::OperationalEvents::Commands::RecordReversal::InvalidRequest) do
+      Core::OperationalEvents::Commands::RecordReversal.call(
+        original_operational_event_id: dep.id,
+        channel: "teller",
+        idempotency_key: "rev-chk-#{SecureRandom.hex(4)}",
+        actor_id: @supervisor.id
+      )
+    end
+  end
+
   test "teller channel reversal requires reversal capability in command" do
     dep = record_and_post_deposit!(10_000, "dep-rev-denied-#{SecureRandom.hex(4)}")
 
@@ -91,6 +113,21 @@ class RecordReversalDepositHoldGuardTest < ActiveSupport::TestCase
       currency: "USD",
       source_account_id: @account.id,
       teller_session_id: @cash_session_id
+    )
+    Core::Posting::Commands::PostEvent.call(operational_event_id: r[:event].id)
+    r[:event]
+  end
+
+  def record_and_post_check_deposit!(amount, idem)
+    payload = { "items" => [ { "amount_minor_units" => amount, "item_reference" => "chk-rev-ref" } ] }
+    r = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "check.deposit.accepted",
+      channel: "teller",
+      idempotency_key: idem,
+      amount_minor_units: amount,
+      currency: "USD",
+      source_account_id: @account.id,
+      payload: payload
     )
     Core::Posting::Commands::PostEvent.call(operational_event_id: r[:event].id)
     r[:event]

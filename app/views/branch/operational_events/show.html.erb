@@ -20,6 +20,12 @@
     <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name || @event.actor_id || "None" %></dd></div>
+    <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
+      <div class="md:col-span-2">
+        <dt class="font-medium text-slate-500">Check deposit items (payload)</dt>
+        <dd class="mt-1 overflow-x-auto rounded border border-slate-200 bg-slate-50 p-3 font-mono text-xs"><pre class="whitespace-pre-wrap"><%= JSON.pretty_generate(@event.payload) %></pre></dd>
+      </div>
+    <% end %>
   </dl>
 
   <div class="mt-6 flex flex-wrap gap-3">

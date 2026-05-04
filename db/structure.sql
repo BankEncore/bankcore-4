@@ -1287,7 +1287,8 @@ CREATE TABLE public.operational_events (
     teller_session_id bigint,
     reference_id character varying,
     actor_id bigint,
-    operating_unit_id bigint
+    operating_unit_id bigint,
+    payload jsonb
 );
 
 
@@ -4212,6 +4213,7 @@ ALTER TABLE ONLY public.cash_teller_event_projections
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260504180000'),
 ('20260503220000'),
 ('20260503215000'),
 ('20260503214000'),

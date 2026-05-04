@@ -191,8 +191,9 @@ module Accounts
 
       def self.validate_deposit_link!(deposit_oe, deposit_account_id, amount_minor_units, currency)
         raise InvalidRequest, "placed_for_operational_event_id not found" if deposit_oe.nil?
-        unless deposit_oe.event_type == "deposit.accepted"
-          raise InvalidRequest, "placed_for_operational_event must be deposit.accepted"
+        unless %w[deposit.accepted check.deposit.accepted].include?(deposit_oe.event_type.to_s)
+          raise InvalidRequest,
+                "placed_for_operational_event must be deposit.accepted or check.deposit.accepted"
         end
         unless deposit_oe.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED
           raise InvalidRequest, "placed_for_operational_event must be posted"

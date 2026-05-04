@@ -138,7 +138,22 @@ class AccountsPlaceHoldDepositLinkTest < ActiveSupport::TestCase
     end
   end
 
-  test "rejects linked hold when event is not deposit.accepted" do
+  test "places hold linked to posted check.deposit.accepted" do
+    dep = record_and_post_check_deposit!(@account_a, 8_000, "dep-chk-ph-#{SecureRandom.hex(4)}")
+
+    r = Accounts::Commands::PlaceHold.call(
+      deposit_account_id: @account_a.id,
+      amount_minor_units: 8_000,
+      currency: "USD",
+      channel: "teller",
+      idempotency_key: "hold-chk-#{SecureRandom.hex(4)}",
+      placed_for_operational_event_id: dep.id
+    )
+    assert_equal :created, r[:outcome]
+    assert_equal dep.id, r[:hold].placed_for_operational_event_id
+  end
+
+  test "rejects linked hold when event is not a deposit or check deposit" do
     record_and_post_deposit!(@account_a, 50_000, "fund-wd-#{SecureRandom.hex(4)}")
     idem = "wd-ph-#{SecureRandom.hex(4)}"
     wd = Core::OperationalEvents::Commands::RecordEvent.call(
@@ -239,6 +254,21 @@ class AccountsPlaceHoldDepositLinkTest < ActiveSupport::TestCase
       currency: "USD",
       source_account_id: account.id,
       teller_session_id: @cash_session_id
+    )
+    Core::Posting::Commands::PostEvent.call(operational_event_id: r[:event].id)
+    r[:event]
+  end
+
+  def record_and_post_check_deposit!(account, amount, idem)
+    payload = { "items" => [ { "amount_minor_units" => amount, "item_reference" => "chk-ph" } ] }
+    r = Core::OperationalEvents::Commands::RecordEvent.call(
+      event_type: "check.deposit.accepted",
+      channel: "teller",
+      idempotency_key: idem,
+      amount_minor_units: amount,
+      currency: "USD",
+      source_account_id: account.id,
+      payload: payload
     )
     Core::Posting::Commands::PostEvent.call(operational_event_id: r[:event].id)
     r[:event]

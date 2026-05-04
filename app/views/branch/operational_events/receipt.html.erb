@@ -28,5 +28,10 @@
     <div><dt class="font-medium text-slate-500">Reversal linkage</dt><dd><%= @event.reversal_of_event_id.present? ? "Reversal of ##{@event.reversal_of_event_id}" : (@event.reversed_by_event_id.present? ? "Reversed by ##{@event.reversed_by_event_id}" : "None") %></dd></div>
     <div><dt class="font-medium text-slate-500">Posting batches</dt><dd><%= @event.posting_batches.map { |batch| "##{batch.id}" }.presence&.join(", ") || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Journal entries</dt><dd><%= @event.journal_entries.map { |entry| "##{entry.id}" }.presence&.join(", ") || "None" %></dd></div>
+    <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
+      <% summary = Core::OperationalEvents::Services::CheckDepositPayload.payload_summary(@event.payload) %>
+      <div><dt class="font-medium text-slate-500">Items (count)</dt><dd><%= summary.fetch("items_count") %></dd></div>
+      <div><dt class="font-medium text-slate-500">Payload total (minor units)</dt><dd><%= summary.fetch("amount_minor_units_total") %></dd></div>
+    <% end %>
   </dl>
 </section>

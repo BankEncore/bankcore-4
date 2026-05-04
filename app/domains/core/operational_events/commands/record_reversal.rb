@@ -21,7 +21,14 @@ module Core
         class PostedReplay < Error
         end
 
-        REVERSIBLE_TYPES = %w[deposit.accepted withdrawal.posted transfer.completed interest.accrued interest.posted].freeze
+        REVERSIBLE_TYPES = %w[
+          deposit.accepted
+          check.deposit.accepted
+          withdrawal.posted
+          transfer.completed
+          interest.accrued
+          interest.posted
+        ].freeze
         STAFF_CHANNELS = %w[teller branch].freeze
 
         def self.call(original_operational_event_id:, channel:, idempotency_key:, business_date: nil, actor_id: nil,
@@ -41,7 +48,7 @@ module Core
           if Models::OperationalEvent.exists?(reversal_of_event_id: original.id)
             raise InvalidRequest, "original event already has a reversal"
           end
-          if original.event_type == "deposit.accepted" &&
+          if %w[deposit.accepted check.deposit.accepted].include?(original.event_type.to_s) &&
               Accounts::Models::Hold.exists?(
                 placed_for_operational_event_id: original.id,
                 status: Accounts::Models::Hold::STATUS_ACTIVE
