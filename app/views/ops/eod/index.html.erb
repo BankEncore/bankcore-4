@@ -1,6 +1,10 @@
 <% content_for :title, "Ops EOD - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+<section class="rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+  Primary EOD workspace is <%= link_to "Close package", ops_close_package_path, class: "font-medium text-slate-950 underline" %> — readiness, classification, trial balance, and close.
+</section>
+
+<section class="mt-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
   <div>
     <h1 class="text-3xl font-semibold">EOD readiness</h1>
     <p class="mt-2 text-slate-600">Read-only close readiness and activity trial balance.</p>
@@ -29,42 +33,7 @@
     <%= render "readiness_card", label: "Trial balance rows", value: @readiness[:trial_balance_row_count], state: true %>
   </section>
 
-  <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-5 py-4">
-      <h2 class="text-xl font-semibold">Activity trial balance</h2>
-      <p class="mt-1 text-sm text-slate-600">
-        Business date <%= @readiness[:business_date] %>; current open date <%= @readiness[:current_business_on] %>.
-      </p>
-    </div>
-
-    <% if @trial_balance_rows.any? %>
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr>
-              <th class="px-5 py-3">Account</th>
-              <th class="px-5 py-3">Type</th>
-              <th class="px-5 py-3 text-right">Debit</th>
-              <th class="px-5 py-3 text-right">Credit</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <% @trial_balance_rows.each do |row| %>
-              <tr>
-                <td class="px-5 py-4">
-                  <div class="font-medium text-slate-950"><%= row.account_number %></div>
-                  <div class="text-xs text-slate-500"><%= row.account_name %></div>
-                </td>
-                <td class="px-5 py-4"><%= row.account_type.humanize %></td>
-                <td class="px-5 py-4 text-right"><%= ops_money(row.debit_minor_units) %></td>
-                <td class="px-5 py-4 text-right"><%= ops_money(row.credit_minor_units) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="px-5 py-8 text-sm text-slate-600">No GL activity for this business date.</div>
-    <% end %>
-  </section>
+  <%= render "ops/eod/trial_balance_table",
+        trial_balance_rows: @trial_balance_rows,
+        business_date_label: "Business date #{@readiness[:business_date]}; current open date #{@readiness[:current_business_on]}." %>
 <% end %>

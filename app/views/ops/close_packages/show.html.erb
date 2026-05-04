@@ -3,7 +3,7 @@
 <section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
   <div>
     <h1 class="text-3xl font-semibold">Close package</h1>
-    <p class="mt-2 text-slate-600">Control summary for EOD close, exceptions, trial balance, and close history.</p>
+    <p class="mt-2 text-slate-600">Canonical EOD workspace: readiness, classified evidence, trial balance, and close action for the open business date.</p>
   </div>
   <%= form_with url: ops_close_package_path, method: :get, class: "flex items-end gap-3" do |form| %>
     <div>
@@ -17,27 +17,133 @@
 <% if @error_message.present? %>
   <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= @error_message %></section>
 <% elsif @readiness.present? %>
+  <% if @classification[:retrospective_only] %>
+    <section class="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+      <p class="font-medium">Retrospective view</p>
+      <p class="mt-1 text-slate-600">This business date is closed for posting. Evidence below is for audit and support; blockers and warnings are explanatory only. Close is not available from this screen.</p>
+    </section>
+  <% end %>
+
+  <section class="mt-8 rounded border border-slate-200 bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">Can we close?</h2>
+    <p class="mt-2 text-sm text-slate-600">
+      <% if @classification[:retrospective_only] %>
+        Historical day — no live close action.
+      <% elsif @readiness[:eod_ready] %>
+        Yes. EOD readiness checks pass for <%= @business_date.iso8601 %>.
+      <% else %>
+        No. Resolve blockers below before closing the business date.
+      <% end %>
+    </p>
+    <p class="mt-3 text-lg font-semibold <%= @readiness[:eod_ready] ? "text-emerald-800" : "text-amber-900" %>">
+      EOD ready: <%= @readiness[:eod_ready] ? "Yes" : "No" %>
+    </p>
+  </section>
+
   <section class="mt-8 grid gap-4 md:grid-cols-4">
-    <%= render "ops/eod/readiness_card", label: "EOD ready", value: @readiness[:eod_ready] ? "Yes" : "No", state: @readiness[:eod_ready] %>
     <%= render "ops/eod/readiness_card", label: "Balanced", value: @readiness[:journal_totals_balanced] ? "Yes" : "No", state: @readiness[:journal_totals_balanced] %>
     <%= render "ops/eod/readiness_card", label: "Open/pending sessions", value: @readiness[:open_teller_sessions_count], state: @readiness[:all_sessions_closed] %>
     <%= render "ops/eod/readiness_card", label: "Pending events", value: @readiness[:pending_operational_events_count], state: @readiness[:pending_operational_events_count].to_i.zero? %>
+    <%= render "ops/eod/readiness_card", label: "Posting day closed", value: @readiness[:posting_day_closed] ? "Yes" : "No", state: !@readiness[:posting_day_closed] %>
   </section>
+
+  <% if @classification[:blockers].any? %>
+    <section class="mt-8 rounded border border-amber-200 bg-amber-50 p-5 shadow-sm">
+      <h2 class="text-xl font-semibold text-amber-950"><%= @classification[:retrospective_only] ? "Blockers (historical context)" : "Blockers" %></h2>
+      <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-amber-950">
+        <% @classification[:blockers].each do |b| %>
+          <li>
+            <span class="font-medium"><%= b[:code].to_s.humanize %>:</span>
+            <%= b[:label] %>
+            <% if b[:count] %>
+              <span class="text-amber-800">(<%= b[:count] %>)</span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @classification[:warnings].any? %>
+    <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="text-xl font-semibold"><%= @classification[:retrospective_only] ? "Warnings (historical context)" : "Warnings" %></h2>
+      <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
+        <% @classification[:warnings].each do |w| %>
+          <li>
+            <span class="font-medium"><%= w[:label] %></span>
+            <% if w[:count].to_i.positive? %>
+              <span class="text-slate-500">(<%= w[:count] %>)</span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @balance_projection_health.present? %>
+    <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-semibold">Balance projection health</h2>
+          <p class="mt-1 text-sm text-slate-600">Projection and snapshot health before close snapshot materialization.</p>
+        </div>
+        <%= link_to "Open balance health", ops_balance_projections_path, class: "rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700" %>
+      </div>
+      <div class="mt-5 grid gap-4 md:grid-cols-3">
+        <%= render "ops/eod/readiness_card", label: "Stale projections", value: @balance_projection_health.stale_projection_count, state: @balance_projection_health.stale_projection_count.zero? %>
+        <%= render "ops/eod/readiness_card", label: "Version mismatches", value: @balance_projection_health.projection_version_mismatch_count, state: @balance_projection_health.projection_version_mismatch_count.zero? %>
+        <%= render "ops/eod/readiness_card", label: "Pending rebuilds", value: @balance_projection_health.pending_rebuild_request_count, state: @balance_projection_health.pending_rebuild_request_count.zero? %>
+      </div>
+    </section>
+  <% end %>
 
   <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-5 py-4">
-      <h2 class="text-xl font-semibold">EOD impact evidence</h2>
-      <p class="mt-1 text-sm text-slate-600">Read-only operational event evidence for <%= @business_date.iso8601 %>.</p>
+      <h2 class="text-xl font-semibold">Classified evidence (primary buckets)</h2>
+      <p class="mt-1 text-sm text-slate-600">Summary counts per ADR-0041 T4.1; each operational event appears in one primary bucket.</p>
+    </div>
+    <div class="grid gap-4 p-5 text-sm md:grid-cols-2 lg:grid-cols-3">
+      <% bucket_labels = {
+        posted: "Posted",
+        pending: "Pending",
+        reversed: "Reversed",
+        held: "Held (active holds)",
+        overridden: "Overrides",
+        exception: "Exceptions (e.g. NSF)"
+      } %>
+      <% @classification[:buckets].each do |key, data| %>
+        <div class="rounded border border-slate-100 bg-slate-50 p-4">
+          <p class="font-medium text-slate-950"><%= bucket_labels.fetch(key, key.to_s.humanize) %></p>
+          <p class="mt-2 text-2xl font-semibold"><%= data[:count] %></p>
+          <% ids = data[:operational_event_ids] || data[:hold_ids] %>
+          <% if ids.present? %>
+            <ul class="mt-2 space-y-1 text-xs text-slate-600">
+              <% ids.first(12).each do |id| %>
+                <li>
+                  <% if key == :held %>
+                    Hold #<%= id %>
+                  <% else %>
+                    <%= link_to "Event ##{id}", ops_operational_event_path(id), class: "text-slate-950 underline" %>
+                  <% end %>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <%= render "ops/eod/trial_balance_table",
+        trial_balance_rows: @trial_balance_rows,
+        business_date_label: "Business date #{@readiness[:business_date]}; current open date #{@readiness[:current_business_on]}." %>
+
+  <section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+      <h2 class="text-xl font-semibold">Raw operational events</h2>
+      <p class="mt-1 text-sm text-slate-600">Full breakdown by status, channel, and event type for <%= @business_date.iso8601 %>.</p>
     </div>
     <div class="grid gap-4 p-5 text-sm md:grid-cols-4">
-      <div>
-        <p class="font-medium text-slate-500">Current business date</p>
-        <p class="mt-1 text-lg font-semibold"><%= @current_business_date.iso8601 %></p>
-      </div>
-      <div>
-        <p class="font-medium text-slate-500">Posting day closed</p>
-        <p class="mt-1 text-lg font-semibold"><%= @posting_day_closed ? "Yes" : "No" %></p>
-      </div>
       <div>
         <p class="font-medium text-slate-500">Operational events</p>
         <p class="mt-1 text-lg font-semibold"><%= @event_total_count %></p>
@@ -48,6 +154,14 @@
         <% if @close_event %>
           <p class="mt-1 text-xs text-slate-500">Closed by <%= @close_event.closed_by_operator&.display_name || "Unknown" %> at <%= ops_time(@close_event.closed_at) %></p>
         <% end %>
+      </div>
+      <div>
+        <p class="font-medium text-slate-500">Pending cash movements</p>
+        <p class="mt-1 text-lg font-semibold"><%= @readiness[:pending_cash_movements_count] %></p>
+      </div>
+      <div>
+        <p class="font-medium text-slate-500">Unresolved cash variances</p>
+        <p class="mt-1 text-lg font-semibold"><%= @readiness[:unresolved_cash_variances_count] %></p>
       </div>
     </div>
     <div class="grid gap-6 border-t border-slate-100 p-5 text-sm lg:grid-cols-3">
@@ -132,8 +246,26 @@
   </section>
 
   <section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 class="text-xl font-semibold">Close action</h2>
-    <p class="mt-2 text-sm text-slate-600">Close is still performed through the guarded business-date close screen.</p>
-    <%= link_to "Preview close", ops_business_date_close_path(business_date: @business_date.iso8601), class: "mt-4 inline-block rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <h2 class="text-xl font-semibold">Close business date</h2>
+    <% if @embedded_close_section %>
+      <% if @readiness[:eod_ready] %>
+        <p class="mt-2 text-sm text-slate-600">This will close <%= @business_date.iso8601 %> and advance the singleton business date.</p>
+        <%= form_with url: ops_business_date_close_path, method: :post, local: true, class: "mt-4" do %>
+          <%= hidden_field_tag :business_date, @business_date.iso8601 %>
+          <%= submit_tag "Close business date", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+        <% end %>
+      <% else %>
+        <p class="mt-2 text-sm text-slate-600">Resolve readiness failures above before close can execute.</p>
+      <% end %>
+    <% else %>
+      <p class="mt-2 text-sm text-slate-600">Close is only available from the close package for the <strong>current open</strong> business date.</p>
+    <% end %>
+    <div class="mt-6 border-t border-slate-100 pt-4 text-sm text-slate-600">
+      <p class="font-medium text-slate-800">Legacy pages</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <li><%= link_to "EOD readiness (trial balance focus)", ops_eod_path(business_date: @business_date.iso8601), class: "text-slate-950 underline" %></li>
+        <li><%= link_to "Business date close (standalone)", ops_business_date_close_path(business_date: @business_date.iso8601), class: "text-slate-950 underline" %></li>
+      </ul>
+    </div>
   </section>
 <% end %>

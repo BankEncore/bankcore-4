@@ -1,6 +1,10 @@
 <% content_for :title, "Business Date Close - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+<section class="rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+  Prefer <%= link_to "Close package", ops_close_package_path, class: "font-medium text-slate-950 underline" %> for day-end review; closing still redirects there after submit.
+</section>
+
+<section class="mt-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
   <div>
     <h1 class="text-3xl font-semibold">Business date close</h1>
     <p class="mt-2 text-slate-600">Preview EOD readiness before advancing the open business date.</p>

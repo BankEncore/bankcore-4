@@ -1,0 +1,39 @@
+<%# locals: trial_balance_rows:, business_date_label: %>
+<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
+  <div class="border-b border-slate-200 px-5 py-4">
+    <h2 class="text-xl font-semibold">Activity trial balance</h2>
+    <% if local_assigns[:business_date_label].present? %>
+      <p class="mt-1 text-sm text-slate-600"><%= business_date_label %></p>
+    <% end %>
+  </div>
+
+  <% if trial_balance_rows.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-5 py-3">Account</th>
+            <th class="px-5 py-3">Type</th>
+            <th class="px-5 py-3 text-right">Debit</th>
+            <th class="px-5 py-3 text-right">Credit</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% trial_balance_rows.each do |row| %>
+            <tr>
+              <td class="px-5 py-4">
+                <div class="font-medium text-slate-950"><%= row.account_number %></div>
+                <div class="text-xs text-slate-500"><%= row.account_name %></div>
+              </td>
+              <td class="px-5 py-4"><%= row.account_type.humanize %></td>
+              <td class="px-5 py-4 text-right"><%= ops_money(row.debit_minor_units) %></td>
+              <td class="px-5 py-4 text-right"><%= ops_money(row.credit_minor_units) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="px-5 py-8 text-sm text-slate-600">No GL activity for this business date.</div>
+  <% end %>
+</section>
