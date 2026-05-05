@@ -106,6 +106,9 @@ class OpsEodAndEventsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", "Operational event ##{event.id}"
     assert_includes response.body, "deposit.accepted"
+    assert_includes response.body, "Operational narrative"
+    assert_includes response.body, "Traceability"
+    assert_includes response.body, "Posting and journal detail"
     assert_includes response.body, "$75.00"
     assert_includes response.body, "Posting batch"
     assert_includes response.body, "Journal entry"

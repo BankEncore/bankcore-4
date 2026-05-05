@@ -1,23 +1,29 @@
 <% content_for :title, "Branch Events - BankCORE" %>
-
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Branch operational events</h1>
-    <p class="mt-2 text-slate-600">Search recent teller-facing events and post pending events.</p>
-  </div>
-  <nav class="flex flex-wrap gap-2 text-sm" aria-label="Operational event actions">
-    <%= link_to "Place hold", new_branch_hold_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <%= link_to "Release hold", release_branch_holds_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <% if current_operator.supervisor? %>
-      <%= link_to "Record reversal", new_branch_reversal_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-    <% end %>
-    <%= link_to "Override", new_branch_override_path, class: "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-700 shadow-sm" %>
-  </nav>
-</section>
+<% branch_event_actions = capture do %>
+  <%= link_to "Place hold", new_branch_hold_path, class: bc_button_class(:secondary) %>
+  <%= link_to "Release hold", release_branch_holds_path, class: bc_button_class(:secondary) %>
+  <% if current_operator.supervisor? %>
+    <%= link_to "Record reversal", new_branch_reversal_path, class: bc_button_class(:secondary) %>
+  <% end %>
+  <%= link_to "Override", new_branch_override_path, class: bc_button_class(:secondary) %>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Branch operational events",
+  subtitle: "Search recent teller-facing events and post pending events.",
+  actions: branch_event_actions %>
 
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm">
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: @scoped_operating_unit || current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Scope", (@branch_events_show_all_units ? "All units" : "Branch-scoped")],
+    ["Results on this page", (@event_search ? @event_search[:rows].size : 0)]
+  ] %>
+
+<section class="<%= bc_panel_class(tone: :muted) %> mt-6 p-4 text-sm text-slate-800">
   <p class="font-medium text-slate-950">Active filters</p>
   <% if @branch_events_show_all_units %>
     <p class="mt-1 text-slate-600">Operating unit filter: <strong>all units</strong> (institution-wide listing).</p>
@@ -43,11 +49,14 @@
     <p class="mt-1 text-slate-600">Results on this page: <strong><%= @event_search[:rows].size %></strong><%= @event_search[:has_more] ? " (more available)" : "" %>.</p>
   <% end %>
   <div class="mt-3">
-    <%= link_to "Show all units", branch_events_path(request.query_parameters.except(:operating_unit_id).merge(all_units: true)), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+    <%= link_to "Show all units", branch_events_path(request.query_parameters.except(:operating_unit_id).merge(all_units: true)), class: bc_button_class(:secondary) %>
   </div>
 </section>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+<%= render "shared/internal/filter_bar",
+  title: "Filters",
+  description: "Search branch events by business date, event type, operating unit, and account context.",
+  class: "mt-6" do %>
   <%= form_with url: branch_events_path, method: :get, class: "grid gap-4 md:grid-cols-3 lg:grid-cols-6" do |form| %>
     <div>
       <%= form.label :business_date, class: "block text-sm font-medium text-slate-700" %>
@@ -66,15 +75,17 @@
       <%= form.text_field :source_account_id, value: @query_params&.fetch(:source_account_id, nil), class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
     <div class="self-end lg:col-span-2">
-      <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Clear filters", branch_events_path, class: "ml-2 rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= form.submit "Search", class: bc_button_class(:primary) %>
+      <%= link_to "Clear filters", branch_events_path, class: "ml-2 #{bc_button_class(:secondary)}" %>
     </div>
   <% end %>
-</section>
+<% end %>
 
-<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
-  <% if @event_search&.fetch(:rows)&.any? %>
-    <div class="overflow-x-auto">
+<% if @event_search&.fetch(:rows)&.any? %>
+  <%= render "shared/internal/data_table",
+    title: "Branch operational events",
+    description: "Filtered record set for branch-facing event review and pending-event posting.",
+    class: "mt-6 overflow-hidden" do %>
     <table class="min-w-full divide-y divide-slate-200 text-sm">
       <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
         <tr>
@@ -110,14 +121,18 @@
         <% end %>
       </tbody>
     </table>
-    </div>
-  <% else %>
-    <div class="p-6 text-sm text-slate-600">
+  <% end %>
+<% else %>
+  <% empty_state = capture do %>
       <p>No operational events found.</p>
       <div class="mt-4 flex flex-wrap gap-2">
-        <%= link_to "Clear filters", branch_events_path, class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
-        <%= link_to "Try broader date range", branch_events_path(request.query_parameters.merge(business_date: nil)), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
+        <%= link_to "Clear filters", branch_events_path, class: bc_button_class(:secondary) %>
+        <%= link_to "Try broader date range", branch_events_path(request.query_parameters.merge(business_date: nil)), class: bc_button_class(:secondary) %>
       </div>
-    </div>
   <% end %>
-</section>
+  <%= render "shared/internal/data_table",
+    title: "Branch operational events",
+    description: "Filtered record set for branch-facing event review and pending-event posting.",
+    empty: empty_state,
+    class: "mt-6 overflow-hidden" %>
+<% end %>

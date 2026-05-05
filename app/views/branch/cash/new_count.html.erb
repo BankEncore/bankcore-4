@@ -1,25 +1,58 @@
 <% content_for :title, "Record Cash Count - BankCORE" %>
 
-<h1 class="text-3xl font-semibold">Record cash count</h1>
+<%= render "shared/internal/page_header",
+  title: "Record cash count",
+  subtitle: "Record a branch cash-location count and any resulting variance evidence." %>
+
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Locations", @locations.size],
+    ["Channel", "branch"]
+  ] %>
+
 <%= render "branch/shared/form_error", error_message: @error_message if @error_message.present? %>
 
-<%= form_with url: branch_cash_counts_path, scope: :cash_count, class: "mt-6 max-w-xl space-y-4 rounded border border-slate-200 bg-white p-5 shadow-sm" do |form| %>
-  <div>
-    <%= form.label :cash_location_id, "Location", class: "block text-sm font-medium text-slate-700" %>
-    <%= form.collection_select :cash_location_id, @locations, :id, :name, { selected: @cash_count["cash_location_id"] || @cash_count[:cash_location_id] }, class: "mt-1 w-full rounded border-slate-300" %>
-  </div>
-  <div>
-    <%= form.label :counted_amount_minor_units, "Counted amount in cents", class: "block text-sm font-medium text-slate-700" %>
-    <%= form.number_field :counted_amount_minor_units, min: 0, value: @cash_count["counted_amount_minor_units"] || @cash_count[:counted_amount_minor_units], class: "mt-1 w-full rounded border-slate-300" %>
-  </div>
-  <div>
-    <%= form.label :expected_amount_minor_units, "Expected amount in cents (optional)", class: "block text-sm font-medium text-slate-700" %>
-    <%= form.number_field :expected_amount_minor_units, min: 0, value: @cash_count["expected_amount_minor_units"] || @cash_count[:expected_amount_minor_units], class: "mt-1 w-full rounded border-slate-300" %>
-  </div>
-  <div>
-    <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
-    <%= form.text_field :idempotency_key, value: @cash_count["idempotency_key"] || @cash_count[:idempotency_key], class: "mt-1 w-full rounded border-slate-300" %>
-    <p class="mt-1 text-xs text-slate-500">Keep this value stable when retrying the same count.</p>
-  </div>
-  <%= form.submit "Record count", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-<% end %>
+<%= render "shared/internal/page_section",
+  title: "Count request",
+  description: "Choose the cash location, record the counted amount, and optionally include the expected amount used for variance comparison.",
+  class: "mt-6",
+  content: capture {
+    form_with url: branch_cash_counts_path, scope: :cash_count, class: "grid gap-4 md:grid-cols-2" do |form|
+      safe_join([
+        content_tag(:div) do
+          safe_join([
+            form.label(:cash_location_id, "Location", class: "block text-sm font-medium text-slate-700"),
+            form.collection_select(:cash_location_id, @locations, :id, :name, { selected: @cash_count["cash_location_id"] || @cash_count[:cash_location_id] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:counted_amount_minor_units, "Counted amount in cents", class: "block text-sm font-medium text-slate-700"),
+            form.number_field(:counted_amount_minor_units, min: 0, value: @cash_count["counted_amount_minor_units"] || @cash_count[:counted_amount_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:expected_amount_minor_units, "Expected amount in cents (optional)", class: "block text-sm font-medium text-slate-700"),
+            form.number_field(:expected_amount_minor_units, min: 0, value: @cash_count["expected_amount_minor_units"] || @cash_count[:expected_amount_minor_units], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:idempotency_key, class: "block text-sm font-medium text-slate-700"),
+            form.text_field(:idempotency_key, value: @cash_count["idempotency_key"] || @cash_count[:idempotency_key], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2"),
+            content_tag(:p, "Keep this value stable when retrying the same count.", class: "mt-1 text-xs text-slate-500")
+          ])
+        end,
+        content_tag(:div, class: "md:col-span-2 flex flex-wrap gap-3") do
+          safe_join([
+            form.submit("Record count", class: bc_button_class(:primary)),
+            link_to("Cash position", branch_cash_path, class: bc_button_class(:secondary))
+          ])
+        end
+      ])
+    end
+  } %>

@@ -1,12 +1,19 @@
 <% content_for :title, "Edit Role - BankCORE" %>
+<% header_actions = capture do %>
+  <%= link_to "Role detail", admin_role_path(@role), class: bc_button_class(:secondary) %>
+<% end %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Edit role</h1>
-    <p class="mt-2 text-slate-600"><%= @role.code %></p>
-  </div>
-  <%= link_to "Role detail", admin_role_path(@role), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Edit role",
+  subtitle: @role.code,
+  actions: header_actions %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  state_items: [
+    ["Mode", "Edit role"],
+    ["Status", (@role.active? ? "Active" : "Inactive")]
+  ] %>
 
 <section class="mt-8">
   <%= render "form" %>

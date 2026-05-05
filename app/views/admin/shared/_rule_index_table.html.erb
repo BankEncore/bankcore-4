@@ -1,4 +1,4 @@
-<section class="mt-6 rounded border border-slate-200 bg-white shadow-sm">
+<section class="mt-6 <%= bc_panel_class(tone: :default) %>">
   <% if rows.any? %>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -37,7 +37,7 @@
                       <%= form.label :ended_on, "End date", class: "sr-only" %>
                       <%= form.text_field :ended_on, placeholder: "YYYY-MM-DD", class: "w-32 rounded border border-slate-300 px-2 py-1" %>
                     </div>
-                    <%= form.submit "Preview", class: "rounded border border-slate-300 px-3 py-1 font-medium text-slate-700" %>
+                    <%= form.submit "Preview", class: bc_button_class(:secondary) %>
                   <% end %>
                 </td>
               <% end %>

@@ -1,57 +1,75 @@
 <% content_for :title, "Operational Event ##{@event.id} - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Operational event #<%= @event.id %></h1>
-    <p class="mt-2 text-slate-600"><%= @event.event_type %> on <%= @event.business_date.iso8601 %></p>
-  </div>
-  <%= link_to "Back to event search", ops_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>
+<% ops_event_actions = capture do %>
+  <%= link_to "Back to event search", ops_operational_events_path, class: bc_button_class(:secondary) %>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Operational event ##{@event.id}",
+  subtitle: "#{@event.event_type} on #{@event.business_date.iso8601}",
+  actions: ops_event_actions %>
+
+<%= render "shared/internal/context_strip",
+  business_date: @event.business_date,
+  operator: current_operator,
+  session: @event.teller_session,
+  state_items: [
+    ["Status", @event.status],
+    ["Channel", @event.channel],
+    ["Actor", (@event.actor&.display_name.presence || @event.actor_id || "None")]
+  ] %>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Status</p>
     <div class="mt-3"><%= ops_status_badge(@event.status) %></div>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Amount</p>
     <p class="mt-2 text-2xl font-semibold"><%= ops_event_amount(@event) %></p>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Channel</p>
     <p class="mt-2 text-2xl font-semibold"><%= @event.channel %></p>
   </div>
 </section>
 
-<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-5 py-4">
-    <h2 class="text-xl font-semibold">Event metadata</h2>
-  </div>
-  <dl class="grid gap-4 p-5 text-sm md:grid-cols-2">
-    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
+<% operational_narrative = capture do %>
+  <dl class="grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Event type</dt><dd><%= @event.event_type %></dd></div>
     <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Source account</dt><dd><%= ops_account_label(@event.source_account) %></dd></div>
     <div><dt class="font-medium text-slate-500">Destination account</dt><dd><%= ops_account_label(@event.destination_account) %></dd></div>
-    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name.presence || @event.actor_id || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Created</dt><dd><%= ops_time(@event.created_at) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Updated</dt><dd><%= ops_time(@event.updated_at) %></dd></div>
+  </dl>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Operational narrative",
+  description: "What happened, which accounts it involved, and when the record was created.",
+  content: operational_narrative,
+  class: "mt-8" %>
+
+<% traceability_content = capture do %>
+  <dl class="grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
     <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Reversal of</dt><dd><%= @event.reversal_of_event_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Reversed by</dt><dd><%= @event.reversed_by_event_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Created</dt><dd><%= ops_time(@event.created_at) %></dd></div>
-    <div><dt class="font-medium text-slate-500">Updated</dt><dd><%= ops_time(@event.updated_at) %></dd></div>
-    <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
-      <div class="md:col-span-2">
-        <dt class="font-medium text-slate-500">Check deposit payload</dt>
-        <dd class="mt-1 overflow-x-auto rounded border border-slate-100 bg-slate-50 p-3 font-mono text-xs"><pre class="whitespace-pre-wrap"><%= JSON.pretty_generate(@event.payload) %></pre></dd>
-      </div>
-    <% end %>
   </dl>
-</section>
+  <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
+    <div class="mt-4">
+      <p class="font-medium text-slate-500">Check deposit payload</p>
+      <div class="mt-1 overflow-x-auto rounded border border-slate-100 bg-slate-50 p-3 font-mono text-xs"><pre class="whitespace-pre-wrap"><%= JSON.pretty_generate(@event.payload) %></pre></div>
+    </div>
+  <% end %>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Traceability",
+  description: "Identifiers and reversal links needed to explain or support this event after the fact.",
+  content: traceability_content,
+  class: "mt-8" %>
 
-<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-5 py-4">
-    <h2 class="text-xl font-semibold">Posting and journal detail</h2>
-  </div>
-
+<% posting_detail = capture do %>
   <% if @event.posting_batches.any? %>
     <% @event.posting_batches.each do |batch| %>
       <div class="border-b border-slate-100 px-5 py-4 last:border-b-0">
@@ -103,4 +121,9 @@
   <% else %>
     <div class="px-5 py-8 text-sm text-slate-600">No posting batches recorded for this event.</div>
   <% end %>
-</section>
+<% end %>
+<%= render "shared/internal/data_table",
+  title: "Posting and journal detail",
+  description: "Financial impact path for this event, from posting batch to journal lines.",
+  content: posting_detail,
+  class: "mt-8" %>

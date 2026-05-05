@@ -1,39 +1,48 @@
 <% content_for :title, "Teller Session ##{@session.id} - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Teller session #<%= @session.id %></h1>
-    <p class="mt-2 text-slate-600"><%= @session.status.humanize %> · <%= @session.drawer_code.presence || "Default drawer" %></p>
-  </div>
-  <div class="flex flex-wrap gap-2">
-    <%= link_to "Session queue", ops_teller_sessions_path, class: "rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" %>
-    <%= link_to "Close package", ops_close_package_path, class: "rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700" %>
-  </div>
-</section>
+<% teller_session_actions = capture do %>
+  <%= link_to "Session queue", ops_teller_sessions_path, class: bc_button_class(:secondary) %>
+  <%= link_to "Close package", ops_close_package_path, class: bc_button_class(:secondary) %>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Teller session ##{@session.id}",
+  subtitle: "#{@session.status.humanize} · #{@session.drawer_code.presence || "Default drawer"}",
+  actions: teller_session_actions %>
+
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: @session.operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Status", @session.status],
+    ["Cash location", (@session.cash_location&.name || "None")],
+    ["Primary operator", (@primary_operator&.display_name.presence || @primary_operator&.id || "Not attributed")]
+  ] %>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Status</p>
     <div class="mt-3"><%= ops_status_badge(@session.status) %></div>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Operating unit</p>
     <p class="mt-2 text-lg font-semibold"><%= @session.operating_unit&.code %> — <%= @session.operating_unit&.name %></p>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Cash location</p>
     <p class="mt-2 text-lg font-semibold"><%= @session.cash_location&.name || "None" %></p>
   </div>
 </section>
 
-<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-5 py-4">
-    <h2 class="text-xl font-semibold">Operator &amp; timestamps</h2>
-  </div>
-  <dl class="grid gap-4 p-5 text-sm md:grid-cols-2">
+<% operational_context = capture do %>
+  <dl class="grid gap-4 text-sm md:grid-cols-2">
     <div>
       <dt class="font-medium text-slate-500">Primary operator (from events)</dt>
       <dd><%= @primary_operator&.display_name.presence || @primary_operator&.id || "Not attributed" %></dd>
+    </div>
+    <div>
+      <dt class="font-medium text-slate-500">Drawer code</dt>
+      <dd><%= @session.drawer_code.presence || "Default drawer" %></dd>
     </div>
     <div>
       <dt class="font-medium text-slate-500">Opened at</dt>
@@ -54,17 +63,28 @@
         <% end %>
       </dd>
     </div>
+    <div>
+      <dt class="font-medium text-slate-500">Cash location id</dt>
+      <dd><%= @session.cash_location_id || "None" %></dd>
+    </div>
   </dl>
-</section>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Operational context",
+  description: "Who operated the drawer, when the session moved through its lifecycle, and where cash custody was assigned.",
+  content: operational_context,
+  class: "mt-8" %>
 
-<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-5 py-4">
-    <h2 class="text-xl font-semibold">Cash &amp; variance</h2>
-  </div>
-  <dl class="grid gap-4 p-5 text-sm md:grid-cols-2">
+<% cash_variance_content = capture do %>
+  <dl class="grid gap-4 text-sm md:grid-cols-2">
     <div><dt class="font-medium text-slate-500">Opening cash</dt><dd><%= ops_money(@session.opening_cash_minor_units) %></dd></div>
     <div><dt class="font-medium text-slate-500">Expected cash</dt><dd><%= ops_money(@session.expected_cash_minor_units) %></dd></div>
     <div><dt class="font-medium text-slate-500">Actual cash</dt><dd><%= ops_money(@session.actual_cash_minor_units) %></dd></div>
     <div><dt class="font-medium text-slate-500">Variance</dt><dd><%= ops_money(@session.variance_minor_units, signed: true) %></dd></div>
   </dl>
-</section>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Cash and variance",
+  description: "Drawer opening amount, close expectation, actual count, and the supervisor-review delta when present.",
+  content: cash_variance_content,
+  class: "mt-8" %>

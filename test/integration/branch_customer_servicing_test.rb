@@ -89,6 +89,9 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[data-surface-tab='events'][aria-current='true']", "Events"
     assert_includes response.body, "Operational event ##{event.id}"
+    assert_includes response.body, "Operational narrative"
+    assert_includes response.body, "Traceability"
+    assert_includes response.body, "Related actions"
 
     get branch_event_receipt_path(event)
     assert_response :success

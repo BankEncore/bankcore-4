@@ -1,17 +1,9 @@
 <% content_for :title, "Cash Locations - BankCORE" %>
-
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Cash locations</h1>
-    <p class="mt-2 text-slate-600">Vault, drawer, and internal transit custody locations.</p>
-  </div>
-  <div class="flex gap-2">
-    <%= link_to "Admin dashboard", admin_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <%= link_to "New cash location", new_admin_cash_location_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-  </div>
-</section>
-
-<section class="mt-6 rounded border border-slate-200 bg-white p-4 shadow-sm">
+<% header_actions = capture do %>
+  <%= link_to "Admin dashboard", admin_path, class: bc_button_class(:secondary) %>
+  <%= link_to "New cash location", new_admin_cash_location_path, class: bc_button_class(:primary) %>
+<% end %>
+<% filter_content = capture do %>
   <%= form_with url: admin_cash_locations_path, method: :get, local: true, class: "grid gap-3 md:grid-cols-4" do |form| %>
     <div>
       <%= form.label :operating_unit_id, "Operating unit", class: "text-sm font-medium text-slate-700" %>
@@ -26,41 +18,59 @@
       <%= form.select :status, options_for_select([["All", ""]] + Cash::Models::CashLocation::STATUSES.map { |status| [status.humanize, status] }, @status), {}, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
     <div class="flex items-end">
-      <%= form.submit "Filter", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+      <%= form.submit "Filter", class: bc_button_class(:primary) %>
     </div>
   <% end %>
-</section>
-
-<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-  <% if @cash_locations.any? %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+<% end %>
+<% location_table = if @cash_locations.any?
+  capture do %>
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Location</th>
+          <th class="px-5 py-3">Operating unit</th>
+          <th class="px-5 py-3">Responsible operator</th>
+          <th class="px-5 py-3">Status</th>
+          <th class="px-5 py-3 text-right">Balance</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% @cash_locations.each do |location| %>
           <tr>
-            <th class="px-5 py-3">Location</th>
-            <th class="px-5 py-3">Operating unit</th>
-            <th class="px-5 py-3">Responsible operator</th>
-            <th class="px-5 py-3">Status</th>
-            <th class="px-5 py-3 text-right">Balance</th>
+            <td class="px-5 py-4">
+              <%= link_to admin_cash_location_label(location), admin_cash_location_path(location), class: "font-medium text-slate-950 underline" %>
+              <div class="text-xs text-slate-500"><%= location.location_type.humanize %></div>
+            </td>
+            <td class="px-5 py-4"><%= admin_operating_unit_label(location.operating_unit) %></td>
+            <td class="px-5 py-4"><%= location.responsible_operator&.display_name || "Unassigned" %></td>
+            <td class="px-5 py-4"><%= admin_status_badge(location.status) %></td>
+            <td class="px-5 py-4 text-right"><%= admin_money(location.cash_balance&.amount_minor_units) %></td>
           </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <% @cash_locations.each do |location| %>
-            <tr>
-              <td class="px-5 py-4">
-                <%= link_to admin_cash_location_label(location), admin_cash_location_path(location), class: "font-medium text-slate-950 underline" %>
-                <div class="text-xs text-slate-500"><%= location.location_type.humanize %></div>
-              </td>
-              <td class="px-5 py-4"><%= admin_operating_unit_label(location.operating_unit) %></td>
-              <td class="px-5 py-4"><%= location.responsible_operator&.display_name || "Unassigned" %></td>
-              <td class="px-5 py-4"><%= admin_status_badge(location.status) %></td>
-              <td class="px-5 py-4 text-right"><%= admin_money(location.cash_balance&.amount_minor_units) %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <div class="px-5 py-8 text-sm text-slate-600">No cash locations match the current filters.</div>
-  <% end %>
-</section>
+        <% end %>
+      </tbody>
+    </table>
+  <% end
+end %>
+
+<%= render "shared/internal/page_header",
+  title: "Cash locations",
+  subtitle: "Vault, drawer, and internal transit custody locations.",
+  actions: header_actions %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  operating_unit: @operating_units.find { |unit| unit.id == @operating_unit_id },
+  state_items: [
+    ["Location type", @location_type.presence || "All"],
+    ["Status filter", @status.presence || "All"]
+  ] %>
+
+<%= render "shared/internal/page_section",
+  title: "Filters",
+  description: "Narrow locations by operating unit, type, and active status.",
+  content: filter_content %>
+
+<%= render "shared/internal/data_table",
+  title: "Cash location directory",
+  empty: "No cash locations match the current filters.",
+  content: location_table %>

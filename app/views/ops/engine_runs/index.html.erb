@@ -1,18 +1,36 @@
 <% content_for :title, "Engine Runs - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Engine runs</h1>
-  <p class="mt-2 text-slate-600">Preview and execute system-owned operational jobs.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Engine runs",
+  subtitle: "Preview and execute system-owned operational jobs." %>
 
-<section class="mt-8 grid gap-4 md:grid-cols-2">
-  <%= link_to ops_new_engine_run_path("monthly_maintenance_fees"), class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
-    <h2 class="font-semibold">Monthly maintenance fees</h2>
-    <p class="mt-2 text-sm text-slate-600">Assess product-configured monthly maintenance fees for eligible open accounts.</p>
-  <% end %>
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operator: current_operator,
+  state_items: [
+    ["Engines", Ops::EngineRunsController::ENGINES.size],
+    ["Mode", "preview first, execute second"]
+  ] %>
 
-  <%= link_to ops_new_engine_run_path("deposit_statements"), class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
-    <h2 class="font-semibold">Deposit statements</h2>
-    <p class="mt-2 text-sm text-slate-600">Generate due monthly deposit statement snapshots.</p>
-  <% end %>
-</section>
+<%= render "shared/internal/page_section",
+  title: "Available engines",
+  description: "Choose the system engine you want to preview and optionally execute.",
+  class: "mt-8",
+  content: capture {
+    content_tag(:div, class: "grid gap-4 md:grid-cols-2") do
+      safe_join([
+        link_to(ops_new_engine_run_path("monthly_maintenance_fees"), class: "#{bc_panel_class(tone: :default)} p-5 transition-colors hover:border-slate-400") do
+          safe_join([
+            content_tag(:h2, "Monthly maintenance fees", class: "font-semibold"),
+            content_tag(:p, "Assess product-configured monthly maintenance fees for eligible open accounts.", class: "mt-2 text-sm text-slate-600")
+          ])
+        end,
+        link_to(ops_new_engine_run_path("deposit_statements"), class: "#{bc_panel_class(tone: :default)} p-5 transition-colors hover:border-slate-400") do
+          safe_join([
+            content_tag(:h2, "Deposit statements", class: "font-semibold"),
+            content_tag(:p, "Generate due monthly deposit statement snapshots.", class: "mt-2 text-sm text-slate-600")
+          ])
+        end
+      ])
+    end
+  } %>

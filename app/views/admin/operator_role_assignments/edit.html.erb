@@ -1,12 +1,21 @@
 <% content_for :title, "Edit Role Assignment - BankCORE" %>
+<% header_actions = capture do %>
+  <%= link_to "Operator detail", admin_operator_path(@operator), class: bc_button_class(:secondary) %>
+<% end %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Edit role assignment</h1>
-    <p class="mt-2 text-slate-600"><%= @operator.display_name %></p>
-  </div>
-  <%= link_to "Operator detail", admin_operator_path(@operator), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Edit role assignment",
+  subtitle: @operator.display_name,
+  actions: header_actions %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  operating_unit: @operator.default_operating_unit,
+  operator: @operator,
+  state_items: [
+    ["Mode", "Edit role assignment"],
+    ["Assignment status", (@assignment.active? ? "Active" : "Inactive")]
+  ] %>
 
 <section class="mt-8">
   <%= render "form" %>

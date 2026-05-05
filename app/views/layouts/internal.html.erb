@@ -21,25 +21,23 @@
         </div>
 
         <% if respond_to?(:current_operator, true) && current_operator %>
-          <% nav_link_base = "rounded-md px-2.5 py-1.5 font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
-          <% nav_link_active = "bg-slate-900 text-white hover:bg-slate-900 hover:text-white" %>
           <nav class="flex items-center gap-2 text-sm" aria-label="Global primary navigation">
             <% home_active = current_page?(internal_path) %>
-            <%= link_to "Home", internal_path, class: [nav_link_base, (nav_link_active if home_active)].compact.join(" "), aria: { current: ("page" if home_active) } %>
+            <%= link_to "Home", internal_path, class: bc_nav_link_class(active: home_active), aria: { current: ("page" if home_active) } %>
             <% if branch_access? %>
               <% branch_active = controller_path.start_with?("branch/") %>
-              <%= link_to "Branch", branch_path, class: [nav_link_base, (nav_link_active if branch_active)].compact.join(" "), aria: { current: ("page" if branch_active) } %>
+              <%= link_to "Branch", branch_path, class: bc_nav_link_class(active: branch_active), aria: { current: ("page" if branch_active) } %>
             <% end %>
             <% if ops_access? %>
               <% ops_active = controller_path.start_with?("ops/") %>
-              <%= link_to "Ops", ops_path, class: [nav_link_base, (nav_link_active if ops_active)].compact.join(" "), aria: { current: ("page" if ops_active) } %>
+              <%= link_to "Ops", ops_path, class: bc_nav_link_class(active: ops_active), aria: { current: ("page" if ops_active) } %>
             <% end %>
             <% if admin_access? %>
               <% admin_active = controller_path.start_with?("admin/") %>
-              <%= link_to "Admin", admin_path, class: [nav_link_base, (nav_link_active if admin_active)].compact.join(" "), aria: { current: ("page" if admin_active) } %>
+              <%= link_to "Admin", admin_path, class: bc_nav_link_class(active: admin_active), aria: { current: ("page" if admin_active) } %>
             <% end %>
             <span class="text-slate-500"><%= current_operator.display_name.presence || current_operator.role.titleize %></span>
-            <%= button_to "Sign out", logout_path, method: :delete, class: "rounded bg-slate-900 px-3 py-1.5 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+            <%= button_to "Sign out", logout_path, method: :delete, class: bc_button_class(:primary) %>
           </nav>
         <% end %>
       </div>
@@ -49,12 +47,7 @@
       <% if controller_path.start_with?("branch/") %>
         <%= render "branch/shared/surface_nav" %>
       <% end %>
-      <% if notice.present? %>
-        <div role="status" aria-live="polite" class="mb-4 rounded border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"><%= notice %></div>
-      <% end %>
-      <% if alert.present? %>
-        <div role="alert" aria-live="assertive" class="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= alert %></div>
-      <% end %>
+      <%= render "shared/internal/flash_region" %>
 
       <%= yield %>
     </main>

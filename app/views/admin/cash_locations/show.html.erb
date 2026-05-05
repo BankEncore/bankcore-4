@@ -1,52 +1,59 @@
 <% content_for :title, "#{@cash_location.name} - BankCORE" %>
+<% header_actions = capture do %>
+  <%= link_to "All cash locations", admin_cash_locations_path, class: bc_button_class(:secondary) %>
+  <%= link_to "Edit", edit_admin_cash_location_path(@cash_location), class: bc_button_class(:secondary) %>
+<% end %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold"><%= @cash_location.name %></h1>
-    <p class="mt-2 text-slate-600"><%= @cash_location.location_type.humanize %></p>
-  </div>
-  <div class="flex flex-wrap gap-2">
-    <%= link_to "All cash locations", admin_cash_locations_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <%= link_to "Edit", edit_admin_cash_location_path(@cash_location), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-  </div>
-</section>
+<%= render "shared/internal/page_header",
+  title: @cash_location.name,
+  subtitle: @cash_location.location_type.humanize,
+  actions: header_actions %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  operating_unit: @cash_location.operating_unit,
+  operator: @cash_location.responsible_operator,
+  state_items: [
+    ["Drawer code", @cash_location.drawer_code.presence || "Not applicable"],
+    ["Status", @cash_location.status.humanize]
+  ] %>
 
 <section class="mt-8 grid gap-4 md:grid-cols-4">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Status</p>
     <div class="mt-3"><%= admin_status_badge(@cash_location.status) %></div>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Balance</p>
     <p class="mt-2 text-2xl font-semibold"><%= admin_money(@cash_location.cash_balance&.amount_minor_units) %></p>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Operating unit</p>
     <p class="mt-2 text-lg font-semibold"><%= link_to @cash_location.operating_unit.code, admin_operating_unit_path(@cash_location.operating_unit), class: "underline" %></p>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Responsible operator</p>
     <p class="mt-2 text-lg font-semibold"><%= @cash_location.responsible_operator&.display_name || "Unassigned" %></p>
   </div>
 </section>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Drawer code</p>
     <p class="mt-2 text-lg font-semibold"><%= @cash_location.drawer_code.presence || "Not applicable" %></p>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">Parent location</p>
     <p class="mt-2 text-lg font-semibold"><%= admin_cash_location_label(@cash_location.parent_cash_location) %></p>
   </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
     <p class="text-sm font-medium text-slate-500">External reference</p>
     <p class="mt-2 text-lg font-semibold"><%= @cash_location.external_reference.presence || "Not recorded" %></p>
   </div>
 </section>
 
 <section class="mt-8 grid gap-4 md:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %>">
     <div class="border-b border-slate-200 px-5 py-4">
       <h2 class="text-xl font-semibold">Recent movements</h2>
     </div>
@@ -64,7 +71,7 @@
     <% end %>
   </div>
 
-  <div class="rounded border border-slate-200 bg-white shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %>">
     <div class="border-b border-slate-200 px-5 py-4">
       <h2 class="text-xl font-semibold">Recent counts</h2>
     </div>
@@ -82,7 +89,7 @@
     <% end %>
   </div>
 
-  <div class="rounded border border-slate-200 bg-white shadow-sm">
+  <div class="<%= bc_panel_class(tone: :default) %>">
     <div class="border-b border-slate-200 px-5 py-4">
       <h2 class="text-xl font-semibold">Variances</h2>
     </div>
@@ -102,9 +109,9 @@
 </section>
 
 <% if @cash_location.active? %>
-  <section class="mt-8 rounded border border-amber-200 bg-amber-50 p-5">
+  <section class="mt-8 <%= bc_panel_class(tone: :warning) %> p-5">
     <h2 class="font-semibold text-amber-950">Deactivate cash location</h2>
     <p class="mt-2 text-sm text-amber-900">Deactivation requires zero balance, no open teller session, and no pending movements or variances.</p>
-    <%= button_to "Deactivate #{@cash_location.name}", deactivate_admin_cash_location_path(@cash_location), method: :post, class: "mt-4 rounded border border-amber-300 px-4 py-2 font-medium text-amber-950" %>
+    <%= button_to "Deactivate #{@cash_location.name}", deactivate_admin_cash_location_path(@cash_location), method: :post, class: "mt-4 #{bc_button_class(:secondary)}" %>
   </section>
 <% end %>

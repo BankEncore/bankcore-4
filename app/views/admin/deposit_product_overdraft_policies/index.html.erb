@@ -1,12 +1,12 @@
 <% content_for :title, "Deposit Product Overdraft Policies - BankCORE" %>
+<% header_actions = capture do %>
+  <%= link_to "New overdraft policy", admin_new_rule_change_path("overdraft_policy", deposit_product_id: @deposit_product_id), class: bc_button_class(:primary) %>
+<% end %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Overdraft policies</h1>
-    <p class="mt-2 text-slate-600">Deny-NSF policy configuration for deposit products.</p>
-  </div>
-  <%= link_to "New overdraft policy", admin_new_rule_change_path("overdraft_policy", deposit_product_id: @deposit_product_id), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Overdraft policies",
+  subtitle: "Deny-NSF policy configuration for deposit products.",
+  actions: header_actions %>
 
 <%= render "admin/shared/rule_filters", path: admin_deposit_product_overdraft_policies_path, as_of: @as_of %>
 <%= render "admin/shared/rule_index_table",

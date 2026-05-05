@@ -1,11 +1,9 @@
 <% current_surface = @branch_surface.presence || branch_surface_for_path %>
 <nav class="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-4 text-sm" aria-label="Branch surface navigation" data-surface-nav data-current-surface="<%= current_surface %>">
-  <% tab_class = "rounded border border-slate-300 bg-white px-3 py-2 font-medium text-slate-800 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2 aria-[current=true]:border-slate-900 aria-[current=true]:bg-slate-900 aria-[current=true]:text-white aria-[current=true]:hover:bg-slate-900" %>
-
-  <%= link_to "CSR", branch_customers_path, class: tab_class, data: { surface_tab: "csr" }, aria: { current: ("true" if current_surface == "csr") } %>
-  <%= link_to "Teller", branch_teller_path, class: tab_class, data: { surface_tab: "teller" }, aria: { current: ("true" if current_surface == "teller") } %>
-  <%= link_to "Supervisor", branch_approvals_path, class: tab_class, data: { surface_tab: "supervisor" }, aria: { current: ("true" if current_surface == "supervisor") } %>
-  <%= link_to "Events", branch_events_path, class: tab_class, data: { surface_tab: "events" }, aria: { current: ("true" if current_surface == "events") } %>
+  <%= link_to "CSR", branch_customers_path, class: bc_nav_link_class(active: current_surface == "csr", tone: :surface), data: { surface_tab: "csr" }, aria: { current: ("true" if current_surface == "csr") } %>
+  <%= link_to "Teller", branch_teller_path, class: bc_nav_link_class(active: current_surface == "teller", tone: :surface), data: { surface_tab: "teller" }, aria: { current: ("true" if current_surface == "teller") } %>
+  <%= link_to "Supervisor", branch_approvals_path, class: bc_nav_link_class(active: current_surface == "supervisor", tone: :surface), data: { surface_tab: "supervisor" }, aria: { current: ("true" if current_surface == "supervisor") } %>
+  <%= link_to "Events", branch_events_path, class: bc_nav_link_class(active: current_surface == "events", tone: :surface), data: { surface_tab: "events" }, aria: { current: ("true" if current_surface == "events") } %>
 </nav>
 
 <script>

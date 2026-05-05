@@ -1,4 +1,11 @@
-<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  state_items: [
+    ["Product filter", params[:deposit_product_id].presence || "All products"],
+    ["Active as of", params[:as_of].presence || "Current rows"]
+  ] %>
+
+<section class="mt-6 <%= bc_panel_class(tone: :default) %> p-5">
   <%= form_with url: path, method: :get, class: "grid gap-4 md:grid-cols-3" do |form| %>
     <div>
       <%= form.label :deposit_product_id, "Product id", class: "block text-sm font-medium text-slate-700" %>
@@ -9,18 +16,18 @@
       <%= form.text_field :as_of, value: params[:as_of], placeholder: "YYYY-MM-DD", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
     </div>
     <div class="flex items-end gap-3">
-      <%= form.submit "Apply", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Clear", path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+      <%= form.submit "Apply", class: bc_button_class(:primary) %>
+      <%= link_to "Clear", path, class: bc_button_class(:secondary) %>
     </div>
   <% end %>
 </section>
 
 <% if @error_message.present? %>
-  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+  <section class="mt-6 <%= bc_status_banner_class(tone: :warning) %>">
     <%= @error_message %>
   </section>
 <% elsif as_of.present? %>
-  <section class="mt-6 rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+  <section class="mt-6 <%= bc_panel_class(tone: :muted) %> px-4 py-3 text-sm text-slate-600">
     Showing active configuration as of <%= admin_date(as_of) %>.
   </section>
 <% end %>

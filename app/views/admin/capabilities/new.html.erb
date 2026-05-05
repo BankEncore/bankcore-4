@@ -1,12 +1,11 @@
 <% content_for :title, "New Capability - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">New capability</h1>
-    <p class="mt-2 text-slate-600">Create a database capability record for role mapping.</p>
-  </div>
-  <%= link_to "All capabilities", admin_capabilities_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>
+<%= render "shared/internal/page_header",
+  title: "New capability",
+  subtitle: "Create a database capability record for role mapping.",
+  actions: capture {
+    link_to "All capabilities", admin_capabilities_path, class: bc_button_class(:secondary)
+  } %>
 
 <section class="mt-8">
   <%= render "form" %>

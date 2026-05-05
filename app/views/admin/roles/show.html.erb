@@ -1,34 +1,10 @@
 <% content_for :title, "#{@role.code} - BankCORE" %>
-
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold"><%= @role.code %></h1>
-    <p class="mt-2 text-slate-600"><%= @role.name %></p>
-  </div>
-  <div class="flex flex-wrap gap-2">
-    <%= link_to "All roles", admin_roles_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <%= link_to "Edit", edit_admin_role_path(@role), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-  </div>
-</section>
-
-<section class="mt-8 grid gap-4 md:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Status</p>
-    <div class="mt-3"><%= admin_status_badge(@role.active? ? "active" : "inactive") %></div>
-  </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Type</p>
-    <p class="mt-2 text-2xl font-semibold"><%= @role.system_role? ? "System" : "Custom" %></p>
-  </div>
-  <div class="rounded border border-slate-200 bg-white p-5 shadow-sm">
-    <p class="text-sm font-medium text-slate-500">Capabilities</p>
-    <p class="mt-2 text-2xl font-semibold"><%= @role.capabilities.size %></p>
-  </div>
-</section>
-
-<section class="mt-8 rounded border border-slate-200 bg-white p-5 shadow-sm">
-  <h2 class="text-xl font-semibold">Capability matrix</h2>
-  <%= form_with url: capabilities_admin_role_path(@role), method: :patch, local: true, class: "mt-4" do %>
+<% header_actions = capture do %>
+  <%= link_to "All roles", admin_roles_path, class: bc_button_class(:secondary) %>
+  <%= link_to "Edit", edit_admin_role_path(@role), class: bc_button_class(:secondary) %>
+<% end %>
+<% capability_content = capture do %>
+  <%= form_with url: capabilities_admin_role_path(@role), method: :patch, local: true, class: "mt-1" do %>
     <div class="grid gap-4 md:grid-cols-2">
       <% @capabilities.each do |category, capabilities| %>
         <div>
@@ -47,44 +23,73 @@
         </div>
       <% end %>
     </div>
-    <%= submit_tag "Update capabilities", class: "mt-6 rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <%= submit_tag "Update capabilities", class: "mt-6 #{bc_button_class(:primary)}" %>
   <% end %>
+<% end %>
+<% assigned_operators_table = if @assignments.any?
+  capture do %>
+    <table class="min-w-full divide-y divide-slate-200 text-sm">
+      <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <tr>
+          <th class="px-5 py-3">Operator</th>
+          <th class="px-5 py-3">Scope</th>
+          <th class="px-5 py-3">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% @assignments.each do |assignment| %>
+          <tr>
+            <td class="px-5 py-4"><%= link_to assignment.operator.display_name, admin_operator_path(assignment.operator), class: "font-medium underline" %></td>
+            <td class="px-5 py-4"><%= admin_assignment_scope_label(assignment) %></td>
+            <td class="px-5 py-4"><%= admin_status_badge(assignment.active? ? "active" : "inactive") %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end
+end %>
+
+<%= render "shared/internal/page_header",
+  title: @role.code,
+  subtitle: @role.name,
+  actions: header_actions %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  state_items: [
+    ["Role type", (@role.system_role? ? "System" : "Custom")],
+    ["Status", (@role.active? ? "Active" : "Inactive")]
+  ] %>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
+    <p class="text-sm font-medium text-slate-500">Status</p>
+    <div class="mt-3"><%= admin_status_badge(@role.active? ? "active" : "inactive") %></div>
+  </div>
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
+    <p class="text-sm font-medium text-slate-500">Type</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @role.system_role? ? "System" : "Custom" %></p>
+  </div>
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
+    <p class="text-sm font-medium text-slate-500">Capabilities</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @role.capabilities.size %></p>
+  </div>
 </section>
 
-<section class="mt-8 rounded border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-5 py-4">
-    <h2 class="text-xl font-semibold">Assigned operators</h2>
-  </div>
-  <% if @assignments.any? %>
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-          <tr>
-            <th class="px-5 py-3">Operator</th>
-            <th class="px-5 py-3">Scope</th>
-            <th class="px-5 py-3">Status</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <% @assignments.each do |assignment| %>
-            <tr>
-              <td class="px-5 py-4"><%= link_to assignment.operator.display_name, admin_operator_path(assignment.operator), class: "font-medium underline" %></td>
-              <td class="px-5 py-4"><%= admin_assignment_scope_label(assignment) %></td>
-              <td class="px-5 py-4"><%= admin_status_badge(assignment.active? ? "active" : "inactive") %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  <% else %>
-    <div class="px-5 py-8 text-sm text-slate-600">No operators are assigned this role.</div>
-  <% end %>
-</section>
+<%= render "shared/internal/page_section",
+  title: "Capability matrix",
+  description: "Review and update the capabilities granted by this role.",
+  content: capability_content %>
+
+<%= render "shared/internal/data_table",
+  title: "Assigned operators",
+  empty: "No operators are assigned this role.",
+  content: assigned_operators_table %>
 
 <% if !@role.system_role? && @role.active? %>
-  <section class="mt-8 rounded border border-amber-200 bg-amber-50 p-5">
+  <section class="mt-8 <%= bc_panel_class(tone: :warning) %> p-5">
     <h2 class="font-semibold text-amber-950">Deactivate role</h2>
     <p class="mt-2 text-sm text-amber-900">Routine admin maintenance deactivates roles instead of deleting them.</p>
-    <%= button_to "Deactivate #{@role.code}", deactivate_admin_role_path(@role), method: :post, class: "mt-4 rounded border border-amber-300 px-4 py-2 font-medium text-amber-950" %>
+    <%= button_to "Deactivate #{@role.code}", deactivate_admin_role_path(@role), method: :post, class: "mt-4 #{bc_button_class(:secondary)}" %>
   </section>
 <% end %>

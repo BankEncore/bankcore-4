@@ -1,0 +1,24 @@
+<div class="mb-6 min-h-[3.5rem]" aria-live="polite">
+  <% if notice.present? %>
+    <div
+      role="status"
+      data-controller="flash"
+      data-flash-autohide-value="true"
+      data-flash-delay-value="4000"
+      class="<%= bc_status_banner_class(tone: :success) %> flex items-start justify-between gap-3">
+      <div><%= notice %></div>
+      <button type="button" data-action="flash#dismiss" class="<%= bc_button_class(:quiet) %> px-2 py-1 text-xs" aria-label="Dismiss notice">Dismiss</button>
+    </div>
+  <% elsif alert.present? %>
+    <div
+      role="alert"
+      aria-live="assertive"
+      data-controller="flash"
+      class="<%= bc_status_banner_class(tone: :warning) %> flex items-start justify-between gap-3">
+      <div><%= alert %></div>
+      <button type="button" data-action="flash#dismiss" class="<%= bc_button_class(:quiet) %> px-2 py-1 text-xs" aria-label="Dismiss alert">Dismiss</button>
+    </div>
+  <% else %>
+    <div class="hidden" aria-hidden="true"></div>
+  <% end %>
+</div>

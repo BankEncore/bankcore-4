@@ -1,66 +1,107 @@
 <% content_for :title, "Cash Result - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Cash result</h1>
-  <p class="mt-2 text-slate-600">Review committed Cash custody evidence.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Cash result",
+  subtitle: "Review committed Cash custody evidence." %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <% if @cash_result_type == "transfer" && @movement.present? %>
-    <h2 class="text-xl font-semibold">Cash movement recorded</h2>
-    <% if @movement.pending_approval? %>
-      <p class="mt-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Approval required: Cash movement approval and no-self-approval are enforced by the Cash command path.</p>
-    <% end %>
-    <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
-      <div><dt class="font-medium text-slate-500">Cash movement</dt><dd>#<%= @movement.id %></dd></div>
-      <div><dt class="font-medium text-slate-500">Movement type</dt><dd><%= @movement.movement_type %></dd></div>
-      <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @movement.status %></dd></div>
-      <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(@movement.business_date) %></dd></div>
-      <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @movement.actor&.display_name || @movement.actor_id %></dd></div>
-      <div><dt class="font-medium text-slate-500">Approver</dt><dd><%= @movement.approving_actor&.display_name || @movement.approving_actor_id || "Pending or not required" %></dd></div>
-      <div><dt class="font-medium text-slate-500">Channel</dt><dd>branch</dd></div>
-      <div><dt class="font-medium text-slate-500">Operating unit</dt><dd><%= @movement.operating_unit_id %></dd></div>
-      <div><dt class="font-medium text-slate-500">Source location</dt><dd><%= @movement.source_cash_location&.name || "None" %></dd></div>
-      <div><dt class="font-medium text-slate-500">Destination location</dt><dd><%= @movement.destination_cash_location&.name || "None" %></dd></div>
-      <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@movement.amount_minor_units) %> <%= @movement.currency %></dd></div>
-      <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @movement.idempotency_key %></dd></div>
-      <div><dt class="font-medium text-slate-500">Operational event</dt><dd><%= @movement.operational_event_id.present? ? "##{@movement.operational_event_id}" : "Pending approval; no event yet" %></dd></div>
-      <div><dt class="font-medium text-slate-500">No-GL evidence</dt><dd>Ordinary internal custody movement does not create journal entries.</dd></div>
-    </dl>
-    <div class="mt-6 flex flex-wrap gap-3">
-      <%= link_to "Cash position", branch_cash_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <% if @movement.operational_event_id.present? %>
-        <%= link_to "Event detail", branch_operational_event_path(@movement.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-        <%= link_to "Trace receipt", branch_event_receipt_path(@movement.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <% end %>
-    </div>
-  <% elsif @cash_result_type == "count" && @count.present? %>
-    <h2 class="text-xl font-semibold">Cash count recorded</h2>
-    <% variance = @count.cash_variance %>
-    <% if variance.present? %>
-      <p class="mt-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Variance approval required: approval and GL adjustment, if any, are owned by the Cash variance command path.</p>
-    <% end %>
-    <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
-      <div><dt class="font-medium text-slate-500">Cash count</dt><dd>#<%= @count.id %></dd></div>
-      <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @count.status %></dd></div>
-      <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(@count.business_date) %></dd></div>
-      <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @count.actor&.display_name || @count.actor_id %></dd></div>
-      <div><dt class="font-medium text-slate-500">Channel</dt><dd>branch</dd></div>
-      <div><dt class="font-medium text-slate-500">Operating unit</dt><dd><%= @count.operating_unit_id %></dd></div>
-      <div><dt class="font-medium text-slate-500">Cash location</dt><dd><%= @count.cash_location.name %></dd></div>
-      <div><dt class="font-medium text-slate-500">Expected amount</dt><dd><%= branch_money(@count.expected_amount_minor_units) %> <%= @count.currency %></dd></div>
-      <div><dt class="font-medium text-slate-500">Counted amount</dt><dd><%= branch_money(@count.counted_amount_minor_units) %> <%= @count.currency %></dd></div>
-      <div><dt class="font-medium text-slate-500">Cash variance</dt><dd><%= variance.present? ? "##{variance.id} (#{variance.status}, #{branch_money(variance.amount_minor_units, signed: true)})" : "None" %></dd></div>
-      <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @count.idempotency_key %></dd></div>
-      <div><dt class="font-medium text-slate-500">Operational event</dt><dd><%= @count.operational_event_id.present? ? "##{@count.operational_event_id}" : "None" %></dd></div>
-      <div><dt class="font-medium text-slate-500">No-GL evidence</dt><dd>Count recording is no-GL; variance approval owns any GL adjustment.</dd></div>
-    </dl>
-    <div class="mt-6 flex flex-wrap gap-3">
-      <%= link_to "Cash position", branch_cash_path, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <% if @count.operational_event_id.present? %>
-        <%= link_to "Event detail", branch_operational_event_path(@count.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-        <%= link_to "Trace receipt", branch_event_receipt_path(@count.operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <% end %>
-    </div>
+<% if @cash_result_type == "transfer" && @movement.present? %>
+  <%= render "shared/internal/context_strip",
+    business_date: @movement.business_date,
+    operating_unit: @movement.operating_unit,
+    operator: current_operator,
+    state_items: [
+      ["Result type", "cash transfer"],
+      ["Status", @movement.status],
+      ["Channel", "branch"]
+    ] %>
+
+  <% if @movement.pending_approval? %>
+    <%= render "shared/internal/status_banner",
+      tone: :warning,
+      title: "Approval required",
+      body: "Cash movement approval and no-self-approval are enforced by the Cash command path." %>
   <% end %>
-</section>
+
+  <%= render "shared/internal/page_section",
+    title: "Cash movement recorded",
+    description: "Custody movement evidence for the branch transfer request.",
+    class: "mt-6",
+    content: capture {
+      safe_join([
+        content_tag(:dl, class: "grid gap-4 text-sm md:grid-cols-2") do
+          safe_join([
+            content_tag(:div) { safe_join([content_tag(:dt, "Cash movement", class: "font-medium text-slate-500"), content_tag(:dd, "##{@movement.id}")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Movement type", class: "font-medium text-slate-500"), content_tag(:dd, @movement.movement_type)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Status", class: "font-medium text-slate-500"), content_tag(:dd, @movement.status)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Business date", class: "font-medium text-slate-500"), content_tag(:dd, branch_date(@movement.business_date))]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Actor", class: "font-medium text-slate-500"), content_tag(:dd, @movement.actor&.display_name || @movement.actor_id)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Approver", class: "font-medium text-slate-500"), content_tag(:dd, @movement.approving_actor&.display_name || @movement.approving_actor_id || "Pending or not required")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Source location", class: "font-medium text-slate-500"), content_tag(:dd, @movement.source_cash_location&.name || "None")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Destination location", class: "font-medium text-slate-500"), content_tag(:dd, @movement.destination_cash_location&.name || "None")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Amount", class: "font-medium text-slate-500"), content_tag(:dd, "#{branch_money(@movement.amount_minor_units)} #{@movement.currency}")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Idempotency key", class: "font-medium text-slate-500"), content_tag(:dd, @movement.idempotency_key)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Operational event", class: "font-medium text-slate-500"), content_tag(:dd, @movement.operational_event_id.present? ? "##{@movement.operational_event_id}" : "Pending approval; no event yet")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "No-GL evidence", class: "font-medium text-slate-500"), content_tag(:dd, "Ordinary internal custody movement does not create journal entries.")]) }
+          ])
+        end,
+        content_tag(:div, class: "mt-6 flex flex-wrap gap-3") do
+          links = [link_to("Cash position", branch_cash_path, class: bc_button_class(:primary))]
+          if @movement.operational_event_id.present?
+            links << link_to("Event detail", branch_operational_event_path(@movement.operational_event_id), class: bc_button_class(:secondary))
+            links << link_to("Trace receipt", branch_event_receipt_path(@movement.operational_event_id), class: bc_button_class(:secondary))
+          end
+          safe_join(links)
+        end
+      ])
+    } %>
+<% elsif @cash_result_type == "count" && @count.present? %>
+  <% variance = @count.cash_variance %>
+  <%= render "shared/internal/context_strip",
+    business_date: @count.business_date,
+    operating_unit: @count.operating_unit,
+    operator: current_operator,
+    state_items: [
+      ["Result type", "cash count"],
+      ["Status", @count.status],
+      ["Variance", (variance.present? ? branch_money(variance.amount_minor_units, signed: true) : "None")]
+    ] %>
+
+  <% if variance.present? %>
+    <%= render "shared/internal/status_banner",
+      tone: :warning,
+      title: "Variance approval required",
+      body: "Variance approval and any GL adjustment are owned by the Cash variance command path." %>
+  <% end %>
+
+  <%= render "shared/internal/page_section",
+    title: "Cash count recorded",
+    description: "Count evidence and any variance generated from the recorded custody comparison.",
+    class: "mt-6",
+    content: capture {
+      safe_join([
+        content_tag(:dl, class: "grid gap-4 text-sm md:grid-cols-2") do
+          safe_join([
+            content_tag(:div) { safe_join([content_tag(:dt, "Cash count", class: "font-medium text-slate-500"), content_tag(:dd, "##{@count.id}")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Status", class: "font-medium text-slate-500"), content_tag(:dd, @count.status)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Business date", class: "font-medium text-slate-500"), content_tag(:dd, branch_date(@count.business_date))]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Actor", class: "font-medium text-slate-500"), content_tag(:dd, @count.actor&.display_name || @count.actor_id)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Cash location", class: "font-medium text-slate-500"), content_tag(:dd, @count.cash_location.name)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Expected amount", class: "font-medium text-slate-500"), content_tag(:dd, "#{branch_money(@count.expected_amount_minor_units)} #{@count.currency}")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Counted amount", class: "font-medium text-slate-500"), content_tag(:dd, "#{branch_money(@count.counted_amount_minor_units)} #{@count.currency}")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Cash variance", class: "font-medium text-slate-500"), content_tag(:dd, variance.present? ? "##{variance.id} (#{variance.status}, #{branch_money(variance.amount_minor_units, signed: true)})" : "None")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Idempotency key", class: "font-medium text-slate-500"), content_tag(:dd, @count.idempotency_key)]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "Operational event", class: "font-medium text-slate-500"), content_tag(:dd, @count.operational_event_id.present? ? "##{@count.operational_event_id}" : "None")]) },
+            content_tag(:div) { safe_join([content_tag(:dt, "No-GL evidence", class: "font-medium text-slate-500"), content_tag(:dd, "Count recording is no-GL; variance approval owns any GL adjustment.")]) }
+          ])
+        end,
+        content_tag(:div, class: "mt-6 flex flex-wrap gap-3") do
+          links = [link_to("Cash position", branch_cash_path, class: bc_button_class(:primary))]
+          if @count.operational_event_id.present?
+            links << link_to("Event detail", branch_operational_event_path(@count.operational_event_id), class: bc_button_class(:secondary))
+            links << link_to("Trace receipt", branch_event_receipt_path(@count.operational_event_id), class: bc_button_class(:secondary))
+          end
+          safe_join(links)
+        end
+      ])
+    } %>
+<% end %>

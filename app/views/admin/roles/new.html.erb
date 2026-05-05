@@ -1,12 +1,16 @@
 <% content_for :title, "New Role - BankCORE" %>
+<% header_actions = capture do %>
+  <%= link_to "All roles", admin_roles_path, class: bc_button_class(:secondary) %>
+<% end %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">New role</h1>
-    <p class="mt-2 text-slate-600">Create a custom role and initial capability mapping.</p>
-  </div>
-  <%= link_to "All roles", admin_roles_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>
+<%= render "shared/internal/page_header",
+  title: "New role",
+  subtitle: "Create a custom role and initial capability mapping.",
+  actions: header_actions %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  state_items: [["Mode", "Create role"]] %>
 
 <section class="mt-8">
   <%= render "form" %>

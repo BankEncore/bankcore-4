@@ -1,9 +1,17 @@
 <% content_for :title, "Record Withdrawal - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Record withdrawal</h1>
-  <p class="mt-2 text-slate-600">Create a teller-channel withdrawal event, with optional immediate posting.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Record withdrawal",
+  subtitle: "Create a teller-channel withdrawal event, with optional immediate posting." %>
+
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Open sessions", @open_teller_sessions.size],
+    ["Posting mode", "Teller cash transaction"]
+  ] %>
 
 <%= render "branch/shared/cash_transaction_form",
   path: branch_withdrawals_path,

@@ -1,12 +1,18 @@
 <% content_for :title, "#{ops_engine_label(@engine)} Results - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold"><%= ops_engine_label(@engine) %> results</h1>
-  <p class="mt-2 text-slate-600">Execution completed for business date <%= @result.business_date.iso8601 %>.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "#{ops_engine_label(@engine)} results",
+  subtitle: "Execution completed for business date #{@result.business_date.iso8601}.",
+  actions: capture {
+    link_to "Run another preview", ops_new_engine_run_path(@engine), class: bc_button_class(:secondary)
+  } %>
+
+<%= render "shared/internal/context_strip",
+  business_date: @result.business_date,
+  operator: current_operator,
+  state_items: [
+    ["Engine", ops_engine_label(@engine)],
+    ["Mode", "execution"]
+  ] %>
 
 <%= render "result_summary", result: @result, preview: false %>
-
-<section class="mt-6">
-  <%= link_to "Run another preview", ops_new_engine_run_path(@engine), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>

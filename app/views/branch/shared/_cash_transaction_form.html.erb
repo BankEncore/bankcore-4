@@ -4,6 +4,7 @@
 <% field_errors = local_assigns[:field_errors] || {} %>
 <% normalized_form_data = form_data.respond_to?(:to_h) ? form_data.to_h.stringify_keys : form_data.stringify_keys %>
 <% open_sessions = local_assigns.fetch(:open_sessions, []) %>
+<% workflow_label = submit_label.to_s.sub(/\ARecord\s+/i, "").presence || submit_label %>
 <%
   inline_error_for = lambda do |field_name|
     explicit = field_errors[field_name.to_s] || field_errors[field_name.to_sym]
@@ -16,64 +17,180 @@
   end
 %>
 
-<%= render "branch/shared/transaction_preview", preview: preview if preview.present? %>
+<div class="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
+  <section class="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 bg-slate-50/80 px-6 py-5">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p class="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">Cash transaction workflow</p>
+          <h2 class="mt-2 text-2xl font-semibold text-slate-950"><%= submit_label %></h2>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Confirm the account, choose the open drawer session, enter the amount, then review the expected cash impact before you submit.
+          </p>
+        </div>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <% if open_sessions.empty? %>
-    <div class="rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-      <p class="font-semibold">Open a teller session first</p>
-      <p class="mt-1">Deposits and withdrawals require an open teller session before they can be submitted.</p>
-      <%= link_to "Open teller session", new_branch_teller_session_path, class: "mt-3 inline-block rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+        <div class="grid grid-cols-2 gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <div class="min-w-[7rem] rounded-lg bg-slate-50 px-3 py-3">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Business date</p>
+            <p class="mt-1 text-sm font-semibold text-slate-950"><%= current_business_date.iso8601 %></p>
+          </div>
+          <div class="min-w-[7rem] rounded-lg bg-slate-50 px-3 py-3">
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Open sessions</p>
+            <p class="mt-1 text-sm font-semibold text-slate-950"><%= open_sessions.size %></p>
+          </div>
+        </div>
+      </div>
     </div>
-  <% end %>
 
-  <%= form_with url: path, scope: scope, method: :post, class: "mt-6 grid gap-4 md:grid-cols-2" do |form| %>
-    <div>
-      <%= form.label :deposit_account_number, "Account number", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
-      <%= form.text_field :deposit_account_number, value: normalized_form_data["deposit_account_number"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Enter the customer deposit account number. Keep leading zeros when applicable.</p>
-      <% if (message = inline_error_for.call(:deposit_account_number)).present? %>
-        <p class="mt-1 text-xs text-red-700"><%= message %></p>
+    <%= form_with url: path,
+      scope: scope,
+      method: :post,
+      class: "divide-y divide-slate-200",
+      data: {
+        controller: "submit-state",
+        action: "turbo:submit-start->submit-state#start turbo:submit-end->submit-state#end"
+      } do |form| %>
+      <div class="px-6 py-6">
+        <% account_context_content = capture do %>
+          <div class="grid gap-5 md:grid-cols-2">
+            <div>
+              <%= form.label :deposit_account_number, "Account number", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+              <%= form.text_field :deposit_account_number, value: normalized_form_data["deposit_account_number"], autocomplete: "off", class: "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5" %>
+              <p class="mt-1 text-xs text-slate-500">Enter the customer deposit account number. Keep leading zeros when applicable.</p>
+              <% if (message = inline_error_for.call(:deposit_account_number)).present? %>
+                <p class="mt-1 text-xs text-red-700"><%= message %></p>
+              <% end %>
+            </div>
+
+            <div>
+              <%= form.label :teller_session_id, "Open teller session", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+              <%= form.select :teller_session_id,
+                open_sessions.map { |session| [branch_teller_session_option_label(session), session.id] },
+                { include_blank: "Select an open session", selected: normalized_form_data["teller_session_id"] },
+                disabled: open_sessions.empty?,
+                class: "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 disabled:bg-slate-100" %>
+              <p class="mt-1 text-xs text-slate-500">Choose the drawer session that will take responsibility for this <%= workflow_label.downcase %>.</p>
+              <% if (message = inline_error_for.call(:teller_session_id)).present? %>
+                <p class="mt-1 text-xs text-red-700"><%= message %></p>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+        <%= render "shared/internal/form_section",
+          title: "Account and cash context",
+          description: "Identify the deposit account and the open teller session that will handle the cash.",
+          content: account_context_content %>
+      </div>
+
+      <div class="px-6 py-6">
+        <% transaction_input_content = capture do %>
+          <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_18rem]">
+            <div>
+              <%= form.label :amount, "Amount", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
+              <%= form.text_field :amount, value: normalized_form_data["amount"], inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-lg" %>
+              <p class="mt-1 text-xs text-slate-500">Use dollars and cents, for example <code>10</code>, <code>10.50</code>, or <code>1,234.56</code>.</p>
+              <% if (message = inline_error_for.call(:amount)).present? %>
+                <p class="mt-1 text-xs text-red-700"><%= message %></p>
+              <% end %>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">What this step controls</p>
+              <ul class="mt-3 space-y-2 text-sm text-slate-700">
+                <li>Amount is validated server-side in dollars and cents.</li>
+                <li>Posting and account restrictions are rechecked on submit.</li>
+                <li>Drawer and account impacts are previewed when available.</li>
+              </ul>
+            </div>
+          </div>
+        <% end %>
+        <%= render "shared/internal/form_section",
+          title: "Transaction inputs",
+          description: "Enter the cash amount using dollars and cents. The command will convert and validate it on submit.",
+          content: transaction_input_content %>
+      </div>
+
+      <%= form.hidden_field :currency, value: normalized_form_data["currency"] || "USD" %>
+      <%= form.hidden_field :idempotency_key, value: normalized_form_data["idempotency_key"] %>
+
+      <div class="px-6 py-6">
+        <% review_submit_content = capture do %>
+          <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div class="space-y-3">
+              <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <%= form.check_box :record_and_post, { checked: ActiveModel::Type::Boolean.new.cast(normalized_form_data["record_and_post"]) }, "1", "0" %>
+                <span>
+                  <span class="block font-medium text-slate-950">Record and post immediately</span>
+                  <span class="mt-1 block text-xs text-slate-500">Leave this on for normal teller cash flows when you want the event and posting completed together.</span>
+                </span>
+              </label>
+              <p class="text-xs text-slate-500">Posting eligibility, account restrictions, cash-session checks, and balance guards are rechecked on submit.</p>
+            </div>
+
+            <div class="flex flex-col gap-3 lg:items-end">
+              <%= form.submit submit_label,
+                disabled: open_sessions.empty?,
+                class: "#{bc_button_class(:primary)} min-w-48 disabled:cursor-not-allowed disabled:bg-slate-400",
+                data: { submitting_label: "Submitting..." } %>
+              <p class="text-xs text-slate-500">Primary action: <%= workflow_label %></p>
+            </div>
+          </div>
+        <% end %>
+        <%= render "shared/internal/form_section",
+          title: "Review and submit",
+          description: "Confirm posting mode and submit only after the account, drawer, and amount look correct.",
+          content: review_submit_content %>
+      </div>
+    <% end %>
+  </section>
+
+  <aside class="space-y-4 xl:sticky xl:top-8 xl:self-start">
+    <% if open_sessions.empty? %>
+      <% no_session_body = capture do %>
+        Deposits and withdrawals require an open teller session before they can be submitted.
+        <div class="mt-3">
+          <%= link_to "Open teller session", new_branch_teller_session_path, class: bc_button_class(:primary) %>
+        </div>
       <% end %>
-    </div>
+      <%= render "shared/internal/status_banner",
+        tone: :warning,
+        title: "Open a teller session first",
+        body: no_session_body %>
+    <% end %>
 
-    <div>
-      <%= form.label :amount, "Amount", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
-      <%= form.text_field :amount, value: normalized_form_data["amount"], inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Use dollars and cents, for example <code>10</code>, <code>10.50</code>, or <code>1,234.56</code>.</p>
-      <% if (message = inline_error_for.call(:amount)).present? %>
-        <p class="mt-1 text-xs text-red-700"><%= message %></p>
-      <% end %>
-    </div>
+    <% if preview.present? %>
+      <%= render "branch/shared/transaction_preview", preview: preview %>
+    <% else %>
+      <section class="<%= bc_panel_class(tone: :muted) %> p-5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Before submit</p>
+        <ul class="mt-3 space-y-3 text-sm text-slate-700">
+          <li>Use the correct deposit account number and drawer session.</li>
+          <li>Make sure the customer-facing cash amount matches the drawer cash movement.</li>
+          <li>Review warnings or posting blockers before you submit.</li>
+        </ul>
+      </section>
+    <% end %>
 
-    <div class="md:col-span-2">
-      <%= form.label :teller_session_id, "Open teller session", class: "block text-sm font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
-      <%= form.select :teller_session_id,
-        open_sessions.map { |session| [branch_teller_session_option_label(session), session.id] },
-        { include_blank: "Select an open session", selected: normalized_form_data["teller_session_id"] },
-        disabled: open_sessions.empty?,
-        class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Choose the open drawer session that will receive or pay out cash.</p>
-      <% if (message = inline_error_for.call(:teller_session_id)).present? %>
-        <p class="mt-1 text-xs text-red-700"><%= message %></p>
-      <% end %>
-    </div>
-
-    <%= form.hidden_field :currency, value: normalized_form_data["currency"] || "USD" %>
-    <%= form.hidden_field :idempotency_key, value: normalized_form_data["idempotency_key"] %>
-
-    <div class="md:col-span-2">
-      <label class="flex items-center gap-2 text-sm text-slate-700">
-        <%= form.check_box :record_and_post, { checked: ActiveModel::Type::Boolean.new.cast(normalized_form_data["record_and_post"]) }, "1", "0" %>
-        Record and post immediately
-      </label>
-      <p class="mt-1 text-xs text-slate-500">Posting eligibility, account restrictions, cash-session checks, and balance guards are rechecked on submit.</p>
-    </div>
-
-    <div class="md:col-span-2">
-      <%= form.submit submit_label,
-        disabled: open_sessions.empty?,
-        class: "rounded bg-slate-900 px-4 py-2 font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
-    </div>
-  <% end %>
-</section>
+    <section class="<%= bc_panel_class(tone: :default) %> p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Operational context</p>
+      <dl class="mt-3 space-y-3 text-sm">
+        <div>
+          <dt class="font-medium text-slate-500">Business date</dt>
+          <dd class="mt-1 text-slate-950"><%= current_business_date.iso8601 %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-slate-500">Operating unit</dt>
+          <dd class="mt-1 text-slate-950"><%= current_operating_unit&.code || "None" %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-slate-500">Operator</dt>
+          <dd class="mt-1 text-slate-950"><%= current_operator.display_name %></dd>
+        </div>
+        <div>
+          <dt class="font-medium text-slate-500">Open sessions available</dt>
+          <dd class="mt-1 text-slate-950"><%= open_sessions.size %></dd>
+        </div>
+      </dl>
+    </section>
+  </aside>
+</div>

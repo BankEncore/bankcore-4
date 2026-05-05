@@ -1,11 +1,12 @@
 <% content_for :title, "Ops Event Search - BankCORE" %>
+<%= render "shared/internal/page_header",
+  title: "Operational event search",
+  subtitle: "Search event history across the current or historical business dates." %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Operational event search</h1>
-  <p class="mt-2 text-slate-600">Search event history across the current or historical business dates.</p>
-</section>
-
-<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
+<%= render "shared/internal/filter_bar",
+  title: "Filters",
+  description: "Search by date, support keys, event type, channel, actor, product, and operating unit.",
+  class: "mt-6" do %>
   <%= form_with url: ops_operational_events_path, method: :get, class: "grid gap-4 md:grid-cols-4" do |form| %>
     <% {
       business_date: "Business date",
@@ -57,7 +58,7 @@
       <%= link_to "Clear filters", ops_operational_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
     </div>
   <% end %>
-</section>
+<% end %>
 
 <% if @error_message.present? %>
   <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -65,11 +66,21 @@
   </section>
 <% elsif @event_search.present? %>
   <% envelope = @event_search[:envelope] %>
-  <section class="mt-6 rounded border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm">
+  <%= render "shared/internal/context_strip",
+    business_date: envelope[:current_business_on],
+    reviewed_business_date: (params[:business_date].presence || envelope[:business_date_from]),
+    operating_unit: @scoped_operating_unit,
+    operator: current_operator,
+    state_items: [
+      ["Date range", "#{envelope[:business_date_from].iso8601} to #{envelope[:business_date_to].iso8601}"],
+      ["Posting day closed", (envelope[:posting_day_closed] ? "Yes" : "No")],
+      ["Results on this page", "#{@event_search[:rows].size}#{@event_search[:has_more] ? ' (more on next page)' : ''}"]
+    ] %>
+
+  <section class="<%= bc_panel_class(tone: :muted) %> mt-6 p-5 text-sm text-slate-600">
     Showing <%= envelope[:business_date_from].iso8601 %> to <%= envelope[:business_date_to].iso8601 %>.
     Current business date is <%= envelope[:current_business_on].iso8601 %>.
     Posting day closed: <%= envelope[:posting_day_closed] ? "yes" : "no" %>.
-    Results on this page: <%= @event_search[:rows].size %><%= @event_search[:has_more] ? " (more on next page)" : "" %>.
     <% if @scoped_operating_unit.present? %>
       Operating unit filter: <strong><%= @scoped_operating_unit.code %></strong> (id <%= @scoped_operating_unit.id %>).
     <% end %>
@@ -86,9 +97,11 @@
     <% end %>
   </section>
 
-  <section class="mt-6 rounded border border-slate-200 bg-white shadow-sm">
-    <% if @event_search[:rows].any? %>
-      <div class="overflow-x-auto">
+  <% if @event_search[:rows].any? %>
+    <%= render "shared/internal/data_table",
+      title: "Operational events",
+      description: "Filtered event-backed record set for the selected business-date and support criteria.",
+      class: "mt-6" do %>
         <table class="min-w-full divide-y divide-slate-200 text-sm">
           <thead class="sticky top-0 z-10 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
@@ -133,17 +146,21 @@
             <% end %>
           </tbody>
         </table>
-      </div>
-    <% else %>
-      <div class="px-5 py-8 text-sm text-slate-600">
+    <% end %>
+  <% else %>
+    <% empty_state = capture do %>
         <p>No operational events matched these filters.</p>
         <div class="mt-4 flex flex-wrap gap-2">
           <%= link_to "Clear filters", ops_operational_events_path, class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
           <%= link_to "Try broader date range", ops_operational_events_path(request.query_parameters.merge(business_date: nil, business_date_from: nil, business_date_to: nil, limit: 100)), class: "rounded border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700" %>
         </div>
-      </div>
     <% end %>
-  </section>
+    <%= render "shared/internal/data_table",
+      title: "Operational events",
+      description: "Filtered event-backed record set for the selected business-date and support criteria.",
+      empty: empty_state,
+      class: "mt-6" %>
+  <% end %>
 
   <% if @event_search[:has_more] %>
     <div class="mt-6">
