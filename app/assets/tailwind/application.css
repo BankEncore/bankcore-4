@@ -1,1 +1,54 @@
 @import "tailwindcss";
+
+/*
+ * BankCORE internal visual foundation tokens.
+ *
+ * Keep the palette restrained: neutrals for layout, one dark action accent,
+ * and semantic colors only for meaning. These tokens are intentionally simple
+ * so Branch/Ops UI work can standardize without introducing a second UI system.
+ */
+
+:root {
+  --bc-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --bc-color-bg: #f1f5f9; /* slate-100 */
+  --bc-color-surface: #ffffff;
+  --bc-color-surface-muted: #f8fafc; /* slate-50 */
+  --bc-color-border: #e2e8f0; /* slate-200 */
+  --bc-color-border-strong: #cbd5e1; /* slate-300 */
+
+  --bc-color-text: #020617; /* slate-950 */
+  --bc-color-text-muted: #475569; /* slate-600 */
+  --bc-color-text-subtle: #64748b; /* slate-500 */
+
+  --bc-color-action: #0f172a; /* slate-900 */
+  --bc-color-action-hover: #1e293b; /* slate-800 */
+  --bc-color-focus: #334155; /* slate-700 */
+
+  --bc-color-success-bg: #ecfdf5; /* emerald-50 */
+  --bc-color-success-border: #a7f3d0; /* emerald-200 */
+  --bc-color-success-text: #065f46; /* emerald-800 */
+
+  --bc-color-warning-bg: #fffbeb; /* amber-50 */
+  --bc-color-warning-border: #fde68a; /* amber-200 */
+  --bc-color-warning-text: #78350f; /* amber-900 */
+
+  --bc-color-danger-bg: #fef2f2; /* red-50 */
+  --bc-color-danger-border: #fecaca; /* red-200 */
+  --bc-color-danger-text: #991b1b; /* red-800 */
+
+  --bc-color-info-bg: #eff6ff; /* blue-50 */
+  --bc-color-info-border: #bfdbfe; /* blue-200 */
+  --bc-color-info-text: #1e3a8a; /* blue-900 */
+
+  --bc-space-page-x: 1.5rem;
+  --bc-space-page-y: 2rem;
+  --bc-space-section: 2rem;
+  --bc-space-panel: 1.25rem;
+}
+
+body {
+  font-family: var(--bc-font-sans);
+  background-color: var(--bc-color-bg);
+  color: var(--bc-color-text);
+}

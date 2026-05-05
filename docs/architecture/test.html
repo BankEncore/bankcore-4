@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BankCORE Color System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto space-y-12">
+        
+        <section>
+            <h2 class="text-slate-950 text-xl font-bold mb-4">System Swatches</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase text-slate-500">Neutrals</p>
+                    <div class="h-12 w-full bg-slate-100 border border-slate-200 rounded flex items-center px-3 text-xs text-slate-600">Slate-100</div>
+                    <div class="h-12 w-full bg-white border border-slate-200 rounded flex items-center px-3 text-xs text-slate-600 shadow-sm">White (Panel)</div>
+                    <div class="h-12 w-full bg-slate-950 rounded flex items-center px-3 text-xs text-white">Slate-950 (Text)</div>
+                </div>
+
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase text-slate-500">Primary Actions</p>
+                    <div class="h-12 w-full bg-slate-900 rounded flex items-center px-3 text-xs text-white">Deep Navy (900)</div>
+                    <div class="h-12 w-full bg-teal-800 rounded flex items-center px-3 text-xs text-white">Dark Teal (800)</div>
+                </div>
+
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase text-slate-500">States</p>
+                    <div class="h-12 w-full bg-emerald-50 border border-emerald-200 rounded flex items-center px-3 text-xs text-emerald-900">Success</div>
+                    <div class="h-12 w-full bg-amber-50 border border-amber-200 rounded flex items-center px-3 text-xs text-amber-950">Warning</div>
+                </div>
+
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold uppercase text-slate-500">&nbsp;</p>
+                    <div class="h-12 w-full bg-red-50 border border-red-200 rounded flex items-center px-3 text-xs text-red-900">Danger</div>
+                    <div class="h-12 w-full bg-blue-50 border border-blue-200 rounded flex items-center px-3 text-xs text-blue-950">Info</div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-300">
+
+        <section>
+            <h2 class="text-slate-950 text-xl font-bold mb-4">In Context: BankCORE Dashboard</h2>
+            
+            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden max-w-md">
+                <div class="p-6 border-b border-slate-100">
+                    <h3 class="text-slate-950 font-semibold text-lg">Checking Account</h3>
+                    <p class="text-slate-600 text-sm">Account ending in •••• 4291</p>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <div>
+                        <p class="text-slate-600 text-xs uppercase tracking-wider font-bold mb-1">Available Balance</p>
+                        <p class="text-slate-950 text-3xl font-bold">$12,450.00</p>
+                    </div>
+
+                    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center gap-3">
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                        <p class="text-emerald-900 text-sm font-medium">Your payroll deposit was processed successfully.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <button class="w-full bg-slate-900 text-white font-medium py-2.5 rounded-lg hover:bg-slate-800 transition-colors focus:ring-4 focus:ring-slate-200 outline-none">
+                            Transfer Funds
+                        </button>
+                        <button class="w-full bg-white border border-slate-200 text-slate-950 font-medium py-2.5 rounded-lg hover:bg-slate-50 transition-colors">
+                            Download Statements
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 border-t border-slate-200">
+                    <p class="text-slate-600 text-xs text-center">Last updated: Today at 4:30 PM</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+</html>
