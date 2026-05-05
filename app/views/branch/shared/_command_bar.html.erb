@@ -1,0 +1,114 @@
+<% current_surface = @branch_surface.presence || branch_surface_for_path %>
+<% summary = local_assigns[:summary] || branch_workspace_summary %>
+<% cap = Workspace::Authorization::CapabilityRegistry %>
+<%
+  primary_action =
+    case current_surface
+    when "csr"
+      if branch_operator_can?(cap::PARTY_CREATE)
+        ["Create party", new_branch_party_path]
+      else
+        ["Find customer", branch_customers_path]
+      end
+    when "supervisor"
+      if branch_operator_can?(cap::REVERSAL_CREATE)
+        ["Review approvals", branch_approvals_path]
+      else
+        ["Branch workspace", branch_path]
+      end
+    when "events"
+      ["Search events", branch_events_path]
+    else
+      if branch_operator_can?(cap::TELLER_SESSION_OPEN)
+        ["Open session", new_branch_teller_session_path]
+      elsif branch_operator_can?(cap::DEPOSIT_ACCEPT)
+        ["Record deposit", new_branch_deposit_path]
+      else
+        ["Teller workspace", branch_teller_path]
+      end
+    end
+%>
+<% surface_labels = { "csr" => "Customer servicing", "teller" => "Teller workspace", "supervisor" => "Supervisor approvals", "events" => "Branch events" } %>
+<% surface_label = surface_labels.fetch(current_surface, "Branch workspace") %>
+
+<section class="mb-5 overflow-hidden rounded-[1.25rem] border text-white shadow-xl" style="border-color: rgba(15, 118, 110, 0.18); background-image: linear-gradient(135deg, var(--bc-color-shell) 0%, var(--bc-color-shell-muted) 55%, rgba(15, 118, 110, 0.88) 100%);" aria-label="Branch command bar">
+  <div class="flex flex-col gap-5 px-5 py-5 lg:px-6">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-4">
+        <div>
+          <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-slate-300">Branch workspace</p>
+          <h2 class="mt-1 text-2xl font-semibold tracking-tight text-white"><%= surface_label %></h2>
+        </div>
+
+        <div class="flex flex-wrap gap-2 text-sm" data-surface-nav data-current-surface="<%= current_surface %>">
+          <%= link_to "CSR", branch_customers_path, class: bc_nav_link_class(active: current_surface == "csr", tone: :command), data: { surface_tab: "csr" }, aria: { current: ("true" if current_surface == "csr") } %>
+          <%= link_to "Teller", branch_teller_path, class: bc_nav_link_class(active: current_surface == "teller", tone: :command), data: { surface_tab: "teller" }, aria: { current: ("true" if current_surface == "teller") } %>
+          <%= link_to "Supervisor", branch_approvals_path, class: bc_nav_link_class(active: current_surface == "supervisor", tone: :command), data: { surface_tab: "supervisor" }, aria: { current: ("true" if current_surface == "supervisor") } %>
+          <%= link_to "Events", branch_events_path, class: bc_nav_link_class(active: current_surface == "events", tone: :command), data: { surface_tab: "events" }, aria: { current: ("true" if current_surface == "events") } %>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <% if ops_access? %>
+          <%= link_to "Ops close package", ops_close_package_path, class: "inline-flex items-center rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/16" %>
+        <% end %>
+        <%= link_to primary_action.first, primary_action.last, class: "inline-flex items-center rounded-md bg-[var(--bc-color-action)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--bc-color-action-hover)]" %>
+      </div>
+    </div>
+
+    <div class="grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div class="rounded-xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Business date</p>
+        <p class="mt-1 text-lg font-semibold text-white"><%= current_business_date.iso8601 %></p>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operating unit</p>
+        <p class="mt-1 text-lg font-semibold text-white"><%= current_operating_unit&.code || current_operating_unit&.name || "Unscoped" %></p>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Operator</p>
+        <p class="mt-1 text-lg font-semibold text-white"><%= current_operator.display_name %></p>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Open sessions</p>
+        <p class="mt-1 text-lg font-semibold text-white"><%= summary.open_sessions.size %></p>
+      </div>
+
+      <div class="rounded-xl border px-4 py-3" style="border-color: rgba(212, 160, 23, 0.32); background-color: rgba(212, 160, 23, 0.14);">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em]" style="color: rgba(255, 244, 214, 0.88);">Pending supervisor</p>
+        <p class="mt-1 text-lg font-semibold" style="color: #fff4d6;"><%= summary.pending_supervisor_sessions.size %></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (() => {
+    const nav = document.querySelector("[data-surface-nav]");
+    if (!nav) return;
+
+    const tabs = Array.from(nav.querySelectorAll("[data-surface-tab]"));
+    const currentSurface = () => {
+      const hashSurface = window.location.hash.replace("#", "");
+      return hashSurface || nav.dataset.currentSurface || "teller";
+    };
+
+    const applyActiveState = () => {
+      const surface = currentSurface();
+      tabs.forEach((tab) => {
+        const isActive = tab.dataset.surfaceTab === surface;
+        if (isActive) {
+          tab.setAttribute("aria-current", "true");
+        } else {
+          tab.removeAttribute("aria-current");
+        }
+      });
+    };
+
+    applyActiveState();
+    window.addEventListener("hashchange", applyActiveState);
+  })();
+</script>

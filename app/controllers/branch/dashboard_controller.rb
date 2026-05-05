@@ -3,7 +3,7 @@
 module Branch
   class DashboardController < ApplicationController
     def index
-      load_dashboard(surface: "csr")
+      load_dashboard(surface: "teller")
     end
 
     def teller

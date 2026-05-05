@@ -11,7 +11,8 @@ module InternalUiHelper
       primary: "#{base} bg-[var(--bc-color-action)] text-white hover:bg-[var(--bc-color-action-hover)]",
       secondary: "#{base} border border-[var(--bc-color-border-strong)] bg-white text-[var(--bc-color-text)] hover:bg-[var(--bc-color-surface-muted)]",
       danger: "#{base} bg-red-700 text-white hover:bg-red-800",
-      quiet: "#{base} text-[var(--bc-color-text-muted)] hover:bg-[var(--bc-color-surface-muted)] hover:text-[var(--bc-color-text)]"
+      quiet: "#{base} text-[var(--bc-color-text-muted)] hover:bg-[var(--bc-color-surface-muted)] hover:text-[var(--bc-color-text)]",
+      shell: "#{base} border border-white/15 bg-white/10 text-white hover:bg-white/16"
     }
 
     variants.fetch(variant.to_sym, variants[:secondary])
@@ -44,6 +45,16 @@ module InternalUiHelper
         "#{base} border border-[var(--bc-color-action)] bg-[var(--bc-color-action)] text-white shadow-sm"
       else
         "#{base} border border-[var(--bc-color-border-strong)] bg-white text-[var(--bc-color-text)] shadow-sm hover:bg-[var(--bc-color-surface-muted)]"
+      end,
+      shell: if active
+        "#{base} bg-white text-slate-950 shadow-sm"
+      else
+        "#{base} text-slate-300 hover:bg-white/10 hover:text-white"
+      end,
+      command: if active
+        "#{base} bg-white text-slate-950 shadow-sm"
+      else
+        "#{base} border border-white/12 bg-white/6 text-slate-200 hover:bg-white/12 hover:text-white"
       end
     }
 

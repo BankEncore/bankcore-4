@@ -9,43 +9,58 @@
     <%= javascript_importmap_tags %>
   </head>
 
+  <% branch_workspace = controller_path.start_with?("branch/") %>
   <body class="bg-slate-100 text-slate-950">
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-white">Skip to main content</a>
-    <header class="border-b border-slate-200 bg-white">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div>
-          <%= link_to "BankCORE Internal", internal_path, class: "font-semibold text-slate-950" %>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-[var(--bc-color-action)] focus:px-4 focus:py-2 focus:text-white">Skip to main content</a>
+    <header class="border-b bg-[var(--bc-color-shell)] text-white shadow-lg" style="border-color: var(--bc-color-shell-border);">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center gap-4">
+          <%= link_to internal_path, class: "flex items-center gap-3" do %>
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--bc-color-action)] text-sm font-semibold tracking-[0.2em] text-white shadow-sm">BC</span>
+            <span>
+              <span class="block text-xs font-semibold uppercase tracking-[0.24em] text-slate-300">BankCORE</span>
+              <span class="block text-sm font-medium text-white">Internal workspace</span>
+            </span>
+          <% end %>
+
           <% if respond_to?(:current_business_date, true) && current_business_date %>
-            <span class="ml-3 text-sm text-slate-500">Business date <%= current_business_date.iso8601 %></span>
+            <span class="hidden rounded-full border px-3 py-1 text-xs font-medium text-slate-200 md:inline-flex" style="border-color: var(--bc-color-shell-border); background-color: rgba(248, 250, 252, 0.06);">
+              Business date <span class="ml-2 text-white"><%= current_business_date.iso8601 %></span>
+            </span>
           <% end %>
         </div>
 
         <% if respond_to?(:current_operator, true) && current_operator %>
-          <nav class="flex items-center gap-2 text-sm" aria-label="Global primary navigation">
-            <% home_active = current_page?(internal_path) %>
-            <%= link_to "Home", internal_path, class: bc_nav_link_class(active: home_active), aria: { current: ("page" if home_active) } %>
-            <% if branch_access? %>
-              <% branch_active = controller_path.start_with?("branch/") %>
-              <%= link_to "Branch", branch_path, class: bc_nav_link_class(active: branch_active), aria: { current: ("page" if branch_active) } %>
-            <% end %>
-            <% if ops_access? %>
-              <% ops_active = controller_path.start_with?("ops/") %>
-              <%= link_to "Ops", ops_path, class: bc_nav_link_class(active: ops_active), aria: { current: ("page" if ops_active) } %>
-            <% end %>
-            <% if admin_access? %>
-              <% admin_active = controller_path.start_with?("admin/") %>
-              <%= link_to "Admin", admin_path, class: bc_nav_link_class(active: admin_active), aria: { current: ("page" if admin_active) } %>
-            <% end %>
-            <span class="text-slate-500"><%= current_operator.display_name.presence || current_operator.role.titleize %></span>
-            <%= button_to "Sign out", logout_path, method: :delete, class: bc_button_class(:primary) %>
-          </nav>
+          <div class="flex flex-col gap-3 lg:items-end">
+            <nav class="flex flex-wrap items-center gap-1.5 text-sm" aria-label="Global primary navigation">
+              <% home_active = current_page?(internal_path) %>
+              <%= link_to "Home", internal_path, class: bc_nav_link_class(active: home_active, tone: :shell), aria: { current: ("page" if home_active) } %>
+              <% if branch_access? %>
+                <% branch_active = controller_path.start_with?("branch/") %>
+                <%= link_to "Branch", branch_path, class: bc_nav_link_class(active: branch_active, tone: :shell), aria: { current: ("page" if branch_active) } %>
+              <% end %>
+              <% if ops_access? %>
+                <% ops_active = controller_path.start_with?("ops/") %>
+                <%= link_to "Ops", ops_path, class: bc_nav_link_class(active: ops_active, tone: :shell), aria: { current: ("page" if ops_active) } %>
+              <% end %>
+              <% if admin_access? %>
+                <% admin_active = controller_path.start_with?("admin/") %>
+                <%= link_to "Admin", admin_path, class: bc_nav_link_class(active: admin_active, tone: :shell), aria: { current: ("page" if admin_active) } %>
+              <% end %>
+            </nav>
+
+            <div class="flex flex-wrap items-center gap-3 text-sm">
+              <span class="text-slate-200"><%= current_operator.display_name.presence || current_operator.role.titleize %></span>
+              <%= button_to "Sign out", logout_path, method: :delete, class: bc_button_class(:shell) %>
+            </div>
+          </div>
         <% end %>
       </div>
     </header>
 
-    <main id="main-content" class="mx-auto max-w-6xl px-6 py-8" tabindex="-1">
-      <% if controller_path.start_with?("branch/") %>
-        <%= render "branch/shared/surface_nav" %>
+    <main id="main-content" class="mx-auto max-w-7xl px-6 <%= branch_workspace ? "py-6" : "py-8" %>" tabindex="-1">
+      <% if branch_workspace %>
+        <%= render "branch/shared/command_bar" %>
       <% end %>
       <%= render "shared/internal/flash_region" %>
 

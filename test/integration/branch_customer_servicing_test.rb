@@ -24,6 +24,7 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
 
     get branch_customers_path(query: "Member")
     assert_response :success
+    assert_select "a[data-surface-tab='csr'][aria-current='true']", "CSR"
     assert_includes response.body, @party.name
 
     get branch_customer_path(@party)
@@ -128,6 +129,15 @@ class BranchCustomerServicingTest < ActionDispatch::IntegrationTest
     assert_includes operational_events_section, "##{hold_event.id}"
     assert_not_includes operational_events_section, "deposit.accepted"
     assert_not_includes operational_events_section, "##{deposit_event.id}"
+  end
+
+  test "branch root defaults to teller-first workspace state" do
+    internal_login!(username: "csr-teller")
+
+    get branch_path
+    assert_response :success
+    assert_select "a[data-surface-tab='teller'][aria-current='true']", "Teller"
+    assert_operator response.body.index("Teller — line operations"), :<, response.body.index("CSR — customer servicing")
   end
 
   test "branch customer and account views show current and historical account-party relationships" do

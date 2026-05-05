@@ -1,27 +1,5 @@
 <% content_for :title, "Branch Events - BankCORE" %>
-<% branch_event_actions = capture do %>
-  <%= link_to "Place hold", new_branch_hold_path, class: bc_button_class(:secondary) %>
-  <%= link_to "Release hold", release_branch_holds_path, class: bc_button_class(:secondary) %>
-  <% if current_operator.supervisor? %>
-    <%= link_to "Record reversal", new_branch_reversal_path, class: bc_button_class(:secondary) %>
-  <% end %>
-  <%= link_to "Override", new_branch_override_path, class: bc_button_class(:secondary) %>
-<% end %>
-<%= render "shared/internal/page_header",
-  title: "Branch operational events",
-  subtitle: "Search recent teller-facing events and post pending events.",
-  actions: branch_event_actions %>
-
 <%= render "branch/shared/form_error", error_message: @error_message %>
-
-<%= render "shared/internal/context_strip",
-  business_date: current_business_date,
-  operating_unit: @scoped_operating_unit || current_operating_unit,
-  operator: current_operator,
-  state_items: [
-    ["Scope", (@branch_events_show_all_units ? "All units" : "Branch-scoped")],
-    ["Results on this page", (@event_search ? @event_search[:rows].size : 0)]
-  ] %>
 
 <section class="<%= bc_panel_class(tone: :muted) %> mt-6 p-4 text-sm text-slate-800">
   <p class="font-medium text-slate-950">Active filters</p>

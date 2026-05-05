@@ -5,7 +5,8 @@ module Branch
     before_action :require_branch_operator!
     helper_method :branch_operator_can?, :branch_surface_for_path, :branch_teller_session_option_label,
       :can_place_servicing_hold?, :can_release_servicing_hold?, :can_waive_fee?, :can_reverse_event?,
-      :can_manage_authorized_signers?, :can_maintain_account?, :can_update_party_contact?
+      :can_manage_authorized_signers?, :can_maintain_account?, :can_update_party_contact?,
+      :branch_workspace_summary
 
     private
 
@@ -138,8 +139,12 @@ module Branch
            %r{\A/branch/parties(?:/|\z)}
         "csr"
       else
-        "csr"
+        "teller"
       end
+    end
+
+    def branch_workspace_summary
+      @branch_workspace_summary ||= Teller::Queries::BranchSessionDashboard.call
     end
 
     def can_place_servicing_hold?
