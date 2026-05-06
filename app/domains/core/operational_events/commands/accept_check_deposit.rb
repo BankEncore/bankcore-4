@@ -20,6 +20,7 @@ module Core
           actor_id: nil,
           operating_unit_id: nil,
           business_date: nil,
+          reference_id: nil,
           hold_amount_minor_units: nil,
           hold_idempotency_key: nil,
           hold_channel: nil,
@@ -59,6 +60,7 @@ module Core
                 actor_id: actor_id,
                 operating_unit_id: operating_unit_id,
                 business_date: business_date,
+                reference_id: reference_id,
                 payload: payload
               )
               operational_event = rr[:event]

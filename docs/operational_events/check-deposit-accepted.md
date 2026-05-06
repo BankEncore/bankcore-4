@@ -17,7 +17,7 @@ Records that the institution **accepted** a **check deposit** ticket against an 
 | **Customer visible** | Yes |
 | **Statement visible** | Yes |
 | **Payload schema** | `docs/operational_events/check-deposit-accepted.md` |
-| **Support search keys** | `source_account_id`, `actor_id`, `teller_session_id`, `idempotency_key` |
+| **Support search keys** | `source_account_id`, `actor_id`, `teller_session_id`, `idempotency_key`, `reference_id` |
 
 ## Semantics
 
@@ -27,6 +27,7 @@ Records that the institution **accepted** a **check deposit** ticket against an 
 - **Does not require** an open `TellerSession`; `teller_session_id` is optional audit/trace only.
 - **Held-at-acceptance** flows **must** use **`AcceptCheckDeposit`** (single transaction: record → post → optional `PlaceHold`) — do not sequence separate HTTP record/post/hold for that intent.
 - Optional **`hold_expires_on`** (**ISO date**) on teller JSON / Branch HTML maps to the linked hold’s **`expires_on`** (must be on or after the acceptance **`business_date`**).
+- Combined cash/check deposit tickets use this event for the check portion and `deposit.accepted` for the cash portion; both child events share a ticket `reference_id` ([ADR-0043](../adr/0043-combined-cash-check-deposit-workflow.md)).
 
 ## Persistence
 
@@ -39,6 +40,7 @@ Records that the institution **accepted** a **check deposit** ticket against an 
 | `currency` | Yes | MVP: USD. |
 | `source_account_id` | Yes | Account credited (`2110` subledger). |
 | `teller_session_id` | Optional | Not used for cash session gate or drawer projection. |
+| `reference_id` | Optional | Support grouping key. Combined deposit tickets set a shared `deposit-ticket:<idempotency_key>` reference on child cash/check events. |
 
 ### Payload items (T1)
 
@@ -65,7 +67,7 @@ Limits: max **100** items; serialized canonical JSON max **65536** bytes.
 ## Idempotency
 
 - **Scope:** `(channel, idempotency_key)` unique.
-- **Fingerprint** includes canonical payload digest (`check_deposit_digest`), `teller_session_id`, and standard financial scalars — see [`RecordEvent`](../../app/domains/core/operational_events/commands/record_event.rb).
+- **Fingerprint** includes canonical payload digest (`check_deposit_digest`), `teller_session_id`, `reference_id` when present, and standard financial scalars — see [`RecordEvent`](../../app/domains/core/operational_events/commands/record_event.rb).
 
 ## Reversals
 
@@ -87,6 +89,7 @@ Limits: max **100** items; serialized canonical JSON max **65536** bytes.
 ## References
 
 - [ADR-0040](../adr/0040-check-deposit-vertical-slice.md)
+- [ADR-0043](../adr/0043-combined-cash-check-deposit-workflow.md)
 - [ADR-0013](../adr/0013-holds-available-and-servicing-events.md)
 - [ADR-0019](../adr/0019-event-catalog-and-fee-events.md)
 

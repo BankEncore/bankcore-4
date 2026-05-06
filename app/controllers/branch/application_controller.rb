@@ -132,6 +132,7 @@ module Branch
       when %r{\A/branch/approvals(?:/|\z)}, %r{\A/branch/reversals(?:/|\z)}, %r{\A/branch/overrides(?:/|\z)}
         "supervisor"
       when %r{\A/branch/teller(?:/|\z)}, %r{\A/branch/teller_sessions(?:/|\z)}, %r{\A/branch/deposits(?:/|\z)},
+           %r{\A/branch/deposit_tickets(?:/|\z)},
            %r{\A/branch/check_deposits(?:/|\z)}, %r{\A/branch/withdrawals(?:/|\z)}, %r{\A/branch/transfers(?:/|\z)},
            %r{\A/branch/holds(?:/|\z)}, %r{\A/branch/cash(?:/|\z)}
         "teller"

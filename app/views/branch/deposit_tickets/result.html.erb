@@ -1,0 +1,51 @@
+<% content_for :title, "Combined Deposit Result - BankCORE" %>
+
+<section>
+  <h1 class="text-3xl font-semibold">Combined deposit result</h1>
+  <p class="mt-2 text-slate-600">Ticket reference <code><%= @ticket_reference %></code></p>
+</section>
+
+<section class="<%= bc_panel_class(tone: :default) %> mt-6 p-6">
+  <h2 class="text-xl font-semibold">Ticket summary</h2>
+
+  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+    <% if @cash_result.present? %>
+      <% cash_event = @cash_result.fetch(:operational_event) %>
+      <div><dt class="font-medium text-slate-500">Cash event</dt><dd>#<%= cash_event.id %> (<%= cash_event.status %>)</dd></div>
+      <div><dt class="font-medium text-slate-500">Cash amount</dt><dd><%= branch_money(cash_event.amount_minor_units) %> <%= cash_event.currency %></dd></div>
+      <div><dt class="font-medium text-slate-500">Cash record outcome</dt><dd><%= @cash_result.fetch(:record_outcome) %></dd></div>
+      <div><dt class="font-medium text-slate-500">Cash post outcome</dt><dd><%= @cash_result.fetch(:posting_outcome) %></dd></div>
+    <% end %>
+
+    <% if @check_result.present? %>
+      <% check_event = @check_result.fetch(:operational_event) %>
+      <% check_summary = Core::OperationalEvents::Services::CheckDepositPayload.payload_summary(check_event.payload) %>
+      <div><dt class="font-medium text-slate-500">Check event</dt><dd>#<%= check_event.id %> (<%= check_event.status %>)</dd></div>
+      <div><dt class="font-medium text-slate-500">Check total</dt><dd><%= branch_money(check_event.amount_minor_units) %> <%= check_event.currency %></dd></div>
+      <div><dt class="font-medium text-slate-500">Check items</dt><dd><%= check_summary.fetch("items_count") %></dd></div>
+      <div><dt class="font-medium text-slate-500">Check record outcome</dt><dd><%= @check_result.fetch(:record_outcome) %></dd></div>
+      <div><dt class="font-medium text-slate-500">Check post outcome</dt><dd><%= @check_result.fetch(:posting_outcome) %></dd></div>
+    <% end %>
+
+    <% if @hold.present? %>
+      <div><dt class="font-medium text-slate-500">Hold placed</dt><dd>#<%= @hold.id %> - <%= branch_money(@hold.amount_minor_units) %> <%= @hold.currency %> (<%= @hold.status %>)</dd></div>
+      <div><dt class="font-medium text-slate-500">Hold outcome</dt><dd><%= @hold_outcome %></dd></div>
+      <% if @hold.expires_on.present? %>
+        <div><dt class="font-medium text-slate-500">Hold scheduled release</dt><dd><%= branch_date(@hold.expires_on) %></dd></div>
+      <% end %>
+    <% end %>
+  </dl>
+
+  <div class="mt-6 flex flex-wrap gap-3">
+    <% if @cash_result.present? %>
+      <% cash_event = @cash_result.fetch(:operational_event) %>
+      <%= link_to "Cash event detail", branch_operational_event_path(cash_event), class: bc_button_class(:primary) %>
+      <%= link_to "Cash receipt", branch_operational_event_receipt_path(cash_event), class: bc_button_class(:secondary) %>
+    <% end %>
+    <% if @check_result.present? %>
+      <% check_event = @check_result.fetch(:operational_event) %>
+      <%= link_to "Check event detail", branch_operational_event_path(check_event), class: bc_button_class(@cash_result.present? ? :secondary : :primary) %>
+      <%= link_to "Check receipt", branch_operational_event_receipt_path(check_event), class: bc_button_class(:secondary) %>
+    <% end %>
+  </div>
+</section>

@@ -52,7 +52,7 @@ module Core
           customer_visible: true,
           statement_visible: true,
           payload_schema: "docs/operational_events/check-deposit-accepted.md",
-          support_search_keys: %w[source_account_id actor_id teller_session_id idempotency_key]
+          support_search_keys: %w[source_account_id actor_id teller_session_id idempotency_key reference_id]
         ),
         Entry.new(
           event_type: "ach.credit.received",
