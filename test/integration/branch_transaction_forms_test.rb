@@ -32,7 +32,7 @@ class BranchTransactionFormsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Accept check deposit"
     assert_includes response.body, "Account and session context"
-    assert_includes response.body, "Check details"
+    assert_includes response.body, "Check items"
     assert_includes response.body, "Hold options"
     assert_includes response.body, "Review and submit"
   end

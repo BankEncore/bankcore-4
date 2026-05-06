@@ -123,7 +123,17 @@ module Teller
     def record_operational_event(attrs, hold_amount_minor_units: nil, hold_idempotency_key: nil, hold_expires_on: nil)
       if attrs[:event_type].to_s == Core::OperationalEvents::Commands::RecordEvent::CHECK_DEPOSIT_ACCEPTED
         payload_perm = params.require(:operational_event).permit(
-          payload: { items: %i[amount_minor_units item_reference serial_number classification] }
+          payload: {
+            items: %i[
+              amount_minor_units
+              item_reference
+              serial_number
+              routing_number
+              account_number
+              check_serial_number
+              classification
+            ]
+          }
         )
         payload_hash =
           if payload_perm[:payload].present?

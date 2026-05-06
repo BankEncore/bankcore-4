@@ -9,13 +9,15 @@ module Branch
     end
 
     def create
-      @check_deposit = normalize_check_deposit_params(check_deposit_params)
+      @check_deposit = check_deposit_params
+      @check_deposit = normalize_check_deposit_params(@check_deposit)
       account_id = resolve_deposit_account_id(
         @check_deposit[:deposit_account_id],
         @check_deposit[:deposit_account_number]
       )
-      amount = @check_deposit[:amount_minor_units].to_i
-      payload = { "items" => [ build_payload_item(@check_deposit, amount) ] }
+      payload_items = build_payload_items(@check_deposit[:items])
+      amount = payload_items.sum { |item| item.fetch("amount_minor_units") }
+      payload = { "items" => payload_items }
 
       hold_minor = parse_hold_amount_minor_units(@check_deposit)
       hold_idem = resolved_hold_idempotency_key(@check_deposit, hold_minor)
@@ -66,9 +68,16 @@ module Branch
         "currency" => "USD",
         "teller_session_id" => params[:teller_session_id],
         "idempotency_key" => default_idempotency_key(prefix),
-        "identity_kind" => "reference",
-        "identity_value" => "",
-        "classification" => "",
+        "items" => [
+          {
+            "amount" => money_amount_display(params[:amount], fallback_minor_units: params[:amount_minor_units]),
+            "amount_minor_units" => params[:amount_minor_units],
+            "routing_number" => "",
+            "account_number" => "",
+            "check_serial_number" => "",
+            "classification" => ""
+          }
+        ],
         "hold_amount" => "",
         "hold_amount_minor_units" => params[:hold_amount_minor_units],
         "hold_idempotency_key" => "",
@@ -78,23 +87,16 @@ module Branch
 
     def check_deposit_params
       params.require(:check_deposit).permit(
-        :deposit_account_id, :deposit_account_number, :amount, :amount_minor_units, :currency, :teller_session_id,
-        :idempotency_key, :identity_kind, :identity_value, :classification, :hold_amount, :hold_amount_minor_units,
-        :hold_idempotency_key, :hold_expires_on
+        :deposit_account_id, :deposit_account_number, :currency, :teller_session_id,
+        :idempotency_key, :hold_amount, :hold_amount_minor_units, :hold_idempotency_key, :hold_expires_on,
+        items: %i[amount amount_minor_units routing_number account_number check_serial_number classification]
       ).to_h.symbolize_keys
     end
 
     def normalize_check_deposit_params(attrs)
       attrs[:currency] = attrs[:currency].presence || "USD"
       attrs[:idempotency_key] = attrs[:idempotency_key].presence || default_idempotency_key("branch-check-deposit")
-      attrs[:identity_kind] = attrs[:identity_kind].to_s == "serial" ? "serial" : "reference"
-      attrs[:amount] = money_amount_display(attrs[:amount], fallback_minor_units: attrs[:amount_minor_units])
-      attrs[:amount_minor_units] = normalize_money_amount_minor_units(
-        attrs[:amount],
-        fallback_minor_units: attrs[:amount_minor_units]
-      )
-      cls = attrs[:classification].to_s.strip
-      attrs[:classification] = cls if %w[on_us transit unknown].include?(cls)
+      attrs[:items] = normalize_check_deposit_items(attrs[:items])
 
       attrs[:hold_amount] = money_amount_display(
         attrs[:hold_amount],
@@ -103,18 +105,57 @@ module Branch
       attrs
     end
 
-    def build_payload_item(attrs, amount_minor_units)
-      raw_val = attrs[:identity_value].to_s.strip
-      raise ArgumentError, "check reference or serial is required" if raw_val.blank?
+    def normalize_check_deposit_items(raw_items)
+      items = Array(raw_items).filter_map do |raw_item|
+        item = raw_item.respond_to?(:to_h) ? raw_item.to_h.symbolize_keys : {}
+        next if blank_check_deposit_item?(item)
 
-      item = { "amount_minor_units" => amount_minor_units }
-      if attrs[:identity_kind] == "serial"
-        item["serial_number"] = raw_val
-      else
-        item["item_reference"] = raw_val
+        amount = money_amount_display(item[:amount], fallback_minor_units: item[:amount_minor_units])
+        normalized = {
+          "amount" => amount,
+          "amount_minor_units" => normalize_money_amount_minor_units(
+            amount,
+            fallback_minor_units: item[:amount_minor_units]
+          ),
+          "routing_number" => item[:routing_number].to_s.strip,
+          "account_number" => item[:account_number].to_s.strip,
+          "check_serial_number" => item[:check_serial_number].to_s.strip
+        }
+        cls = item[:classification].to_s.strip
+        normalized["classification"] = cls if %w[on_us transit unknown].include?(cls)
+        normalized
       end
-      item["classification"] = attrs[:classification] if attrs[:classification].present?
-      item
+      if items.blank?
+        raise ArgumentError, "at least one check item is required"
+      end
+
+      items
+    end
+
+    def blank_check_deposit_item?(item)
+      %i[amount amount_minor_units routing_number account_number check_serial_number classification].all? do |key|
+        item[key].blank?
+      end
+    end
+
+    def build_payload_items(items)
+      items.map.with_index do |item, idx|
+        routing_number = item["routing_number"].to_s.strip
+        account_number = item["account_number"].to_s.strip
+        check_serial_number = item["check_serial_number"].to_s.strip
+        if [ routing_number, account_number, check_serial_number ].any?(&:blank?)
+          raise ArgumentError, "check item #{idx + 1} requires routing number, account number, and check serial number"
+        end
+
+        payload_item = {
+          "amount_minor_units" => item.fetch("amount_minor_units").to_i,
+          "routing_number" => routing_number,
+          "account_number" => account_number,
+          "check_serial_number" => check_serial_number
+        }
+        payload_item["classification"] = item["classification"] if item["classification"].present?
+        payload_item
+      end
     end
 
     def parse_hold_amount_minor_units(attrs)

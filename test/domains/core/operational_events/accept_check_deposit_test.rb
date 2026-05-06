@@ -111,6 +111,124 @@ class AcceptCheckDepositTest < ActiveSupport::TestCase
     assert_equal release_on, r[:hold].expires_on
   end
 
+  test "records structured check identity fields" do
+    idem = "chk-structured-#{SecureRandom.hex(6)}"
+    payload = {
+      "items" => [
+        {
+          "amount_minor_units" => 3_000,
+          "routing_number" => "011000015",
+          "account_number" => "0001234500",
+          "check_serial_number" => "1001",
+          "classification" => "on_us"
+        },
+        {
+          "amount_minor_units" => 2_000,
+          "routing_number" => "021000021",
+          "account_number" => "987654321",
+          "check_serial_number" => "2055"
+        }
+      ]
+    }
+
+    r = Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+      channel: "teller",
+      idempotency_key: idem,
+      amount_minor_units: 5_000,
+      currency: "USD",
+      source_account_id: @account.id,
+      actor_id: @operator.id,
+      payload: payload
+    )
+
+    assert_equal :created, r[:record_outcome]
+    assert_equal payload, r[:operational_event].reload.payload
+
+    summary = Core::OperationalEvents::Services::CheckDepositPayload.payload_summary(payload)
+    assert_equal 2, summary.fetch("items_count")
+    assert_equal 5_000, summary.fetch("amount_minor_units_total")
+    assert_equal "*****0015", summary.fetch("items_masked").first.fetch("routing_number_masked")
+  end
+
+  test "rejects partial structured check identity fields" do
+    idem = "chk-partial-#{SecureRandom.hex(4)}"
+    payload = {
+      "items" => [
+        { "amount_minor_units" => 100, "routing_number" => "011000015", "check_serial_number" => "1001" }
+      ]
+    }
+
+    err = assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+        channel: "teller",
+        idempotency_key: idem,
+        amount_minor_units: 100,
+        currency: "USD",
+        source_account_id: @account.id,
+        payload: payload
+      )
+    end
+    assert_match(/structured identity requires/, err.message)
+  end
+
+  test "rejects duplicate structured check identity" do
+    idem = "chk-dup-#{SecureRandom.hex(4)}"
+    payload = {
+      "items" => [
+        {
+          "amount_minor_units" => 100,
+          "routing_number" => "011000015",
+          "account_number" => "0001234500",
+          "check_serial_number" => "1001"
+        },
+        {
+          "amount_minor_units" => 200,
+          "routing_number" => "011000015",
+          "account_number" => "0001234500",
+          "check_serial_number" => "1001"
+        }
+      ]
+    }
+
+    err = assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+        channel: "teller",
+        idempotency_key: idem,
+        amount_minor_units: 300,
+        currency: "USD",
+        source_account_id: @account.id,
+        payload: payload
+      )
+    end
+    assert_match(/duplicate item identity/, err.message)
+  end
+
+  test "rejects structured item total mismatch" do
+    idem = "chk-total-#{SecureRandom.hex(4)}"
+    payload = {
+      "items" => [
+        {
+          "amount_minor_units" => 200,
+          "routing_number" => "011000015",
+          "account_number" => "0001234500",
+          "check_serial_number" => "1001"
+        }
+      ]
+    }
+
+    err = assert_raises(Core::OperationalEvents::Commands::RecordEvent::InvalidRequest) do
+      Core::OperationalEvents::Commands::AcceptCheckDeposit.call(
+        channel: "teller",
+        idempotency_key: idem,
+        amount_minor_units: 201,
+        currency: "USD",
+        source_account_id: @account.id,
+        payload: payload
+      )
+    end
+    assert_match(/sum of payload.items amounts/, err.message)
+  end
+
   test "requires distinct hold idempotency key when holding" do
     idem = "chk-same-#{SecureRandom.hex(4)}"
     payload = { "items" => [ { "amount_minor_units" => 100, "item_reference" => "X" } ] }

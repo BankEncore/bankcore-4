@@ -31,8 +31,19 @@ class CheckDepositAcceptedIntegrationTest < ActionDispatch::IntegrationTest
         hold_expires_on: "2026-04-28",
         payload: {
           items: [
-            { amount_minor_units: 400, item_reference: "REF-A", classification: "on_us" },
-            { amount_minor_units: 350, serial_number: "SER-B" }
+            {
+              amount_minor_units: 400,
+              routing_number: "011000015",
+              account_number: "0001234500",
+              check_serial_number: "1001",
+              classification: "on_us"
+            },
+            {
+              amount_minor_units: 350,
+              routing_number: "021000021",
+              account_number: "987654321",
+              check_serial_number: "2055"
+            }
           ]
         }
       }
@@ -54,6 +65,40 @@ class CheckDepositAcceptedIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal 2, row["payload_summary"]["items_count"]
     assert_nil row["payload"]
     refute row.key?("items")
+  end
+
+  test "POST operational_events still accepts legacy check item identity" do
+    idem = "chk-http-legacy-#{SecureRandom.hex(6)}"
+    body = {
+      operational_event: {
+        event_type: "check.deposit.accepted",
+        channel: "teller",
+        idempotency_key: idem,
+        amount_minor_units: 750,
+        currency: "USD",
+        source_account_id: @account.id,
+        payload: {
+          items: [
+            { amount_minor_units: 400, item_reference: "REF-A", classification: "on_us" },
+            { amount_minor_units: 350, serial_number: "SER-B" }
+          ]
+        }
+      }
+    }
+
+    post "/teller/operational_events", params: body.to_json, headers: teller_json_headers(@teller_operator)
+    assert_response :created
+
+    ev = Core::OperationalEvents::Models::OperationalEvent.find_by!(channel: "teller", idempotency_key: idem)
+    assert_equal(
+      {
+        "items" => [
+          { "amount_minor_units" => 400, "item_reference" => "REF-A", "classification" => "on_us" },
+          { "amount_minor_units" => 350, "serial_number" => "SER-B" }
+        ]
+      },
+      ev.payload
+    )
   end
 
   test "GET event_types includes check deposit with teller-only channels" do

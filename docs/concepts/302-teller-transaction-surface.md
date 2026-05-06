@@ -26,7 +26,7 @@ For the **bank-wide capability taxonomy** (families **F1–F17**, phased **T1–
 
 **Module mapping (see [module catalog](../architecture/bankcore-module-catalog.md)):** `Teller` owns teller session lifecycle and workstation-facing cash flows; `Branch` is the internal staff HTML workspace over teller and servicing commands; `Core::OperationalEvents` records durable business facts; `Core::Posting` converts eligible financial events into balanced journal entries; `Core::Ledger` stores financial truth; `Accounts` owns deposit account state, holds, restrictions, lifecycle, and available-balance checks; `Cash` owns vault/drawer custody locations, movements, counts, balances, and cash variances; `Products` / `Deposits` own product-driven deposit behavior; `Workspace` / `Organization` own operators, capabilities, and operating-unit scope.
 
-**MVP vs broader scope:** Teller cash deposits, cash withdrawals, account transfers, manual fees, holds, reversals, teller sessions, drawer variance, trial balance, EOD readiness, and internal cash custody movements are MVP-aligned or already shipped in narrow slices. Check deposits, check cashing, official checks, loan payments, GL miscellaneous receipts, generalized approval queues, document-grade receipts, and external channel behavior are phased capabilities that require explicit ADR coverage before implementation.
+**MVP vs broader scope:** Teller cash deposits, accepted check deposits, cash withdrawals, account transfers, manual fees, holds, reversals, teller sessions, drawer variance, trial balance, EOD readiness, and internal cash custody movements are MVP-aligned or already shipped in narrow slices. Check cashing, check clearing/returns, official checks, loan payments, GL miscellaneous receipts, generalized approval queues, document-grade receipts, and external channel behavior are phased capabilities that require explicit ADR coverage before implementation.
 
 **Staff authorized surfaces:** Branch HTML teller line, teller supervisor, CSR, and JSON `/teller` surfaces orchestrate access. They do not own domain state. Capability gates and operating-unit scope remain governed by [ADR-0029](../adr/0029-capability-first-authorization-layer.md), [ADR-0032](../adr/0032-operating-units-and-branch-scope.md), and [ADR-0037](../adr/0037-internal-staff-authorized-surfaces.md).
 
@@ -50,6 +50,7 @@ The current BankCORE teller/branch transaction surface should be treated as the 
 | Teller activity | Primary owner | Evidence | Posting behavior | MVP posture |
 | --- | --- | --- | --- | --- |
 | Cash deposit to deposit account | `Core::OperationalEvents`, `Teller` | `deposit.accepted` | Dr `1110` / Cr `2110` | Shipped |
+| Check deposit to deposit account | `Core::OperationalEvents`, `Accounts`, `Teller` | `check.deposit.accepted`; optional linked hold | Dr `1160` / Cr `2110`; no drawer cash delta | Shipped |
 | Cash withdrawal | `Core::OperationalEvents`, `Accounts`, `Teller` | `withdrawal.posted` or `overdraft.nsf_denied` | Dr `2110` / Cr `1110`; NSF denial is no-GL plus possible fee | Shipped |
 | Account-to-account transfer | `Core::OperationalEvents`, `Accounts` | `transfer.completed` or `overdraft.nsf_denied` | Dr source `2110` / Cr destination `2110` | Shipped |
 | Manual fee assessment | `Core::OperationalEvents`, `Core::Posting` | `fee.assessed` | Dr `2110` / Cr fee income | Shipped |
@@ -76,6 +77,7 @@ Use this matrix to decide whether a teller-facing change belongs in the MVP tran
 | Activity | MVP classification | Command / controller surface | Durable evidence | Acceptance proof |
 | --- | --- | --- | --- | --- |
 | Cash deposit | MVP / shipped | `Branch::DepositsController`, `Teller::OperationalEventsController`, `Core::OperationalEvents::Commands::RecordEvent`, `Core::Posting::Commands::PostEvent` | `deposit.accepted`, posting batch, journal entry | Branch form can record-only and record-and-post; open teller session is required where configured; journal posts Dr `1110` / Cr `2110`; posting applies drawer custody delta for session-linked teller cash per [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md) |
+| Check deposit | MVP / shipped | `Branch::CheckDepositsController`, `Teller::OperationalEventsController`, `Core::OperationalEvents::Commands::AcceptCheckDeposit` | `check.deposit.accepted`, posting batch, journal entry, optional linked hold | Branch form accepts one or more structured check items; JSON accepts structured and legacy item payloads; journal posts Dr `1160` / Cr `2110`; optional event-level holds constrain availability; no teller drawer cash delta ([ADR-0040](../adr/0040-check-deposit-vertical-slice.md)) |
 | Cash withdrawal | MVP / shipped | `Branch::WithdrawalsController`, `Accounts::Commands::AuthorizeDebit`, `Core::Posting::Commands::PostEvent` | `withdrawal.posted` or `overdraft.nsf_denied`; optional NSF fee event | Branch form can record-and-post; insufficient funds produces NSF denial evidence instead of an invalid withdrawal; posting applies drawer custody delta for session-linked teller cash per [ADR-0039](../adr/0039-teller-session-drawer-custody-projection.md) |
 | Account transfer | MVP / shipped | `Branch::TransfersController`, `Accounts::Commands::AuthorizeDebit`, `Core::Posting::Commands::PostEvent` | `transfer.completed` or `overdraft.nsf_denied` | Transfer posts balanced source/destination `2110` legs; insufficient funds follows the same NSF denial path as withdrawals |
 | Manual fee assessment | MVP / shipped | `Core::OperationalEvents::Commands::RecordEvent`, `Core::Posting::Commands::PostEvent`; Branch/JSON event entry surfaces | `fee.assessed` | Fee event records and posts separately from the customer transaction that triggered it |
@@ -91,7 +93,7 @@ Use this matrix to decide whether a teller-facing change belongs in the MVP tran
 | Cash variance approval | MVP-adjacent cash foundation / shipped | Ops/JSON Cash variance approval surfaces, `Cash::Commands::ApproveCashVariance` | `cash_variance.posted` event and journal when approved | Approved variance posts GL adjustment through `Core::Posting`; no-self-approval and state guards apply |
 | Trial balance / EOD readiness | MVP / shipped | JSON reports, Ops EOD/close package surfaces, `Teller::Queries::EodReadiness`, `Core::Ledger::Queries::TrialBalanceForBusinessDate` | read-only readiness and trial-balance evidence | Readiness exposes pending events, open sessions, trial-balance status, and close evidence without mutating financial truth |
 
-Items not listed above are not part of the teller MVP unless a follow-up ADR explicitly pulls them forward. In particular, check deposits, check cashing, official checks, loan payments, GL miscellaneous receipts, generalized approval queues, durable receipt documents, and denomination-level drawer tickets remain later slices.
+Items not listed above are not part of the teller MVP unless a follow-up ADR explicitly pulls them forward. In particular, check cashing, check clearing/returns, official checks, loan payments, GL miscellaneous receipts, generalized approval queues, durable receipt documents, and denomination-level drawer tickets remain later slices.
 
 ## Near-Term Teller UI Capabilities
 
@@ -335,6 +337,7 @@ The teller MVP should be proven by a focused set of integration and domain tests
 | Teller JSON money flows | `test/integration/teller/teller_requests_test.rb`, operational-event integration tests | Existing JSON `/teller` behavior remains stable while Branch HTML flows wrap the same domain commands |
 | Session cash policy | `test/integration/teller/teller_session_cash_policy_test.rb`, `test/domains/teller/expected_cash_for_session_test.rb` | Expected cash uses opening snapshot plus **posted** teller cash events (pending excluded); deposits increase expected cash and withdrawals decrease it when posted; session-attributed movements participate when configured; missing/closed sessions are rejected where configured |
 | NSF and available balance | `test/integration/teller/overdraft_nsf_test.rb`, `test/domains/accounts/authorize_debit_test.rb` | Insufficient funds create `overdraft.nsf_denied` evidence and forced fee behavior rather than invalid postings |
+| Check deposits | `test/domains/core/operational_events/accept_check_deposit_test.rb`, `test/integration/teller/check_deposit_accepted_test.rb`, `test/integration/branch_check_deposit_test.rb` | Multi-item check deposits post through `AcceptCheckDeposit`, preserve item payload evidence, support optional event-level holds, and do not affect expected teller cash |
 | Holds | `test/integration/teller/holds_deposit_linked_test.rb`, `test/domains/accounts/place_hold_deposit_link_test.rb`, `test/domains/accounts/expire_due_holds_test.rb` | Holds are no-GL, affect available balance, enforce deposit-link rules, and can release/expire through controlled paths |
 | Reversals | `test/domains/core/operational_events/record_reversal_deposit_hold_guard_test.rb`, reversal integration coverage | Reversals create linked compensating events and journals; guarded events are rejected |
 | Fee waiver and servicing controls | `test/integration/branch_customer_servicing_test.rb`, capability tests | Supervisor/capability-gated fee waiver and hold release remain controlled and traceable |
@@ -351,10 +354,11 @@ Minimum end-to-end MVP proof:
 4. Exercise an NSF denial path.
 5. Complete an account transfer.
 6. Place and release a hold.
-7. Reverse an eligible posted event.
-8. Close the teller session with server-computed expected vs operator-supplied actual count.
-9. Move cash between vault and drawer and prove ordinary custody movement is no-GL.
-10. Confirm trial balance/EOD readiness reflects unresolved teller work.
+7. Record and post a multi-item check deposit, with optional event-level hold evidence.
+8. Reverse an eligible posted event.
+9. Close the teller session with server-computed expected vs operator-supplied actual count.
+10. Move cash between vault and drawer and prove ordinary custody movement is no-GL.
+11. Confirm trial balance/EOD readiness reflects unresolved teller work.
 
 Tests should prefer existing domain commands and workspace routes over new generic transaction abstractions. If implementation later adds preview endpoints, tests should assert that previews are advisory and that command execution re-checks state before commit.
 
@@ -364,12 +368,12 @@ The following capabilities are legitimate banking needs, but they veer beyond Ba
 
 | Capability | Likely owner | Why it is not teller MVP |
 | --- | --- | --- |
-| Check deposit, on-us or transit | `Integration`, `Accounts`, possibly future item-processing domain | Requires item lifecycle, availability rules, returns, collection risk, and check metadata |
+| Check clearing, returns, and settlement | `Integration`, `Accounts`, possibly future item-processing domain | Accepted check deposits are shipped, but clearing lifecycle, returns, collection risk, and settlement-specific item state remain outside the narrow intake slice |
 | Check cashing | future `Instruments` or check domain, `Cash`, `Core::Posting` | Requires presenter authority, check item lifecycle, limits, returns, and cash payout risk |
 | Official check / bank draft issuance | future `Instruments` | Requires instrument records, liability account, issue/void/paid/replacement lifecycle, reconciliation |
 | Loan payment | `Loans`, `Core::Posting` | Requires loan servicing, amortization, allocation, delinquency, and loan GL rules |
 | GL miscellaneous receipt | `Core::Ledger` plus a controlled Operations/Admin surface | Non-account GL intake is high-risk and should not be a generic teller shortcut |
-| Multi-check deposit ticket | item-processing domain plus `Integration` | Requires item detail, balancing, holds, return handling, and operational proofing |
+| Item-level check holds, release, and reversal | item-processing domain plus `Integration` / `Accounts` | Multi-item accepted deposits are shipped with event-level holds only; item-specific availability, release, return, and reversal semantics require separate ownership and controls |
 | Full approval queue | `Workflow` | Requires durable approval request/decision model beyond command-specific gates |
 | Document-grade receipt storage | `Documents`, `Reporting` | Requires retention, rendering, storage, reprint policy, and audit rules |
 | Denomination-level drawer activity | `Cash` | Requires denomination models for movements/counts and reconciliation |
@@ -470,6 +474,6 @@ Create or update an ADR before implementing any teller surface slice that:
 
 ## Suggested Summary
 
-BankCORE should treat Teller as a controlled transaction entry surface, not a catch-all banking operations module. The MVP teller surface covers cash deposits, cash withdrawals, account transfers, manual fees and waivers, holds, controlled reversals, teller sessions, drawer variance, receipt/trace evidence, and initiation of internal cash custody movements. The system guarantee is that financial impact flows through operational events and balanced posting, while physical cash custody flows through Cash locations and movements.
+BankCORE should treat Teller as a controlled transaction entry surface, not a catch-all banking operations module. The MVP teller surface covers cash deposits, accepted check deposits, cash withdrawals, account transfers, manual fees and waivers, holds, controlled reversals, teller sessions, drawer variance, receipt/trace evidence, and initiation of internal cash custody movements. The system guarantee is that financial impact flows through operational events and balanced posting, while physical cash custody flows through Cash locations and movements.
 
-Check deposits, check cashing, official checks, loan payments, miscellaneous GL receipts, generalized approval queues, denomination-level activity, and document-grade receipts are valid future capabilities, but they belong to later domain-owned slices with explicit ADR coverage.
+Check clearing/returns, check cashing, official checks, loan payments, miscellaneous GL receipts, generalized approval queues, denomination-level activity, and document-grade receipts are valid future capabilities, but they belong to later domain-owned slices with explicit ADR coverage.
