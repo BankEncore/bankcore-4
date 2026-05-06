@@ -69,6 +69,7 @@ Rails.application.routes.draw do
     post "cash/movements/:id/approve", to: "cash#approve_movement", as: :approve_cash_movement
     post "cash/variances/:id/approve", to: "cash#approve_variance", as: :approve_cash_variance
     resources :deposits, only: [ :new, :create ]
+    resources :deposit_tickets, only: [ :new, :create ]
     resources :check_deposits, only: [ :new, :create ]
     resources :withdrawals, only: [ :new, :create ]
     resources :transfers, only: [ :new, :create ]

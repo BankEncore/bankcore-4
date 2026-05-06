@@ -195,6 +195,9 @@ module Core
           if event_type.to_s == "fee.assessed" && reference_id.present?
             payload[:reference_id] = reference_id.to_s
           end
+          if %w[deposit.accepted].include?(event_type.to_s) && reference_id.present?
+            payload[:reference_id] = reference_id.to_s
+          end
           if event_type.to_s == "interest.posted" && reference_id.present?
             payload[:reference_id] = reference_id.to_s
           end
@@ -205,6 +208,7 @@ module Core
             canonical = check_deposit_canonical_payload || {}
             payload[:teller_session_id] = teller_session_id&.to_i
             payload[:check_deposit_digest] = Services::CheckDepositPayload.digest(canonical)
+            payload[:reference_id] = reference_id.to_s if reference_id.present?
           end
           Digest::SHA256.hexdigest(payload.to_json)
         end

@@ -23,7 +23,7 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 
 - **Must** reference an **open** `deposit_accounts` row via `source_account_id` (the account being credited).
 - **Must** carry a positive `amount_minor_units` and supported `currency` (MVP: USD).
-- Represents **cash-in** tender only in the current slice; mixed tender (cash + checks) is a future composition pattern (ADR-0002 §3.3).
+- Represents **cash-in** tender only. Combined cash/check deposit tickets use this event for the cash portion and `check.deposit.accepted` for the check portion ([ADR-0043](../adr/0043-combined-cash-check-deposit-workflow.md)).
 
 ## Persistence
 
@@ -39,6 +39,7 @@ Records that the institution **accepted** a cash deposit and intends to **credit
 | `source_account_id` | Yes | FK → `deposit_accounts` (account credited). |
 | `teller_session_id` | Conditional | On **`channel: teller`**, required (open session) when **`config.x.teller.require_open_session_for_cash`** is true ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)); optional for other channels. |
 | `actor_id` | Optional | Nullable FK → **`operators`**. On **`POST /teller/operational_events`**, set from **`X-Operator-Id`** when present ([ADR-0015](../adr/0015-teller-workspace-authentication.md)); other channels may omit until they authenticate. |
+| `reference_id` | Optional | Support grouping key. Combined deposit tickets set a shared `deposit-ticket:<idempotency_key>` reference on child cash/check events. |
 
 ## Lifecycle
 
@@ -56,7 +57,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 ## Idempotency
 
 - **Scope:** `(channel, idempotency_key)` at most one row (ADR-0002 §7.3).
-- **Fingerprint (material fields):** include `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id`. When the teller cash session gate applies, **`teller_session_id`** is included ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)).
+- **Fingerprint (material fields):** include `event_type`, `channel`, `idempotency_key`, `amount_minor_units`, `currency`, `source_account_id`, and `reference_id` when present. When the teller cash session gate applies, **`teller_session_id`** is included ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)).
 
 ## Reversals
 
@@ -67,6 +68,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 
 - **`source_account_id`:** account credited.
 - **`teller_session_id`:** drawer correlation; required for teller cash when policy enabled ([ADR-0014](../adr/0014-teller-sessions-and-control-events.md)).
+- **`reference_id`:** optional ticket grouping key when recorded by a combined deposit workflow.
 
 ## Module ownership
 
@@ -80,6 +82,7 @@ Failed posting leaves the event **`pending`** (ADR-0002 §3.2: do not overload `
 - [ADR-0011](../adr/0011-accounts-deposit-vertical-slice-mvp.md) — slice 1 deposit path.
 - [ADR-0014](../adr/0014-teller-sessions-and-control-events.md) — open session gate for teller cash, fingerprint.
 - [ADR-0015](../adr/0015-teller-workspace-authentication.md) — teller JSON `X-Operator-Id`, `actor_id` → `operators`.
+- [ADR-0043](../adr/0043-combined-cash-check-deposit-workflow.md) — combined cash/check workflow orchestration.
 
 ## Examples
 

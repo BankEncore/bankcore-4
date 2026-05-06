@@ -1,0 +1,187 @@
+<% content_for :title, "Combined Deposit - BankCORE" %>
+<% normalized = @deposit_ticket.respond_to?(:to_h) ? @deposit_ticket.to_h.stringify_keys : @deposit_ticket.stringify_keys %>
+<% check_items = Array(normalized["items"]).presence || [ {} ] %>
+<% classification_options = [
+  [ "Not specified", "" ],
+  [ "On us", "on_us" ],
+  [ "Transit", "transit" ],
+  [ "Unknown", "unknown" ]
+] %>
+
+<%= render "shared/internal/page_header",
+  title: "Combined deposit",
+  subtitle: "Accept cash and/or one or more checks in one teller operation." %>
+
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Open sessions", @open_teller_sessions.size],
+    ["Posting mode", "Cash and check deposit ticket"]
+  ] %>
+
+<%= render "branch/shared/form_error", error_message: @error_message %>
+
+<section class="<%= bc_panel_class(tone: :default) %> mt-6 p-6">
+  <%= form_with url: branch_deposit_tickets_path,
+    scope: :deposit_ticket,
+    method: :post,
+    class: "space-y-6",
+    data: {
+      controller: "submit-state",
+      action: "turbo:submit-start->submit-state#start turbo:submit-end->submit-state#end"
+    } do |form| %>
+    <%= render "shared/internal/form_section",
+      title: "Account and session context",
+      description: "Identify the credited account. A teller session is required when cash is included and the session policy is enabled." do %>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <%= form.label :deposit_account_number, "Account number", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :deposit_account_number, value: normalized["deposit_account_number"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Credited DDA; keep leading zeros when applicable.</p>
+        </div>
+
+        <div>
+          <%= form.label :teller_session_id, "Teller session", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.select :teller_session_id,
+            @open_teller_sessions.map { |session| [branch_teller_session_option_label(session), session.id] },
+            { include_blank: "None", selected: normalized["teller_session_id"] },
+            class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Cash deposits require an open session where configured; checks use this as audit context.</p>
+        </div>
+      </div>
+    <% end %>
+
+    <%= render "shared/internal/form_section",
+      title: "Cash received",
+      description: "Enter cash only if this deposit ticket includes cash. Leave blank for check-only tickets." do %>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <%= form.label :cash_amount, "Cash amount", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :cash_amount, value: normalized["cash_amount"], inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Posted as <code>deposit.accepted</code> and included in teller cash projection.</p>
+        </div>
+      </div>
+    <% end %>
+
+    <%= render "shared/internal/form_section",
+      title: "Check items",
+      description: "Enter each deposited check separately. Leave all check rows blank for cash-only tickets." do %>
+      <div data-controller="check-deposit-items">
+        <div class="space-y-4" data-check-deposit-items-target="list">
+          <% check_items.each do |item| %>
+            <% item = item.respond_to?(:to_h) ? item.to_h.stringify_keys : item.stringify_keys %>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4" data-check-deposit-items-row>
+              <div class="flex items-start justify-between gap-4">
+                <p class="text-sm font-medium text-slate-700">Check item</p>
+                <button type="button" class="text-sm font-medium text-red-700 hover:text-red-900" data-action="check-deposit-items#remove">Remove</button>
+              </div>
+              <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div>
+                  <%= label_tag nil, "Amount", class: "block text-sm font-medium text-slate-700" %>
+                  <%= text_field_tag "deposit_ticket[items][][amount]", item["amount"], id: nil, inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+                </div>
+
+                <div>
+                  <%= label_tag nil, "Routing number", class: "block text-sm font-medium text-slate-700" %>
+                  <%= text_field_tag "deposit_ticket[items][][routing_number]", item["routing_number"], id: nil, autocomplete: "off", inputmode: "numeric", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+                </div>
+
+                <div>
+                  <%= label_tag nil, "Account number", class: "block text-sm font-medium text-slate-700" %>
+                  <%= text_field_tag "deposit_ticket[items][][account_number]", item["account_number"], id: nil, autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+                </div>
+
+                <div>
+                  <%= label_tag nil, "Check (serial number)", class: "block text-sm font-medium text-slate-700" %>
+                  <%= text_field_tag "deposit_ticket[items][][check_serial_number]", item["check_serial_number"], id: nil, autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+                </div>
+
+                <div>
+                  <%= label_tag nil, "Classification", class: "block text-sm font-medium text-slate-700" %>
+                  <%= select_tag "deposit_ticket[items][][classification]", options_for_select(classification_options, item["classification"]), id: nil, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <template data-check-deposit-items-target="template">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4" data-check-deposit-items-row>
+            <div class="flex items-start justify-between gap-4">
+              <p class="text-sm font-medium text-slate-700">Check item</p>
+              <button type="button" class="text-sm font-medium text-red-700 hover:text-red-900" data-action="check-deposit-items#remove">Remove</button>
+            </div>
+            <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div>
+                <%= label_tag nil, "Amount", class: "block text-sm font-medium text-slate-700" %>
+                <%= text_field_tag "deposit_ticket[items][][amount]", nil, id: nil, inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+              </div>
+
+              <div>
+                <%= label_tag nil, "Routing number", class: "block text-sm font-medium text-slate-700" %>
+                <%= text_field_tag "deposit_ticket[items][][routing_number]", nil, id: nil, autocomplete: "off", inputmode: "numeric", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+              </div>
+
+              <div>
+                <%= label_tag nil, "Account number", class: "block text-sm font-medium text-slate-700" %>
+                <%= text_field_tag "deposit_ticket[items][][account_number]", nil, id: nil, autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+              </div>
+
+              <div>
+                <%= label_tag nil, "Check (serial number)", class: "block text-sm font-medium text-slate-700" %>
+                <%= text_field_tag "deposit_ticket[items][][check_serial_number]", nil, id: nil, autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+              </div>
+
+              <div>
+                <%= label_tag nil, "Classification", class: "block text-sm font-medium text-slate-700" %>
+                <%= select_tag "deposit_ticket[items][][classification]", options_for_select(classification_options, ""), id: nil, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <button type="button" class="mt-4 inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100" data-action="check-deposit-items#add">
+          Add another check
+        </button>
+      </div>
+    <% end %>
+
+    <%= render "shared/internal/form_section",
+      title: "Check hold options",
+      description: "Optionally place an event-level hold against the check portion only." do %>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <%= form.label :hold_amount, "Check hold amount (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :hold_amount, value: normalized["hold_amount"], inputmode: "decimal", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Cannot exceed the check total. Cash is not included in this hold cap.</p>
+        </div>
+
+        <div>
+          <%= form.label :hold_idempotency_key, "Hold idempotency key (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :hold_idempotency_key, value: normalized["hold_idempotency_key"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">If omitted while a hold amount is set, a deterministic ticket hold key is used.</p>
+        </div>
+
+        <div>
+          <%= form.label :hold_expires_on, "Scheduled hold release date (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.date_field :hold_expires_on, value: normalized["hold_expires_on"].presence, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        </div>
+      </div>
+    <% end %>
+
+    <%= form.hidden_field :currency, value: normalized["currency"] || "USD" %>
+    <%= form.hidden_field :idempotency_key, value: normalized["idempotency_key"] %>
+
+    <%= render "shared/internal/form_section",
+      title: "Review and submit",
+      description: "This action records and posts each included portion in one server transaction." do %>
+      <div>
+        <%= form.submit "Accept combined deposit",
+          class: bc_button_class(:primary),
+          data: { submitting_label: "Submitting..." } %>
+      </div>
+    <% end %>
+  <% end %>
+</section>
