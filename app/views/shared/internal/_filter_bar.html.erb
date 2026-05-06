@@ -1,0 +1,19 @@
+<% filter_content = local_assigns[:content] %>
+<% filter_content = capture { yield } if filter_content.blank? && block_given? %>
+
+<section class="<%= [bc_panel_class(tone: :default), local_assigns[:class]].compact.join(" ") %>">
+  <% if local_assigns[:title].present? || local_assigns[:description].present? %>
+    <div class="border-b border-[var(--bc-color-border)] px-5 py-4">
+      <% if local_assigns[:title].present? %>
+        <h2 class="text-lg font-semibold text-slate-950"><%= title %></h2>
+      <% end %>
+      <% if local_assigns[:description].present? %>
+        <p class="mt-1 text-sm text-slate-600"><%= description %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="p-5">
+    <%= filter_content %>
+  </div>
+</section>

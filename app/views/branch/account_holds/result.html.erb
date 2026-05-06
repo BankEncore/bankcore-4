@@ -1,29 +1,47 @@
 <% content_for :title, "Hold Result - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Hold result</h1>
-  <p class="mt-2 text-slate-600">Review the servicing event and hold row.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Hold result",
+  subtitle: "Review the servicing event and hold row." %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <h2 class="text-xl font-semibold"><%= @event.event_type %></h2>
-  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
-    <div><dt class="font-medium text-slate-500">Hold</dt><dd>#<%= @hold_record.id %> (<%= @hold_record.status %>)</dd></div>
-    <div><dt class="font-medium text-slate-500">Operational event</dt><dd>#<%= @event.id %></dd></div>
-    <div><dt class="font-medium text-slate-500">Outcome</dt><dd><%= @outcome %></dd></div>
-    <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= @event.channel %></dd></div>
-    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name || @event.actor_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(@event.business_date) %></dd></div>
-    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
-    <div><dt class="font-medium text-slate-500">Account</dt><dd>#<%= @event.source_account_id %></dd></div>
-    <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></dd></div>
-    <div><dt class="font-medium text-slate-500">Hold type</dt><dd><%= @hold_record.hold_type.humanize %></dd></div>
-    <div><dt class="font-medium text-slate-500">Reason</dt><dd><%= @hold_record.reason_code.humanize %></dd></div>
-    <div><dt class="font-medium text-slate-500">Customer explanation</dt><dd><%= @hold_record.customer_explanation %></dd></div>
-    <div><dt class="font-medium text-slate-500">Expires on</dt><dd><%= branch_date(@hold_record.expires_on) %></dd></div>
-  </dl>
-  <div class="mt-6 flex flex-wrap gap-3">
-    <%= link_to "Back to account", branch_servicing_deposit_account_path(@account), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-    <%= link_to "Event detail", branch_operational_event_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-  </div>
-</section>
+<%= render "shared/internal/context_strip",
+  business_date: @event.business_date,
+  operating_unit: @event.operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Outcome", @outcome],
+    ["Event type", @event.event_type],
+    ["Channel", @event.channel]
+  ] %>
+
+<%= render "shared/internal/page_section",
+  title: @event.event_type,
+  description: "Servicing hold evidence across the hold row and operational-event layer.",
+  class: "mt-6",
+  content: capture {
+    safe_join([
+      content_tag(:dl, class: "grid gap-4 text-sm md:grid-cols-2") do
+        safe_join([
+          content_tag(:div) { safe_join([content_tag(:dt, "Hold", class: "font-medium text-slate-500"), content_tag(:dd, "##{@hold_record.id} (#{@hold_record.status})")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Operational event", class: "font-medium text-slate-500"), content_tag(:dd, "##{@event.id}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Outcome", class: "font-medium text-slate-500"), content_tag(:dd, @outcome)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Channel", class: "font-medium text-slate-500"), content_tag(:dd, @event.channel)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Actor", class: "font-medium text-slate-500"), content_tag(:dd, @event.actor&.display_name || @event.actor_id || "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Business date", class: "font-medium text-slate-500"), content_tag(:dd, branch_date(@event.business_date))]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Idempotency key", class: "font-medium text-slate-500"), content_tag(:dd, @event.idempotency_key)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Account", class: "font-medium text-slate-500"), content_tag(:dd, "##{@event.source_account_id}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Amount", class: "font-medium text-slate-500"), content_tag(:dd, "#{branch_money(@event.amount_minor_units)} #{@event.currency}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Hold type", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.hold_type.humanize)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Reason", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.reason_code.humanize)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Customer explanation", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.customer_explanation)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Expires on", class: "font-medium text-slate-500"), content_tag(:dd, branch_date(@hold_record.expires_on))]) }
+        ])
+      end,
+      content_tag(:div, class: "mt-6 flex flex-wrap gap-3") do
+        safe_join([
+          link_to("Back to account", branch_servicing_deposit_account_path(@account), class: bc_button_class(:primary)),
+          link_to("Event detail", branch_operational_event_path(@event), class: bc_button_class(:secondary))
+        ])
+      end
+    ])
+  } %>

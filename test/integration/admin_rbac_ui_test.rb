@@ -14,6 +14,8 @@ class AdminRbacUiTest < ActionDispatch::IntegrationTest
     get "/admin/operators"
     assert_response :success
     assert_includes response.body, "Operators"
+    assert_includes response.body, "Directory filters"
+    assert_includes response.body, "Operator directory"
 
     get "/admin/operators/new"
     assert_response :success
@@ -144,6 +146,7 @@ class AdminRbacUiTest < ActionDispatch::IntegrationTest
     get "/admin/capabilities/new"
     assert_response :success
     assert_includes response.body, "New capability"
+    assert_includes response.body, "Capability definition"
     assert_includes response.body, 'name="capability[name]"'
 
     assert_difference -> { Workspace::Models::Capability.count }, 1 do
@@ -163,12 +166,17 @@ class AdminRbacUiTest < ActionDispatch::IntegrationTest
     get "/admin/capabilities/#{capability.id}/edit"
     assert_response :success
     assert_includes response.body, "Edit capability"
+    assert_includes response.body, "Capability details"
     assert_includes response.body, 'name="capability[name]"'
 
     patch "/admin/capabilities/#{capability.id}",
       params: { capability: { name: "Updated Capability", category: "admin", active: "1" } }
     assert_redirected_to "/admin/capabilities/#{capability.id}"
     assert_equal "Updated Capability", capability.reload.name
+
+    get "/admin/capabilities/#{capability.id}"
+    assert_response :success
+    assert_includes response.body, "Roles using this capability"
 
     post "/admin/capabilities/#{capability.id}/deactivate"
     assert_redirected_to "/admin/capabilities"

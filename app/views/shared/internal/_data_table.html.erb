@@ -1,0 +1,34 @@
+<% table_content = local_assigns[:content] %>
+<% table_content = capture { yield } if table_content.blank? && block_given? %>
+
+<section class="<%= [bc_panel_class(tone: :default), local_assigns[:class]].compact.join(" ") %>">
+  <% if local_assigns[:title].present? || local_assigns[:description].present? || local_assigns[:actions].present? %>
+    <div class="border-b border-[var(--bc-color-border)] px-5 py-4">
+      <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+        <div>
+          <% if local_assigns[:title].present? %>
+            <h2 class="text-xl font-semibold text-slate-950"><%= title %></h2>
+          <% end %>
+          <% if local_assigns[:description].present? %>
+            <p class="mt-1 text-sm text-slate-600"><%= description %></p>
+          <% end %>
+        </div>
+        <% if local_assigns[:actions].present? %>
+          <div class="flex flex-wrap gap-2 text-sm">
+            <%= actions %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <% if table_content.blank? && local_assigns[:empty].present? %>
+    <div class="px-5 py-8 text-sm text-slate-600">
+      <%= empty %>
+    </div>
+  <% else %>
+    <div class="overflow-x-auto">
+      <%= table_content %>
+    </div>
+  <% end %>
+</section>

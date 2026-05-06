@@ -1,0 +1,31 @@
+<% items = [] %>
+<% items << ["Business date", business_date.respond_to?(:iso8601) ? business_date.iso8601 : business_date] if local_assigns[:business_date].present? %>
+<% items << ["Reviewed day", reviewed_business_date.respond_to?(:iso8601) ? reviewed_business_date.iso8601 : reviewed_business_date] if local_assigns[:reviewed_business_date].present? %>
+<% if local_assigns[:operating_unit].present? %>
+  <% unit_label = operating_unit.try(:code).presence || operating_unit.try(:name).presence || operating_unit.to_s %>
+  <% items << ["Operating unit", unit_label] %>
+<% end %>
+<% if local_assigns[:operator].present? %>
+  <% items << ["Operator", operator.try(:display_name).presence || operator.try(:role).to_s.titleize] %>
+<% end %>
+<% items << ["Surface", surface.to_s.humanize] if local_assigns[:surface].present? %>
+<% if local_assigns[:session].present? %>
+  <% items << ["Teller session", "##{session.id}"] %>
+<% end %>
+<% Array(local_assigns[:state_items]).each do |label, value| %>
+  <% next if value.blank? %>
+  <% items << [label, value] %>
+<% end %>
+
+<% if items.any? %>
+  <section class="<%= bc_panel_class(tone: :muted) %> mt-6 px-4 py-3" aria-label="Operational context">
+    <dl class="grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+      <% items.each do |label, value| %>
+        <div>
+          <dt class="font-medium text-slate-500"><%= label %></dt>
+          <dd class="mt-1 text-slate-950"><%= value %></dd>
+        </div>
+      <% end %>
+    </dl>
+  </section>
+<% end %>

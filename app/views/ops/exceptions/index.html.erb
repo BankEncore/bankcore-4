@@ -1,15 +1,16 @@
 <% content_for :title, "Ops Exceptions - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Exception queues</h1>
-  <p class="mt-2 text-slate-600">Review pending events, variance approvals, and recent NSF denials.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Exception queues",
+  subtitle: "Review pending events, variance approvals, and recent NSF denials." %>
 
 <section class="mt-8 grid gap-6 lg:grid-cols-3">
-  <div class="rounded border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-5 py-4">
-      <h2 class="text-xl font-semibold">Pending events</h2>
-    </div>
+  <% pending_empty = capture do %>
+    No pending events.
+  <% end %>
+  <%= render "shared/internal/data_table",
+    title: "Pending events",
+    empty: (@pending_events.any? ? nil : pending_empty) do %>
     <% if @pending_events.any? %>
       <ul class="divide-y divide-slate-100">
         <% @pending_events.each do |event| %>
@@ -19,34 +20,34 @@
           </li>
         <% end %>
       </ul>
-    <% else %>
-      <div class="px-5 py-8 text-sm text-slate-600">No pending events.</div>
     <% end %>
-  </div>
+  <% end %>
 
-  <div class="rounded border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-5 py-4">
-      <h2 class="text-xl font-semibold">Variance approvals</h2>
-    </div>
+  <% variance_empty = capture do %>
+    No pending variances.
+  <% end %>
+  <%= render "shared/internal/data_table",
+    title: "Variance approvals",
+    empty: (@pending_sessions.any? ? nil : variance_empty) do %>
     <% if @pending_sessions.any? %>
       <ul class="divide-y divide-slate-100">
         <% @pending_sessions.each do |session| %>
           <li class="px-5 py-4 text-sm">
             <span class="font-medium">Session #<%= session.id %></span>
             <div class="text-slate-600">Variance <%= ops_money(session.variance_minor_units, signed: true) %></div>
-            <%= button_to "Approve", approve_ops_teller_variance_path(session), method: :post, class: "mt-2 rounded bg-slate-900 px-3 py-1 text-white" %>
+            <%= button_to "Approve", approve_ops_teller_variance_path(session), method: :post, class: "mt-2 #{bc_button_class(:primary)}" %>
           </li>
         <% end %>
       </ul>
-    <% else %>
-      <div class="px-5 py-8 text-sm text-slate-600">No pending variances.</div>
     <% end %>
-  </div>
+  <% end %>
 
-  <div class="rounded border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-5 py-4">
-      <h2 class="text-xl font-semibold">Recent NSF denials</h2>
-    </div>
+  <% nsf_empty = capture do %>
+    No NSF denials found.
+  <% end %>
+  <%= render "shared/internal/data_table",
+    title: "Recent NSF denials",
+    empty: (@nsf_denials.any? ? nil : nsf_empty) do %>
     <% if @nsf_denials.any? %>
       <ul class="divide-y divide-slate-100">
         <% @nsf_denials.each do |event| %>
@@ -56,8 +57,6 @@
           </li>
         <% end %>
       </ul>
-    <% else %>
-      <div class="px-5 py-8 text-sm text-slate-600">No NSF denials found.</div>
     <% end %>
-  </div>
+  <% end %>
 </section>

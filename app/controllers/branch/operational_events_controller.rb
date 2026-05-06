@@ -3,6 +3,7 @@
 module Branch
   class OperationalEventsController < ApplicationController
     def index
+      @branch_surface = "events"
       @query_params = permitted_query_params
       apply_branch_operating_unit_default!
 
@@ -33,10 +34,12 @@ module Branch
     end
 
     def show
+      @branch_surface = "events"
       @event = load_event
     end
 
     def receipt
+      @branch_surface = "events"
       @event = load_event
     end
 

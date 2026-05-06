@@ -1,43 +1,60 @@
 <% content_for :title, "Hold Result - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Hold result</h1>
-  <p class="mt-2 text-slate-600">Review the hold event and hold row.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Hold result",
+  subtitle: "Review the hold event and hold row." %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <h2 class="text-xl font-semibold">Hold trace</h2>
-  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
-    <div><dt class="font-medium text-slate-500">Hold</dt><dd>#<%= @hold_record.id %></dd></div>
-    <div><dt class="font-medium text-slate-500">Hold status</dt><dd><%= @hold_record.status %></dd></div>
-    <div><dt class="font-medium text-slate-500">Hold type</dt><dd><%= @hold_record.hold_type %></dd></div>
-    <div><dt class="font-medium text-slate-500">Reason code</dt><dd><%= @hold_record.reason_code %></dd></div>
-    <div><dt class="font-medium text-slate-500">Operational event</dt><dd>#<%= @event.id %></dd></div>
-    <div><dt class="font-medium text-slate-500">Event type</dt><dd><%= @event.event_type %></dd></div>
-    <div><dt class="font-medium text-slate-500">Event status</dt><dd><%= @event.status %></dd></div>
-    <div><dt class="font-medium text-slate-500">Outcome</dt><dd><%= @outcome %></dd></div>
-    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name || @event.actor_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= @event.channel %></dd></div>
-    <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= branch_date(@event.business_date) %></dd></div>
-    <div><dt class="font-medium text-slate-500">Operating unit</dt><dd><%= @event.operating_unit_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Account</dt><dd><%= @event.source_account_id.present? ? "##{@event.source_account_id}" : "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></dd></div>
-    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
-    <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Deposit event link</dt><dd><%= @hold_record.placed_for_operational_event_id.present? ? "##{@hold_record.placed_for_operational_event_id}" : "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">No-GL evidence</dt><dd>No posting batches or journal entries are expected for hold events.</dd></div>
-  </dl>
+<%= render "shared/internal/context_strip",
+  business_date: @event.business_date,
+  operating_unit: @event.operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Outcome", @outcome],
+    ["Event type", @event.event_type],
+    ["Channel", @event.channel]
+  ] %>
 
-  <div class="mt-6 flex flex-wrap gap-3">
-    <%= link_to "Event detail", branch_operational_event_path(@event), class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-    <%= link_to "Trace receipt", branch_event_receipt_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% if @event.source_account_id.present? %>
-      <%= link_to "Account profile", branch_account_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <%= link_to "Account holds", branch_account_holds_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <%= link_to "Account activity", branch_account_activity_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-    <% if @hold_record.placed_for_operational_event_id.present? %>
-      <%= link_to "Deposit event", branch_operational_event_path(@hold_record.placed_for_operational_event_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-  </div>
-</section>
+<%= render "shared/internal/page_section",
+  title: "Hold trace",
+  description: "Operational-event evidence and hold-row context for the completed request.",
+  class: "mt-6",
+  content: capture {
+    safe_join([
+      content_tag(:dl, class: "grid gap-4 text-sm md:grid-cols-2") do
+        safe_join([
+          content_tag(:div) { safe_join([content_tag(:dt, "Hold", class: "font-medium text-slate-500"), content_tag(:dd, "##{@hold_record.id}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Hold status", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.status)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Hold type", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.hold_type)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Reason code", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.reason_code)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Operational event", class: "font-medium text-slate-500"), content_tag(:dd, "##{@event.id}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Event type", class: "font-medium text-slate-500"), content_tag(:dd, @event.event_type)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Event status", class: "font-medium text-slate-500"), content_tag(:dd, @event.status)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Outcome", class: "font-medium text-slate-500"), content_tag(:dd, @outcome)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Actor", class: "font-medium text-slate-500"), content_tag(:dd, @event.actor&.display_name || @event.actor_id || "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Business date", class: "font-medium text-slate-500"), content_tag(:dd, branch_date(@event.business_date))]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Operating unit", class: "font-medium text-slate-500"), content_tag(:dd, @event.operating_unit_id || "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Account", class: "font-medium text-slate-500"), content_tag(:dd, @event.source_account_id.present? ? "##{@event.source_account_id}" : "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Amount", class: "font-medium text-slate-500"), content_tag(:dd, "#{branch_money(@event.amount_minor_units)} #{@event.currency}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Idempotency key", class: "font-medium text-slate-500"), content_tag(:dd, @event.idempotency_key)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Reference", class: "font-medium text-slate-500"), content_tag(:dd, @event.reference_id.presence || "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Deposit event link", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.placed_for_operational_event_id.present? ? "##{@hold_record.placed_for_operational_event_id}" : "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "No-GL evidence", class: "font-medium text-slate-500"), content_tag(:dd, "No posting batches or journal entries are expected for hold events.")]) }
+        ])
+      end,
+      content_tag(:div, class: "mt-6 flex flex-wrap gap-3") do
+        links = [
+          link_to("Event detail", branch_operational_event_path(@event), class: bc_button_class(:primary)),
+          link_to("Trace receipt", branch_event_receipt_path(@event), class: bc_button_class(:secondary))
+        ]
+        if @event.source_account_id.present?
+          links << link_to("Account profile", branch_account_path(@event.source_account_id), class: bc_button_class(:secondary))
+          links << link_to("Account holds", branch_account_holds_path(@event.source_account_id), class: bc_button_class(:secondary))
+          links << link_to("Account activity", branch_account_activity_path(@event.source_account_id), class: bc_button_class(:secondary))
+        end
+        if @hold_record.placed_for_operational_event_id.present?
+          links << link_to("Deposit event", branch_operational_event_path(@hold_record.placed_for_operational_event_id), class: bc_button_class(:secondary))
+        end
+        safe_join(links)
+      end
+    ])
+  } %>

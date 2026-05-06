@@ -1,18 +1,25 @@
 <% content_for :title, "Cash Position - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Cash position</h1>
-    <p class="mt-2 text-slate-600">Branch vault and teller drawer custody balances.</p>
-  </div>
-  <nav class="flex gap-2 text-sm" aria-label="Cash actions">
-    <%= link_to "Transfer cash", branch_new_cash_transfer_path, class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
-    <%= link_to "Receive shipment", branch_new_external_cash_shipment_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
-    <%= link_to "Record count", branch_new_cash_count_path, class: "rounded border border-slate-300 px-3 py-2 font-medium text-slate-700" %>
-  </nav>
-</section>
+<% cash_actions = capture do %>
+  <%= link_to "Transfer cash", branch_new_cash_transfer_path, class: bc_button_class(:primary) %>
+  <%= link_to "Receive shipment", branch_new_external_cash_shipment_path, class: bc_button_class(:secondary) %>
+  <%= link_to "Record count", branch_new_cash_count_path, class: bc_button_class(:secondary) %>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Cash position",
+  subtitle: "Branch vault and teller drawer custody balances.",
+  actions: cash_actions %>
 
-<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Locations", @positions.size],
+    ["Scope", "current custody state"]
+  ] %>
+
+<% cash_position_table = capture do %>
   <table class="min-w-full divide-y divide-slate-200 text-sm">
     <thead class="bg-slate-50 text-left text-slate-600">
       <tr>
@@ -33,4 +40,10 @@
       <% end %>
     </tbody>
   </table>
-</section>
+<% end %>
+<%= render "shared/internal/data_table",
+  title: "Location balances",
+  description: "Active branch cash locations and their current custody balances.",
+  content: cash_position_table,
+  empty: "No active cash locations are available for this operating unit.",
+  class: "mt-6" %>

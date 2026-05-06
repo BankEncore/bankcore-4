@@ -1,43 +1,53 @@
 <% content_for :title, "Close Package - BankCORE" %>
 <% bd = @business_date&.iso8601 %>
-
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Close package</h1>
-    <p class="mt-2 text-slate-600">Canonical EOD workspace: readiness, classified evidence, trial balance, and close action for the open business date.</p>
-  </div>
+<% page_actions = capture do %>
   <%= form_with url: ops_close_package_path, method: :get, class: "flex items-end gap-3" do |form| %>
     <div>
       <%= form.label :business_date, class: "block text-sm font-medium text-slate-700" %>
       <%= form.text_field :business_date, value: @business_date&.iso8601 || params[:business_date], placeholder: "YYYY-MM-DD", class: "mt-1 rounded border border-slate-300 px-3 py-2" %>
     </div>
-    <%= form.submit "Review", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
+    <%= form.submit "Review", class: bc_button_class(:primary) %>
   <% end %>
-</section>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Close package",
+  subtitle: "Canonical EOD workspace: readiness, classified evidence, trial balance, and close action for the open business date.",
+  actions: page_actions %>
 
 <% if @error_message.present? %>
-  <section class="mt-6 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><%= @error_message %></section>
+  <%= render "shared/internal/status_banner",
+    tone: :warning,
+    body: @error_message %>
 <% elsif @readiness.present? %>
   <% oe_status = Core::OperationalEvents::Models::OperationalEvent %>
+  <% business_date_context_body = capture do %>
+    Reviewing <strong><%= bd %></strong>.
+    Current open business date (singleton) is <strong><%= @readiness[:current_business_on] %></strong>.
+    <% if @business_date.iso8601 == @readiness[:current_business_on].to_s %>
+      This is the <strong>current open</strong> processing day.
+    <% else %>
+      This day is <strong>historical</strong> relative to the open processing day.
+    <% end %>
+  <% end %>
+  <%= render "shared/internal/context_strip",
+    business_date: @readiness[:current_business_on],
+    reviewed_business_date: @business_date,
+    operator: current_operator,
+    state_items: [
+      ["Mode", (@classification[:retrospective_only] ? "Historical review" : "Current open day")],
+      ["EOD ready", (@readiness[:eod_ready] ? "Yes" : "No")]
+    ] %>
   <% if @classification[:retrospective_only] %>
-    <section class="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
-      <p class="font-medium">Retrospective view</p>
-      <p class="mt-1 text-slate-600">This business date is closed for posting. Evidence below is for audit and support; blockers and warnings are explanatory only. Close is not available from this screen.</p>
-    </section>
+    <%= render "shared/internal/status_banner",
+      tone: :info,
+      title: "Retrospective view",
+      body: "This business date is closed for posting. Evidence below is for audit and support; blockers and warnings are explanatory only. Close is not available from this screen." %>
   <% end %>
 
-  <section class="mt-6 rounded border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm">
-    <p class="font-medium text-slate-950">Business date context</p>
-    <p class="mt-1 text-slate-600">
-      Reviewing <strong><%= bd %></strong>.
-      Current open business date (singleton) is <strong><%= @readiness[:current_business_on] %></strong>.
-      <% if @business_date.iso8601 == @readiness[:current_business_on].to_s %>
-        This is the <strong>current open</strong> processing day.
-      <% else %>
-        This day is <strong>historical</strong> relative to the open processing day.
-      <% end %>
-    </p>
-  </section>
+  <%= render "shared/internal/status_banner",
+    tone: :info,
+    title: "Business date context",
+    body: business_date_context_body %>
 
   <section class="mt-8 rounded border border-slate-200 bg-white p-6 shadow-sm">
     <h2 class="text-xl font-semibold">Can we close?</h2>

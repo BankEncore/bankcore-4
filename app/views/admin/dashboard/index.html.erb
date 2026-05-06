@@ -1,64 +1,66 @@
 <% content_for :title, "Admin Workspace - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Admin workspace</h1>
-  <p class="mt-2 text-slate-600">
-    Maintain internal operators, authorization, deposit products, and active product configuration.
-  </p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Admin workspace",
+  subtitle: "Maintain internal operators, authorization, deposit products, and active product configuration." %>
+
+<%= render "shared/internal/context_strip",
+  surface: :admin,
+  operator: current_operator,
+  state_items: [["Workspace", "Internal administration"]] %>
 
 <section class="mt-8 grid gap-4 md:grid-cols-2">
-  <%= link_to admin_operators_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_operators_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Operators</h2>
     <p class="mt-2 text-sm text-slate-600">Create operators, reset credentials, and manage active status.</p>
   <% end %>
 
-  <%= link_to admin_roles_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_roles_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Roles and assignments</h2>
     <p class="mt-2 text-sm text-slate-600">Review roles, capability mappings, and operating-unit scoped access.</p>
   <% end %>
 
-  <%= link_to admin_capabilities_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_capabilities_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Capabilities</h2>
     <p class="mt-2 text-sm text-slate-600">Maintain the database capability catalog used by runtime authorization.</p>
   <% end %>
 
-  <%= link_to admin_operating_units_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_operating_units_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Operating units</h2>
     <p class="mt-2 text-sm text-slate-600">Maintain institution, branch, operations, department, and region scope records.</p>
   <% end %>
 
-  <%= link_to admin_cash_locations_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_cash_locations_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Cash locations</h2>
     <p class="mt-2 text-sm text-slate-600">Configure vaults, drawers, and internal transit custody locations.</p>
   <% end %>
 
-  <%= link_to admin_deposit_products_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_deposit_products_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Deposit products</h2>
     <p class="mt-2 text-sm text-slate-600">Browse products and related fee, overdraft, and statement configuration.</p>
   <% end %>
 
-  <%= link_to admin_deposit_products_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_deposit_products_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Product readiness</h2>
     <p class="mt-2 text-sm text-slate-600">Open a product and review active profiles needed by shipped engines.</p>
   <% end %>
 
-  <%= link_to admin_deposit_product_fee_rules_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_deposit_product_fee_rules_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Fee rules</h2>
     <p class="mt-2 text-sm text-slate-600">Review monthly maintenance fee rules and active-as-of results.</p>
   <% end %>
 
-  <%= link_to admin_deposit_product_overdraft_policies_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_deposit_product_overdraft_policies_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Overdraft policies</h2>
     <p class="mt-2 text-sm text-slate-600">Review deny-NSF policy configuration by product and date.</p>
   <% end %>
 
-  <%= link_to admin_deposit_product_statement_profiles_path, class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_deposit_product_statement_profiles_path, class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">Statement profiles</h2>
     <p class="mt-2 text-sm text-slate-600">Review statement cycle profile configuration and active-as-of results.</p>
   <% end %>
 
-  <%= link_to admin_new_rule_change_path("fee_rule"), class: "rounded border border-slate-200 bg-white p-5 shadow-sm hover:border-slate-400" do %>
+  <%= link_to admin_new_rule_change_path("fee_rule"), class: "#{bc_panel_class(tone: :default)} p-5 hover:border-slate-400" do %>
     <h2 class="font-semibold">New product rule</h2>
     <p class="mt-2 text-sm text-slate-600">Preview and create effective-dated product configuration rows.</p>
   <% end %>

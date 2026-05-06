@@ -1,91 +1,126 @@
 <% content_for :title, "Accept Check Deposit - BankCORE" %>
 <% normalized = @check_deposit.respond_to?(:to_h) ? @check_deposit.to_h.stringify_keys : @check_deposit.stringify_keys %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Accept check deposit</h1>
-  <p class="mt-2 text-slate-600">
-    Record, post, and optionally place an event-level hold in one step (same as teller JSON <code>AcceptCheckDeposit</code>).
-    An open teller session is optional; link one for drawer traceability when useful.
-  </p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Accept check deposit",
+  subtitle: "Record, post, and optionally place an event-level hold in one step (same as teller JSON AcceptCheckDeposit)." %>
+
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Open sessions", @open_teller_sessions.size],
+    ["Posting mode", "Teller check deposit"]
+  ] %>
 
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <%= form_with url: branch_check_deposits_path, scope: :check_deposit, method: :post, class: "grid gap-4 md:grid-cols-2" do |form| %>
-    <div>
-      <%= form.label :deposit_account_number, "Account number", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :deposit_account_number, value: normalized["deposit_account_number"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Credited DDA; keep leading zeros when applicable.</p>
-    </div>
+<section class="<%= bc_panel_class(tone: :default) %> mt-6 p-6">
+  <%= form_with url: branch_check_deposits_path,
+    scope: :check_deposit,
+    method: :post,
+    class: "space-y-6",
+    data: {
+      controller: "submit-state",
+      action: "turbo:submit-start->submit-state#start turbo:submit-end->submit-state#end"
+    } do |form| %>
+    <%= render "shared/internal/form_section",
+      title: "Account and session context",
+      description: "Identify the credited account and optionally link an open teller session for drawer traceability." do %>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <%= form.label :deposit_account_number, "Account number", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :deposit_account_number, value: normalized["deposit_account_number"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Credited DDA; keep leading zeros when applicable.</p>
+        </div>
 
-    <div>
-      <%= form.label :amount, "Check total amount", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :amount, value: normalized["amount"], inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">T1 form: single check line; sum must match this total.</p>
-    </div>
-
-    <div class="md:col-span-2">
-      <p class="text-sm font-medium text-slate-700">Item identity</p>
-      <div class="mt-2 flex flex-wrap gap-4 text-sm text-slate-700">
-        <label class="inline-flex items-center gap-2">
-          <%= form.radio_button :identity_kind, "reference", checked: normalized["identity_kind"] != "serial" %>
-          Item reference
-        </label>
-        <label class="inline-flex items-center gap-2">
-          <%= form.radio_button :identity_kind, "serial", checked: normalized["identity_kind"] == "serial" %>
-          Serial number
-        </label>
+        <div>
+          <%= form.label :teller_session_id, "Teller session (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.select :teller_session_id,
+            @open_teller_sessions.map { |session| [branch_teller_session_option_label(session), session.id] },
+            { include_blank: "None", selected: normalized["teller_session_id"] },
+            class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Not required for check deposits; optional audit link only.</p>
+        </div>
       </div>
-      <%= form.text_field :identity_value, value: normalized["identity_value"], autocomplete: "off", placeholder: "Reference or serial", class: "mt-2 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
+    <% end %>
 
-    <div>
-      <%= form.label :classification, "Classification (optional)", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.select :classification,
-        [
-          [ "Not specified", "" ],
-          [ "On us", "on_us" ],
-          [ "Transit", "transit" ],
-          [ "Unknown", "unknown" ]
-        ],
-        { selected: normalized["classification"] },
-        class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
+    <%= render "shared/internal/form_section",
+      title: "Check details",
+      description: "T1 form captures one check line. The stated total must match the item amount." do %>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <%= form.label :amount, "Check total amount", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :amount, value: normalized["amount"], inputmode: "decimal", placeholder: "10.50", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">T1 form: single check line; sum must match this total.</p>
+        </div>
 
-    <div>
-      <%= form.label :teller_session_id, "Teller session (optional)", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.select :teller_session_id,
-        @open_teller_sessions.map { |session| [branch_teller_session_option_label(session), session.id] },
-        { include_blank: "None", selected: normalized["teller_session_id"] },
-        class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Not required for check deposits; optional audit link only.</p>
-    </div>
+        <div>
+          <%= form.label :classification, "Classification (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.select :classification,
+            [
+              [ "Not specified", "" ],
+              [ "On us", "on_us" ],
+              [ "Transit", "transit" ],
+              [ "Unknown", "unknown" ]
+            ],
+            { selected: normalized["classification"] },
+            class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+        </div>
 
-    <div>
-      <%= form.label :hold_amount, "Hold at acceptance (optional)", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :hold_amount, value: normalized["hold_amount"], inputmode: "decimal", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Partial or full hold against this deposit total. Leave blank for no hold.</p>
-    </div>
+        <div class="md:col-span-2">
+          <p class="text-sm font-medium text-slate-700">Item identity</p>
+          <div class="mt-2 flex flex-wrap gap-4 text-sm text-slate-700">
+            <label class="inline-flex items-center gap-2">
+              <%= form.radio_button :identity_kind, "reference", checked: normalized["identity_kind"] != "serial" %>
+              Item reference
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <%= form.radio_button :identity_kind, "serial", checked: normalized["identity_kind"] == "serial" %>
+              Serial number
+            </label>
+          </div>
+          <%= form.text_field :identity_value, value: normalized["identity_value"], autocomplete: "off", placeholder: "Reference or serial", class: "mt-2 w-full rounded border border-slate-300 px-3 py-2" %>
+        </div>
+      </div>
+    <% end %>
 
-    <div>
-      <%= form.label :hold_idempotency_key, "Hold idempotency key (optional)", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :hold_idempotency_key, value: normalized["hold_idempotency_key"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">If omitted while a hold amount is set, defaults to deposit key with <code>-hold</code> suffix (must differ from deposit idempotency key).</p>
-    </div>
+    <%= render "shared/internal/form_section",
+      title: "Hold options",
+      description: "Optionally place an event-level hold at acceptance time." do %>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <%= form.label :hold_amount, "Hold at acceptance (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :hold_amount, value: normalized["hold_amount"], inputmode: "decimal", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Partial or full hold against this deposit total. Leave blank for no hold.</p>
+        </div>
 
-    <div>
-      <%= form.label :hold_expires_on, "Scheduled hold release date (optional)", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.date_field :hold_expires_on, value: normalized["hold_expires_on"].presence, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Stored as <code>expires_on</code> on the hold; must be on or after the business date of acceptance.</p>
-    </div>
+        <div>
+          <%= form.label :hold_idempotency_key, "Hold idempotency key (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.text_field :hold_idempotency_key, value: normalized["hold_idempotency_key"], autocomplete: "off", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">If omitted while a hold amount is set, defaults to deposit key with <code>-hold</code> suffix (must differ from deposit idempotency key).</p>
+        </div>
+
+        <div>
+          <%= form.label :hold_expires_on, "Scheduled hold release date (optional)", class: "block text-sm font-medium text-slate-700" %>
+          <%= form.date_field :hold_expires_on, value: normalized["hold_expires_on"].presence, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
+          <p class="mt-1 text-xs text-slate-500">Stored as <code>expires_on</code> on the hold; must be on or after the business date of acceptance.</p>
+        </div>
+      </div>
+    <% end %>
 
     <%= form.hidden_field :currency, value: normalized["currency"] || "USD" %>
     <%= form.hidden_field :idempotency_key, value: normalized["idempotency_key"] %>
 
-    <div class="md:col-span-2">
-      <%= form.submit "Accept check deposit",
-        class: "rounded bg-slate-900 px-4 py-2 font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2" %>
-    </div>
+    <%= render "shared/internal/form_section",
+      title: "Review and submit",
+      description: "This action records the event, posts it, and optionally places the hold in one workflow." do %>
+      <div>
+        <%= form.submit "Accept check deposit",
+          class: bc_button_class(:primary),
+          data: { submitting_label: "Submitting..." } %>
+      </div>
+    <% end %>
   <% end %>
 </section>

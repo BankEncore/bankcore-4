@@ -1,0 +1,8 @@
+<section class="<%= bc_status_banner_class(tone: tone) %>">
+  <% if local_assigns[:title].present? %>
+    <p class="font-medium"><%= title %></p>
+  <% end %>
+  <div class="<%= "mt-1" if local_assigns[:title].present? %>">
+    <%= body %>
+  </div>
+</section>

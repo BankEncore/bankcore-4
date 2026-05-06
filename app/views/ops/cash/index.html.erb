@@ -1,45 +1,70 @@
 <% content_for :title, "Cash Approvals - BankCORE" %>
 
+<% cash_actions = capture do %>
+  <%= link_to "Reconciliation", ops_cash_reconciliation_path, class: bc_button_class(:secondary) %>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Cash approvals",
+  subtitle: "Review pending vault movements and Cash-domain variances.",
+  actions: cash_actions %>
+
 <% if @reviewed_business_date.present? || @from_close_package %>
-  <section class="mt-6 rounded border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">
+  <section class="<%= bc_panel_class(tone: :muted) %> mt-6 px-4 py-3 text-sm text-slate-800">
     <p class="font-medium text-slate-950">Drill context</p>
     <% if @reviewed_business_date.present? %>
       <p class="mt-1">Reviewed business date from close package: <strong><%= @reviewed_business_date.iso8601 %></strong>.</p>
     <% end %>
     <% if @from_close_package %>
-      <p class="mt-1 text-slate-600">Opened from close-package pending cash movements warning. Pending lists reflect current approvals workload — compare counts to readiness when scopes align.</p>
+      <p class="mt-1 text-slate-600">Opened from close-package pending cash movements warning. Pending lists reflect current approvals workload; compare counts to readiness when scopes align.</p>
     <% end %>
   </section>
 <% end %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end mt-8">
-  <div>
-    <h1 class="text-3xl font-semibold">Cash approvals</h1>
-    <p class="mt-2 text-slate-600">Review pending vault movements and Cash-domain variances.</p>
-  </div>
-  <%= link_to "Reconciliation", ops_cash_reconciliation_path, class: "rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700" %>
-</section>
+<%= render "shared/internal/context_strip",
+  business_date: current_business_date,
+  operating_unit: current_operating_unit,
+  operator: current_operator,
+  state_items: [
+    ["Pending movements", @approvals.fetch(:movements).size],
+    ["Pending variances", @approvals.fetch(:variances).size]
+  ] %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
-  <h2 class="font-semibold">Pending movements</h2>
-  <div class="mt-3 space-y-3 text-sm">
-    <% @approvals.fetch(:movements).each do |movement| %>
-      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
-        <span>#<%= movement.id %> <%= movement.movement_type %> <%= number_to_currency(movement.amount_minor_units / 100.0) %></span>
-        <%= button_to "Approve", ops_approve_cash_movement_path(movement), class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
-      </div>
-    <% end %>
-  </div>
-</section>
+<% movement_empty = capture do %>
+  No pending cash movements.
+<% end %>
+<%= render "shared/internal/data_table",
+  title: "Pending movements",
+  description: "Cash-movement approvals waiting on an authorized operator.",
+  empty: (@approvals.fetch(:movements).any? ? nil : movement_empty),
+  class: "mt-6" do %>
+  <% if @approvals.fetch(:movements).any? %>
+    <div class="space-y-3 text-sm">
+      <% @approvals.fetch(:movements).each do |movement| %>
+        <div class="flex items-center justify-between border-t border-slate-100 pt-3 first:border-t-0 first:pt-0">
+          <span>#<%= movement.id %> <%= movement.movement_type %> <%= number_to_currency(movement.amount_minor_units / 100.0) %></span>
+          <%= button_to "Approve", ops_approve_cash_movement_path(movement), class: bc_button_class(:primary) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
-  <h2 class="font-semibold">Pending variances</h2>
-  <div class="mt-3 space-y-3 text-sm">
-    <% @approvals.fetch(:variances).each do |variance| %>
-      <div class="flex items-center justify-between border-t border-slate-100 pt-3">
-        <span>#<%= variance.id %> <%= variance.cash_location.name %> <%= number_to_currency(variance.amount_minor_units / 100.0) %></span>
-        <%= button_to "Approve and post", ops_approve_cash_variance_path(variance), class: "rounded bg-slate-900 px-3 py-2 font-medium text-white" %>
-      </div>
-    <% end %>
-  </div>
-</section>
+<% variance_empty = capture do %>
+  No pending variances.
+<% end %>
+<%= render "shared/internal/data_table",
+  title: "Pending variances",
+  description: "Cash-variance approvals waiting on a supervisor-style decision.",
+  empty: (@approvals.fetch(:variances).any? ? nil : variance_empty),
+  class: "mt-6" do %>
+  <% if @approvals.fetch(:variances).any? %>
+    <div class="space-y-3 text-sm">
+      <% @approvals.fetch(:variances).each do |variance| %>
+        <div class="flex items-center justify-between border-t border-slate-100 pt-3 first:border-t-0 first:pt-0">
+          <span>#<%= variance.id %> <%= variance.cash_location.name %> <%= number_to_currency(variance.amount_minor_units / 100.0) %></span>
+          <%= button_to "Approve and post", ops_approve_cash_variance_path(variance), class: bc_button_class(:primary) %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

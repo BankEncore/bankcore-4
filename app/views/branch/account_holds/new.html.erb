@@ -1,50 +1,70 @@
 <% content_for :title, "Place Hold - BankCORE" %>
 
 <%= render "branch/shared/account_context", active_tab: "holds", show_actions: false %>
-
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <h1 class="text-3xl font-semibold">Place account hold</h1>
-  <p class="mt-2 text-slate-600">Record a branch servicing hold for this account.</p>
-
-  <%= form_with url: branch_account_hold_placements_path(@account), scope: :hold, class: "mt-6 grid gap-4 md:grid-cols-2" do |form| %>
-    <div>
-      <%= form.label :amount_minor_units, "Amount (minor units)", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.number_field :amount_minor_units, value: @hold["amount_minor_units"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div>
-      <%= form.label :currency, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :currency, value: @hold["currency"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div>
-      <%= form.label :placed_for_operational_event_id, "Linked deposit event id", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :placed_for_operational_event_id, value: @hold["placed_for_operational_event_id"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div>
-      <%= form.label :hold_type, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.select :hold_type, branch_hold_type_options, { selected: @hold["hold_type"] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div>
-      <%= form.label :reason_code, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.select :reason_code, branch_hold_reason_options, { selected: @hold["reason_code"] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div>
-      <%= form.label :expires_on, "Expires on", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.date_field :expires_on, value: @hold["expires_on"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div class="md:col-span-2">
-      <%= form.label :reason_description, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_area :reason_description, value: @hold["reason_description"], rows: 3, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Use staff-safe detail. Customer-facing explanation is generated from the reason code.</p>
-    </div>
-    <div>
-      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :idempotency_key, value: @hold["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div class="md:col-span-2 flex gap-3">
-      <%= form.submit "Place hold", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Cancel", branch_account_holds_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    </div>
-  <% end %>
-</section>
+<%= render "shared/internal/page_section",
+  title: "Place account hold",
+  description: "Record a branch servicing hold for this account.",
+  class: "mt-6",
+  content: capture {
+    form_with url: branch_account_hold_placements_path(@account), scope: :hold, class: "grid gap-4 md:grid-cols-2" do |form|
+      safe_join([
+        content_tag(:div) do
+          safe_join([
+            form.label(:amount_minor_units, "Amount (minor units)", class: "block text-sm font-medium text-slate-700"),
+            form.number_field(:amount_minor_units, value: @hold["amount_minor_units"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:currency, class: "block text-sm font-medium text-slate-700"),
+            form.text_field(:currency, value: @hold["currency"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:placed_for_operational_event_id, "Linked deposit event id", class: "block text-sm font-medium text-slate-700"),
+            form.text_field(:placed_for_operational_event_id, value: @hold["placed_for_operational_event_id"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:hold_type, class: "block text-sm font-medium text-slate-700"),
+            form.select(:hold_type, branch_hold_type_options, { selected: @hold["hold_type"] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:reason_code, class: "block text-sm font-medium text-slate-700"),
+            form.select(:reason_code, branch_hold_reason_options, { selected: @hold["reason_code"] }, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:expires_on, "Expires on", class: "block text-sm font-medium text-slate-700"),
+            form.date_field(:expires_on, value: @hold["expires_on"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div, class: "md:col-span-2") do
+          safe_join([
+            form.label(:reason_description, class: "block text-sm font-medium text-slate-700"),
+            form.text_area(:reason_description, value: @hold["reason_description"], rows: 3, class: "mt-1 w-full rounded border border-slate-300 px-3 py-2"),
+            content_tag(:p, "Use staff-safe detail. Customer-facing explanation is generated from the reason code.", class: "mt-1 text-xs text-slate-500")
+          ])
+        end,
+        content_tag(:div) do
+          safe_join([
+            form.label(:idempotency_key, class: "block text-sm font-medium text-slate-700"),
+            form.text_field(:idempotency_key, value: @hold["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+          ])
+        end,
+        content_tag(:div, class: "md:col-span-2 flex gap-3") do
+          safe_join([
+            form.submit("Place hold", class: bc_button_class(:primary)),
+            link_to("Cancel", branch_account_holds_path(@account), class: bc_button_class(:secondary))
+          ])
+        end
+      ])
+    end
+  } %>

@@ -1,21 +1,44 @@
 <% content_for :title, "Transfer Result - BankCORE" %>
 
-<section>
-  <h1 class="text-3xl font-semibold">Transfer result</h1>
-  <p class="mt-2 text-slate-600">Review the transfer event, posting outcome, or NSF denial.</p>
-</section>
+<%= render "shared/internal/page_header",
+  title: "Transfer result",
+  subtitle: "Review the transfer event, posting outcome, or NSF denial." %>
 
 <% if @denial_event.present? %>
-  <section class="mt-6 rounded border border-amber-200 bg-amber-50 p-6 text-amber-950 shadow-sm">
-    <h2 class="text-xl font-semibold">Transfer denied for NSF</h2>
-    <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
-      <div><dt class="font-medium">Denial event</dt><dd>#<%= @denial_event.id %></dd></div>
-      <div><dt class="font-medium">Fee event</dt><dd>#<%= @fee_event.id %></dd></div>
-      <div><dt class="font-medium">Outcome</dt><dd><%= @outcome %></dd></div>
-      <div><dt class="font-medium">Attempt amount</dt><dd><%= branch_money(@denial_event.amount_minor_units) %> <%= @denial_event.currency %></dd></div>
-    </dl>
-  </section>
+  <%= render "shared/internal/context_strip",
+    business_date: @denial_event.business_date,
+    operating_unit: @denial_event.operating_unit,
+    operator: current_operator,
+    state_items: [
+      ["Outcome", @outcome],
+      ["Denial event", @denial_event.id],
+      ["Fee event", @fee_event&.id || "None"]
+    ] %>
+
+  <%= render "shared/internal/status_banner",
+    tone: :warning,
+    title: "Transfer denied for NSF",
+    body: capture {
+      content_tag(:dl, class: "mt-2 grid gap-4 text-sm md:grid-cols-2") do
+        safe_join([
+          content_tag(:div) { safe_join([content_tag(:dt, "Denial event", class: "font-medium"), content_tag(:dd, "##{@denial_event.id}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Fee event", class: "font-medium"), content_tag(:dd, "##{@fee_event.id}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Outcome", class: "font-medium"), content_tag(:dd, @outcome)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Attempt amount", class: "font-medium"), content_tag(:dd, "#{branch_money(@denial_event.amount_minor_units)} #{@denial_event.currency}")]) }
+        ])
+      end
+    } %>
 <% else %>
+  <%= render "shared/internal/context_strip",
+    business_date: @event&.business_date || current_business_date,
+    operating_unit: @event&.operating_unit || current_operating_unit,
+    operator: current_operator,
+    state_items: [
+      ["Outcome", @outcome],
+      ["Event type", @event&.event_type || "None"],
+      ["Status", @event&.status || "None"]
+    ] %>
+
   <%= render "branch/shared/transaction_result",
     title: "Transfer recorded",
     event: @event,

@@ -1,31 +1,41 @@
 <% content_for :title, "Release Hold - BankCORE" %>
 
 <%= render "branch/shared/account_context", active_tab: "holds", show_actions: false %>
-
 <%= render "branch/shared/form_error", error_message: @error_message %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
-  <h1 class="text-3xl font-semibold">Release account hold</h1>
-  <p class="mt-2 text-slate-600">Release hold #<%= @hold_record.id %> from this account.</p>
-  <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
-    <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @hold_record.status %></dd></div>
-    <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@hold_record.amount_minor_units) %> <%= @hold_record.currency %></dd></div>
-    <div><dt class="font-medium text-slate-500">Hold type</dt><dd><%= @hold_record.hold_type.humanize %></dd></div>
-    <div><dt class="font-medium text-slate-500">Reason</dt><dd><%= @hold_record.reason_code.humanize %></dd></div>
-    <div><dt class="font-medium text-slate-500">Customer explanation</dt><dd><%= @hold_record.customer_explanation %></dd></div>
-    <div><dt class="font-medium text-slate-500">Expires on</dt><dd><%= branch_date(@hold_record.expires_on) %></dd></div>
-    <div><dt class="font-medium text-slate-500">Placed event</dt><dd><%= @hold_record.placed_by_operational_event_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Linked deposit event</dt><dd><%= @hold_record.placed_for_operational_event_id || "None" %></dd></div>
-  </dl>
-
-  <%= form_with url: branch_release_account_hold_path(@account, @hold_record), scope: :hold_release, class: "mt-6 grid gap-4 md:grid-cols-2" do |form| %>
-    <div>
-      <%= form.label :idempotency_key, class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :idempotency_key, value: @hold_release["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-    </div>
-    <div class="self-end flex gap-3">
-      <%= form.submit "Release hold", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-      <%= link_to "Cancel", branch_account_holds_path(@account), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    </div>
-  <% end %>
-</section>
+<%= render "shared/internal/page_section",
+  title: "Release account hold",
+  description: "Release hold ##{@hold_record.id} from this account.",
+  class: "mt-6",
+  content: capture {
+    safe_join([
+      content_tag(:dl, class: "grid gap-4 text-sm md:grid-cols-2") do
+        safe_join([
+          content_tag(:div) { safe_join([content_tag(:dt, "Status", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.status)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Amount", class: "font-medium text-slate-500"), content_tag(:dd, "#{branch_money(@hold_record.amount_minor_units)} #{@hold_record.currency}")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Hold type", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.hold_type.humanize)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Reason", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.reason_code.humanize)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Customer explanation", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.customer_explanation)]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Expires on", class: "font-medium text-slate-500"), content_tag(:dd, branch_date(@hold_record.expires_on))]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Placed event", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.placed_by_operational_event_id || "None")]) },
+          content_tag(:div) { safe_join([content_tag(:dt, "Linked deposit event", class: "font-medium text-slate-500"), content_tag(:dd, @hold_record.placed_for_operational_event_id || "None")]) }
+        ])
+      end,
+      form_with(url: branch_release_account_hold_path(@account, @hold_record), scope: :hold_release, class: "mt-6 grid gap-4 md:grid-cols-2") do |form|
+        safe_join([
+          content_tag(:div) do
+            safe_join([
+              form.label(:idempotency_key, class: "block text-sm font-medium text-slate-700"),
+              form.text_field(:idempotency_key, value: @hold_release["idempotency_key"], class: "mt-1 w-full rounded border border-slate-300 px-3 py-2")
+            ])
+          end,
+          content_tag(:div, class: "self-end flex gap-3") do
+            safe_join([
+              form.submit("Release hold", class: bc_button_class(:primary)),
+              link_to("Cancel", branch_account_holds_path(@account), class: bc_button_class(:secondary))
+            ])
+          end
+        ])
+      end
+    ])
+  } %>

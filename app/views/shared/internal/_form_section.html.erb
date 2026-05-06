@@ -1,0 +1,17 @@
+<% section_content = local_assigns[:content] %>
+<% section_content = capture { yield } if section_content.blank? && block_given? %>
+
+<section class="space-y-3">
+  <% if local_assigns[:title].present? %>
+    <div>
+      <h2 class="text-lg font-semibold text-slate-950"><%= title %></h2>
+      <% if local_assigns[:description].present? %>
+        <p class="mt-1 text-sm text-slate-600"><%= description %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="grid gap-4">
+    <%= section_content %>
+  </div>
+</section>

@@ -1,27 +1,31 @@
 <% content_for :title, "Customer Servicing - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Customer servicing</h1>
-    <p class="mt-2 text-slate-600">Search by party id, legal name, or individual profile names.</p>
-  </div>
-  <%= link_to "Back to Branch", branch_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-</section>
+<%= render "shared/internal/page_section",
+  title: "Customer servicing",
+  content: capture {
+    form_with url: branch_customers_path, method: :get, class: "grid gap-4 md:grid-cols-[1fr_auto]" do |form|
+      concat(content_tag(:div) do
+        safe_join([
+          form.label(:query, "Customer search", class: "block text-sm font-medium text-slate-700"),
+          form.text_field(:query, value: @query, placeholder: "Party #123 or Jane Doe", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2"),
+          content_tag(:p, class: "mt-1 text-xs text-slate-500") do
+            safe_join([
+              "Examples: ",
+              content_tag(:code, "Party #123"),
+              ", ",
+              content_tag(:code, "123"),
+              ", ",
+              content_tag(:code, "Jane Doe"),
+              ", or a legal entity name."
+            ])
+          end
+        ])
+      end)
+      concat(content_tag(:div, class: "self-end") { form.submit("Search", class: bc_button_class(:primary)) })
+    end
+  } %>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-5 shadow-sm">
-  <%= form_with url: branch_customers_path, method: :get, class: "grid gap-4 md:grid-cols-[1fr_auto]" do |form| %>
-    <div>
-      <%= form.label :query, "Customer search", class: "block text-sm font-medium text-slate-700" %>
-      <%= form.text_field :query, value: @query, placeholder: "Party #123 or Jane Doe", class: "mt-1 w-full rounded border border-slate-300 px-3 py-2" %>
-      <p class="mt-1 text-xs text-slate-500">Examples: <code>Party #123</code>, <code>123</code>, <code>Jane Doe</code>, or a legal entity name.</p>
-    </div>
-    <div class="self-end">
-      <%= form.submit "Search", class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-    </div>
-  <% end %>
-</section>
-
-<section class="mt-6 overflow-hidden rounded border border-slate-200 bg-white shadow-sm">
+<section class="mt-6 overflow-hidden <%= bc_panel_class(tone: :default) %>">
   <% if @search.nil? %>
     <div class="p-6 text-sm text-slate-600">Enter a party id or name to begin customer servicing.</div>
   <% elsif @search.rows.any? %>
@@ -50,7 +54,7 @@
               <% end %>
             </td>
             <td class="px-5 py-4">
-              <%= link_to "Open 360", branch_customer_path(party), class: "rounded bg-slate-900 px-3 py-1.5 font-medium text-white" %>
+              <%= link_to "Open 360", branch_customer_path(party), class: bc_button_class(:primary) %>
             </td>
           </tr>
         <% end %>

@@ -1,27 +1,61 @@
 <% content_for :title, "Event ##{@event.id} - BankCORE" %>
 
-<section class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-  <div>
-    <h1 class="text-3xl font-semibold">Operational event #<%= @event.id %></h1>
-    <p class="mt-2 text-slate-600"><%= @event.event_type %></p>
+<% branch_event_actions = capture do %>
+  <%= link_to "Back to events", branch_events_path, class: bc_button_class(:secondary) %>
+<% end %>
+<%= render "shared/internal/page_header",
+  title: "Operational event ##{@event.id}",
+  subtitle: "#{@event.event_type} on #{@event.business_date.iso8601}",
+  actions: branch_event_actions %>
+
+<%= render "shared/internal/context_strip",
+  business_date: @event.business_date,
+  operating_unit: @event.operating_unit || current_operating_unit,
+  operator: current_operator,
+  session: @event.teller_session,
+  state_items: [
+    ["Status", @event.status],
+    ["Channel", @event.channel],
+    ["Actor", (@event.actor&.display_name.presence || @event.actor_id || "None")]
+  ] %>
+
+<section class="mt-8 grid gap-4 md:grid-cols-3">
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
+    <p class="text-sm font-medium text-slate-500">Status</p>
+    <p class="mt-2 text-2xl font-semibold capitalize"><%= @event.status %></p>
   </div>
-  <%= link_to "Back to events", branch_events_path, class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
+    <p class="text-sm font-medium text-slate-500">Amount</p>
+    <p class="mt-2 text-2xl font-semibold"><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></p>
+  </div>
+  <div class="<%= bc_panel_class(tone: :default) %> p-5">
+    <p class="text-sm font-medium text-slate-500">Channel</p>
+    <p class="mt-2 text-2xl font-semibold"><%= @event.channel %></p>
+  </div>
 </section>
 
-<section class="mt-6 rounded border border-slate-200 bg-white p-6 shadow-sm">
+<% operational_narrative = capture do %>
   <dl class="grid gap-4 text-sm md:grid-cols-2">
-    <div><dt class="font-medium text-slate-500">Status</dt><dd><%= @event.status %></dd></div>
-    <div><dt class="font-medium text-slate-500">Business date</dt><dd><%= @event.business_date %></dd></div>
-    <div><dt class="font-medium text-slate-500">Channel</dt><dd><%= @event.channel %></dd></div>
-    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
+    <div><dt class="font-medium text-slate-500">Event type</dt><dd><%= @event.event_type %></dd></div>
+    <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Source account</dt><dd><%= @event.source_account_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Destination account</dt><dd><%= @event.destination_account_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Amount</dt><dd><%= branch_money(@event.amount_minor_units) %> <%= @event.currency %></dd></div>
-    <div><dt class="font-medium text-slate-500">Reference</dt><dd><%= @event.reference_id.presence || "None" %></dd></div>
+    <div><dt class="font-medium text-slate-500">Created</dt><dd><%= l(@event.created_at, format: :long) %></dd></div>
+    <div><dt class="font-medium text-slate-500">Updated</dt><dd><%= l(@event.updated_at, format: :long) %></dd></div>
+  </dl>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Operational narrative",
+  description: "What happened, which accounts it involved, and when the event record changed.",
+  content: operational_narrative,
+  class: "mt-8" %>
+
+<% traceability_content = capture do %>
+  <dl class="grid gap-4 text-sm md:grid-cols-2">
+    <div><dt class="font-medium text-slate-500">Idempotency key</dt><dd><%= @event.idempotency_key %></dd></div>
+    <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Reversal of event id</dt><dd><%= @event.reversal_of_event_id || "None" %></dd></div>
     <div><dt class="font-medium text-slate-500">Reversed by event id</dt><dd><%= @event.reversed_by_event_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Teller session</dt><dd><%= @event.teller_session_id || "None" %></dd></div>
-    <div><dt class="font-medium text-slate-500">Actor</dt><dd><%= @event.actor&.display_name || @event.actor_id || "None" %></dd></div>
     <div>
       <dt class="font-medium text-slate-500">Operating unit</dt>
       <dd>
@@ -33,45 +67,55 @@
       </dd>
     </div>
     <% if @event.posting_batches.any? %>
-      <div class="md:col-span-2">
+      <div>
         <dt class="font-medium text-slate-500">Posting batches / journal entries</dt>
-        <dd class="mt-1 text-slate-700">
+        <dd>
           Batches: <%= @event.posting_batches.map(&:id).join(", ") %> ·
           Entries: <%= @event.posting_batches.flat_map(&:journal_entries).map(&:id).join(", ") %>
-          <span class="block text-xs text-slate-500">Full journal grid remains on Ops event detail.</span>
+          <span class="mt-1 block text-xs text-slate-500">Full journal detail remains on the Ops event page.</span>
         </dd>
       </div>
     <% end %>
-    <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
-      <div class="md:col-span-2">
-        <dt class="font-medium text-slate-500">Check deposit items (payload)</dt>
-        <dd class="mt-1 overflow-x-auto rounded border border-slate-200 bg-slate-50 p-3 font-mono text-xs"><pre class="whitespace-pre-wrap"><%= JSON.pretty_generate(@event.payload) %></pre></dd>
-      </div>
-    <% end %>
   </dl>
+  <% if @event.event_type == "check.deposit.accepted" && @event.payload.present? %>
+    <div class="mt-4">
+      <p class="font-medium text-slate-500">Check deposit items (payload)</p>
+      <div class="mt-1 overflow-x-auto rounded border border-slate-200 bg-slate-50 p-3 font-mono text-xs"><pre class="whitespace-pre-wrap"><%= JSON.pretty_generate(@event.payload) %></pre></div>
+    </div>
+  <% end %>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Traceability",
+  description: "Identifiers, reversal links, and posting references for support and audit follow-up.",
+  content: traceability_content,
+  class: "mt-8" %>
 
-  <div class="mt-6 flex flex-wrap gap-3">
-    <% if ops_access? %>
-      <%= link_to "View in Ops", ops_operational_event_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-    <%= link_to "Trace receipt", branch_event_receipt_path(@event), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% if @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
-      <%= button_to "Post event", branch_event_post_path(@event), method: :post, class: "rounded bg-slate-900 px-4 py-2 font-medium text-white" %>
-    <% end %>
-    <% if @event.source_account_id.present? %>
-      <%= link_to "Account profile", branch_account_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <%= link_to "Account activity", branch_account_activity_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <%= link_to "Account holds", branch_account_holds_path(@event.source_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-    <% if @event.destination_account_id.present? %>
-      <%= link_to "Destination account", branch_account_path(@event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-      <%= link_to "Destination activity", branch_account_activity_path(@event.destination_account_id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-    <% if current_operator.supervisor? && @event.event_type == "fee.assessed" && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
-      <%= link_to "Waive fee", branch_new_fee_waiver_path(@event.source_account_id, fee_assessment_event_id: @event.id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-    <% if current_operator.supervisor? && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
-      <%= link_to "Reverse event", new_branch_reversal_path(original_operational_event_id: @event.id), class: "rounded border border-slate-300 px-4 py-2 font-medium text-slate-700" %>
-    <% end %>
-  </div>
-</section>
+<% branch_event_actions = capture do %>
+  <% if ops_access? %>
+    <%= link_to "View in Ops", ops_operational_event_path(@event), class: bc_button_class(:secondary) %>
+  <% end %>
+  <%= link_to "Trace receipt", branch_event_receipt_path(@event), class: bc_button_class(:secondary) %>
+  <% if @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_PENDING %>
+    <%= button_to "Post event", branch_event_post_path(@event), method: :post, class: bc_button_class(:primary) %>
+  <% end %>
+  <% if @event.source_account_id.present? %>
+    <%= link_to "Account profile", branch_account_path(@event.source_account_id), class: bc_button_class(:secondary) %>
+    <%= link_to "Account activity", branch_account_activity_path(@event.source_account_id), class: bc_button_class(:secondary) %>
+    <%= link_to "Account holds", branch_account_holds_path(@event.source_account_id), class: bc_button_class(:secondary) %>
+  <% end %>
+  <% if @event.destination_account_id.present? %>
+    <%= link_to "Destination account", branch_account_path(@event.destination_account_id), class: bc_button_class(:secondary) %>
+    <%= link_to "Destination activity", branch_account_activity_path(@event.destination_account_id), class: bc_button_class(:secondary) %>
+  <% end %>
+  <% if current_operator.supervisor? && @event.event_type == "fee.assessed" && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
+    <%= link_to "Waive fee", branch_new_fee_waiver_path(@event.source_account_id, fee_assessment_event_id: @event.id), class: bc_button_class(:secondary) %>
+  <% end %>
+  <% if current_operator.supervisor? && @event.status == Core::OperationalEvents::Models::OperationalEvent::STATUS_POSTED %>
+    <%= link_to "Reverse event", new_branch_reversal_path(original_operational_event_id: @event.id), class: bc_button_class(:danger) %>
+  <% end %>
+<% end %>
+<%= render "shared/internal/page_section",
+  title: "Related actions",
+  description: "Continue with posting, trace the receipt, or drill into related account surfaces.",
+  content: branch_event_actions,
+  class: "mt-8" %>
