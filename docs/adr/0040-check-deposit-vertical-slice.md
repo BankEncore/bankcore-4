@@ -101,11 +101,14 @@ The payload must support multiple deposited items in one customer action. The mi
 - `items[]`
 - per item:
   - `amount_minor_units`
-  - `item_reference` or `serial_number`
+  - structured check identity: `routing_number`, `account_number`, and `check_serial_number`
+  - legacy compatibility identity: `item_reference` or `serial_number`
 
-Optional placeholders such as routing or on-us/transit metadata may be added if needed for the first slice, but T1 does not require full MICR parsing, image capture, or clearing identifiers.
+Optional placeholders such as on-us/transit metadata may be added if needed for the first slice, but T1 does not require full MICR parsing, image capture, or clearing identifiers.
 
 This follows ADR-0002's guidance that instrument-heavy or mixed deposits may use a typed payload or child rows per family, without forcing a global line-item architecture.
+
+**2026-05-06 amendment:** Branch check-deposit intake now prompts for and transmits structured check identity (`routing_number`, `account_number`, `check_serial_number`) per item. The operational-event validator continues accepting the original `item_reference` / `serial_number` item shape for JSON client compatibility, but new Branch-originated check deposits should use the structured shape.
 
 ### 4.5 Posting and GL treatment
 

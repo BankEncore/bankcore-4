@@ -45,7 +45,9 @@ Records that the institution **accepted** a **check deposit** ticket against an 
 Each item:
 
 - `amount_minor_units` (positive integer)
-- **Exactly one** of `item_reference` or `serial_number` (non-blank string after strip)
+- Preferred structured identity: **all** of `routing_number`, `account_number`, and `check_serial_number` (non-blank strings after strip)
+- Legacy identity, still accepted for compatibility: **exactly one** of `item_reference` or `serial_number` (non-blank string after strip)
+- Do not mix structured identity fields with legacy identity fields on the same item
 - Optional `classification`: `on_us`, `transit`, or `unknown` only when present
 - **No other keys** at item or payload root (root allows only `items`).
 
@@ -75,7 +77,7 @@ Limits: max **100** items; serialized canonical JSON max **65536** bytes.
 | Surface | Policy |
 | --- | --- |
 | Detail | Full normalized **`payload`** (`items`). |
-| List / search / receipts | **`payload_summary`** only (`items_count`, totals, masked identities) — no full `items` array. |
+| List / search / receipts | **`payload_summary`** only (`items_count`, totals, masked structured or legacy identities) — no full `items` array. |
 
 ## Module ownership
 
@@ -103,8 +105,19 @@ Minimal teller JSON (orchestration entry via `POST /teller/operational_events`):
     "source_account_id": 42,
     "payload": {
       "items": [
-        { "amount_minor_units": 3000, "item_reference": "CHK-A", "classification": "on_us" },
-        { "amount_minor_units": 2000, "serial_number": "987654321" }
+        {
+          "amount_minor_units": 3000,
+          "routing_number": "011000015",
+          "account_number": "0001234500",
+          "check_serial_number": "1001",
+          "classification": "on_us"
+        },
+        {
+          "amount_minor_units": 2000,
+          "routing_number": "021000021",
+          "account_number": "987654321",
+          "check_serial_number": "2055"
+        }
       ]
     },
     "hold_amount_minor_units": 5000,

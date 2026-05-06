@@ -12,7 +12,7 @@ class BranchCheckDepositIntegrationTest < ActionDispatch::IntegrationTest
     @account = Accounts::Commands::OpenAccount.call(party_record_id: @party.id)
   end
 
-  test "branch accept check deposit posts and shows hold when requested" do
+  test "branch accept check deposit posts multiple structured items and shows hold when requested" do
     internal_login!(username: "chk-branch-html")
 
     idem = "br-int-chk-#{SecureRandom.hex(6)}"
@@ -21,11 +21,23 @@ class BranchCheckDepositIntegrationTest < ActionDispatch::IntegrationTest
     post branch_check_deposits_path, params: {
       check_deposit: {
         deposit_account_number: @account.account_number,
-        amount: "42.75",
         currency: "USD",
-        identity_kind: "reference",
-        identity_value: "BR-CHK-REF",
-        classification: "on_us",
+        items: [
+          {
+            amount: "30.00",
+            routing_number: "011000015",
+            account_number: "0001234500",
+            check_serial_number: "1001",
+            classification: "on_us"
+          },
+          {
+            amount: "12.75",
+            routing_number: "021000021",
+            account_number: "987654321",
+            check_serial_number: "2055",
+            classification: "transit"
+          }
+        ],
         hold_amount: "42.75",
         hold_idempotency_key: hold_idem,
         hold_expires_on: "2026-08-15",
@@ -41,6 +53,27 @@ class BranchCheckDepositIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal "check.deposit.accepted", ev.event_type
     assert_equal "posted", ev.status
     assert_equal 4_275, ev.amount_minor_units
+    assert_equal(
+      {
+        "items" => [
+          {
+            "amount_minor_units" => 3_000,
+            "routing_number" => "011000015",
+            "account_number" => "0001234500",
+            "check_serial_number" => "1001",
+            "classification" => "on_us"
+          },
+          {
+            "amount_minor_units" => 1_275,
+            "routing_number" => "021000021",
+            "account_number" => "987654321",
+            "check_serial_number" => "2055",
+            "classification" => "transit"
+          }
+        ]
+      },
+      ev.payload
+    )
     hold = Accounts::Models::Hold.find_by!(placed_for_operational_event_id: ev.id)
     assert_equal Date.new(2026, 8, 15), hold.expires_on
   end

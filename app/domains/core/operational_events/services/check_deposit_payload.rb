@@ -12,6 +12,8 @@ module Core
         MAX_ITEMS = 100
         MAX_SERIALIZED_BYTES = 65_536
         CLASSIFICATIONS = %w[on_us transit unknown].freeze
+        LEGACY_IDENTITY_KEYS = %w[item_reference serial_number].freeze
+        STRUCTURED_IDENTITY_KEYS = %w[routing_number account_number check_serial_number].freeze
 
         module_function
 
@@ -48,7 +50,15 @@ module Core
             item = raw_item.respond_to?(:to_unsafe_h) ? raw_item.to_unsafe_h : raw_item.to_h
             item = item.stringify_keys
 
-            unknown_item_keys = item.keys - %w[amount_minor_units item_reference serial_number classification]
+            unknown_item_keys = item.keys - %w[
+              amount_minor_units
+              item_reference
+              serial_number
+              routing_number
+              account_number
+              check_serial_number
+              classification
+            ]
             if unknown_item_keys.any?
               raise invalid,
                     "payload.items[#{idx}] unknown keys: #{unknown_item_keys.sort.join(", ")}"
@@ -61,41 +71,59 @@ module Core
             amt = item["amount_minor_units"].to_i
             raise invalid, "payload.items[#{idx}].amount_minor_units must be positive" unless amt.positive?
 
-            has_ref = item["item_reference"].present?
-            has_serial = item["serial_number"].present?
-            if has_ref && has_serial
+            legacy_present = LEGACY_IDENTITY_KEYS.select { |key| item[key].present? }
+            structured_present = STRUCTURED_IDENTITY_KEYS.select { |key| item[key].present? }
+
+            if legacy_present.any? && structured_present.any?
               raise invalid,
-                    "payload.items[#{idx}] must set only one of item_reference or serial_number"
-            end
-            unless has_ref || has_serial
-              raise invalid,
-                    "payload.items[#{idx}] must set exactly one of item_reference or serial_number"
+                    "payload.items[#{idx}] must use either legacy identity or structured check identity, not both"
             end
 
+            canonical_item = {
+              "amount_minor_units" => amt
+            }
+
             item_key =
-              if has_ref
-                item["item_reference"].to_s.strip
+              if structured_present.any?
+                unless structured_present.sort == STRUCTURED_IDENTITY_KEYS.sort
+                  missing = STRUCTURED_IDENTITY_KEYS - structured_present
+                  raise invalid,
+                        "payload.items[#{idx}] structured identity requires: #{missing.join(", ")}"
+                end
+
+                routing_number = item["routing_number"].to_s.strip
+                account_number = item["account_number"].to_s.strip
+                check_serial_number = item["check_serial_number"].to_s.strip
+                if [ routing_number, account_number, check_serial_number ].any?(&:blank?)
+                  raise invalid,
+                        "payload.items[#{idx}] structured identity fields cannot be blank"
+                end
+
+                canonical_item["routing_number"] = routing_number
+                canonical_item["account_number"] = account_number
+                canonical_item["check_serial_number"] = check_serial_number
+                [ routing_number, account_number, check_serial_number ].join(":")
               else
-                item["serial_number"].to_s.strip
+                if legacy_present.size != 1
+                  raise invalid,
+                        "payload.items[#{idx}] must set exactly one of item_reference or serial_number, or all structured check identity fields"
+                end
+
+                legacy_key = legacy_present.first
+                legacy_value = item[legacy_key].to_s.strip
+                if legacy_value.blank?
+                  raise invalid,
+                        "payload.items[#{idx}] identity field cannot be blank"
+                end
+
+                canonical_item[legacy_key] = legacy_value
+                legacy_value
               end
-            if item_key.blank?
-              raise invalid,
-                    "payload.items[#{idx}] identity field cannot be blank"
-            end
 
             if seen_keys[item_key]
               raise invalid, "duplicate item identity #{item_key.inspect}"
             end
             seen_keys[item_key] = true
-
-            canonical_item = {
-              "amount_minor_units" => amt
-            }
-            if has_ref
-              canonical_item["item_reference"] = item_key
-            else
-              canonical_item["serial_number"] = item_key
-            end
 
             if item.key?("classification") && item["classification"].present?
               cls = item["classification"].to_s
@@ -153,9 +181,17 @@ module Core
           masked =
             items.map do |it|
               it = it.respond_to?(:stringify_keys) ? it.stringify_keys : it.to_h.stringify_keys
-              ref = it["item_reference"].presence || it["serial_number"].presence
+              if structured_identity?(it)
+                {
+                  "routing_number_masked" => mask_identity(it["routing_number"].to_s),
+                  "account_number_masked" => mask_identity(it["account_number"].to_s),
+                  "check_serial_number_masked" => mask_identity(it["check_serial_number"].to_s)
+                }
+              else
+                ref = it["item_reference"].presence || it["serial_number"].presence
 
-              { "item_reference_masked" => mask_identity(ref.to_s) }
+                { "item_reference_masked" => mask_identity(ref.to_s) }
+              end
             end
           {
             "items_count" => items.size,
@@ -169,6 +205,10 @@ module Core
           return s if s.length <= 4
 
           "#{"*" * (s.length - 4)}#{s[-4..]}"
+        end
+
+        def structured_identity?(item)
+          STRUCTURED_IDENTITY_KEYS.all? { |key| item[key].present? }
         end
       end
     end
